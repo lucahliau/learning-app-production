@@ -1,0 +1,2404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Learning Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            min-height: 100vh;
+            color: #e4e4e7;
+            overflow: hidden;
+        }
+        /* --- NEW: View & Landing Page Styles --- */
+.view {
+    width: 100%;
+    height: 100vh;
+    display: none; /* Keep hidden by default */
+}
+
+.view.active {
+    display: flex; /* Show the active view */
+}
+
+#landingView {
+    flex-direction: column;
+    align-items: center;
+    padding: 40px;
+    overflow-y: auto;
+}
+
+.landing-header {
+    width: 100%;
+    max-width: 1200px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 40px;
+    flex-shrink: 0;
+}
+
+.landing-header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: #fafafa;
+}
+
+.new-topic-btn {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.new-topic-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
+}
+
+#topicGrid {
+    width: 100%;
+    max-width: 1200px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+/* --- NEW: Modal Styles --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    display: none; /* Use display instead of visibility */
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-overlay.active {
+    display: flex; /* Use flex to center the content */
+}
+
+.modal-content {
+    background: #18181b;
+    padding: 40px;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 500px;
+    border: 1px solid #27272a;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    animation: fadeIn 0.3s ease; /* Match existing fadeIn */
+}
+
+.modal-content h2 {
+    font-size: 24px;
+    margin-bottom: 30px;
+    text-align: center;
+    color: #fafafa;
+}
+
+.modal-content label {
+    display: block;
+    font-size: 14px;
+    color: #a1a1aa;
+    margin-bottom: 8px;
+}
+
+.modal-input {
+    width: 100%;
+    padding: 12px 15px;
+    background: #27272a;
+    border: 1px solid #3f3f46;
+    color: #fafafa;
+    border-radius: 8px;
+    font-size: 16px;
+    margin-bottom: 25px;
+    transition: all 0.2s ease;
+}
+
+.modal-input:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.sophistication-slider {
+    display: flex;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #3f3f46;
+    margin-bottom: 30px;
+}
+
+.sophistication-option {
+    flex: 1;
+    text-align: center;
+    padding: 12px;
+    cursor: pointer;
+    background: #27272a;
+    color: #a1a1aa;
+    transition: background 0.2s ease;
+    font-weight: 500;
+}
+
+.sophistication-option.active {
+    background: #6366f1;
+    color: white;
+    font-weight: 600;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+}
+
+.modal-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.modal-btn.cancel {
+    background: #27272a;
+    color: #a1a1aa;
+}
+.modal-btn.cancel:hover {
+    background: #3f3f46;
+}
+
+.modal-btn.submit {
+    background: #6366f1;
+    color: white;
+}
+.modal-btn.submit:hover {
+    background: #4f46e5;
+}
+
+        .app-wrapper {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+        }
+
+        .tree-sidebar {
+            width: 320px;
+            background: #18181b;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            overflow-x: auto;
+            overflow-y: auto;
+            border-right: 1px solid #27272a;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tree-sidebar h3 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #fafafa;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .tree-container {
+            padding: 10px;
+            overflow-x: auto;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .tree-node {
+            margin: 5px 0;
+            position: relative;
+            white-space: nowrap;
+        }
+
+        .tree-node::before {
+            content: '';
+            position: absolute;
+            left: -15px;
+            top: 16px;
+            width: 10px;
+            height: 1px;
+            background: #3f3f46;
+        }
+
+        .tree-node-content {
+            cursor: pointer;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #27272a;
+            border: 1px solid #3f3f46;
+            max-width: 250px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #a1a1aa;
+        }
+
+        .tree-node-content:hover {
+            background: #3f3f46;
+            border-color: #52525b;
+            transform: translateX(3px);
+            color: #fafafa;
+        }
+
+        .tree-node-content.active {
+            background: #6366f1;
+            color: white;
+            border-color: transparent;
+        }
+
+        .tree-node-icon {
+            flex-shrink: 0;
+            font-size: 16px;
+        }
+
+        .tree-node-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .tree-children {
+            margin-left: 25px;
+            margin-top: 5px;
+            border-left: 1px solid #3f3f46;
+            padding-left: 15px;
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            padding-bottom: 100px;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .app-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 1000px;
+            width: 100%;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+
+        .navigation-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .nav-button {
+            background: #27272a;
+            color: #a1a1aa;
+            border: 2px solid #3f3f46;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-button:hover:not(:disabled) {
+            background: #3f3f46;
+            color: #fafafa;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .nav-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .breadcrumb {
+            flex: 1;
+            background: #18181b;
+            padding: 15px 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            overflow-x: auto;
+            white-space: nowrap;
+            border: 1px solid #27272a;
+        }
+
+        .breadcrumb-item {
+            color: #71717a;
+            font-size: 14px;
+            padding: 5px 10px;
+            border-radius: 6px;
+            flex-shrink: 0;
+        }
+
+        .breadcrumb-separator {
+            color: #52525b;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .breadcrumb-item.active {
+            color: #fafafa;
+            font-weight: 600;
+            background: #27272a;
+        }
+
+        .main-content {
+            flex: 1;
+            background: #18181b;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            overflow-y: auto;
+            overflow-x: hidden;
+            animation: fadeIn 0.5s ease;
+            border: 1px solid #27272a;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .welcome-message {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .welcome-message h1 {
+            font-size: 48px;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+            font-weight: 800;
+        }
+
+        .welcome-message p {
+            font-size: 20px;
+            color: #a1a1aa;
+            margin-bottom: 40px;
+        }
+
+        .topic-overview {
+            margin-bottom: 30px;
+            padding: 25px;
+            background: #27272a;
+            color: #fafafa;
+            border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            border: 1px solid #3f3f46;
+        }
+
+        .topic-overview h2 {
+            font-size: 28px;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .topic-overview p, .topic-overview div {
+            font-size: 18px;
+            line-height: 1.6;
+            color: #d4d4d8;
+        }
+
+        .topic-overview ul {
+            list-style-type: disc;
+            margin: 15px 0;
+            padding-left: 30px;
+        }
+
+        .topic-overview li {
+            margin: 8px 0;
+            line-height: 1.6;
+            color: #d4d4d8;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .card {
+            background: #27272a;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid #3f3f46;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* --- CARD STATUS INDICATOR STYLES --- */
+
+.status-indicator {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: transparent;
+    border: 2px solid #52525b; /* Hollow circle style */
+    transition: all 0.3s ease;
+}
+
+.status-indicator.read {
+    background-color: #22c55e; /* Green background for 'read' state */
+    border-color: #22c55e;
+}
+
+/* The white checkmark icon */
+.status-indicator.read::before {
+    content: '';
+    display: block;
+    width: 100%;
+    height: 100%;
+    /* Embedded SVG for the checkmark - clean and scalable */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+    background-size: 60%;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            border-color: #6366f1;
+            background: #3f3f46;
+        }
+
+        .card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .card h3 {
+            font-size: 20px;
+            margin-bottom: 8px;
+            color: #fafafa;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-icon {
+            width: 20px;
+            height: 20px;
+            color: #6366f1;
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover .card-icon {
+            transform: translateX(5px);
+        }
+
+        .card p {
+            color: #a1a1aa;
+            line-height: 1.4;
+            font-size: 14px;
+        }
+
+        .content-section {
+            margin-bottom: 30px;
+        }
+
+        .content-section h3 {
+            font-size: 24px;
+            color: #fafafa;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .content-section p {
+            font-size: 16px;
+            line-height: 1.8;
+            color: #d4d4d8;
+            margin-bottom: 15px;
+            white-space: pre-wrap;
+        }
+
+        .tell-me-more-button {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .tell-me-more-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .chat-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #18181b;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            z-index: 1000;
+            border-top: 1px solid #27272a;
+        }
+
+        .chat-input-wrapper {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #3f3f46;
+            border-radius: 12px;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+            background: #27272a;
+            color: #fafafa;
+        }
+
+        .chat-input:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .chat-input::placeholder {
+            color: #71717a;
+        }
+
+        .send-button {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .send-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .send-button:disabled {
+            background: #3f3f46;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid transparent;
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #dc2626;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: none;
+            animation: shake 0.5s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        strong {
+            font-weight: 600;
+            color: #fafafa;
+        }
+
+        em {
+            font-style: italic;
+            color: #a1a1aa;
+        }
+
+        ul, ol {
+            margin: 15px 0;
+            padding-left: 30px;
+            color: #d4d4d8;
+        }
+
+        li {
+            margin: 8px 0;
+            line-height: 1.6;
+            color: #d4d4d8;
+        }
+
+        /* --- NEW STYLES FOR TERM DEFINITIONS --- */
+
+        .technical-term {
+            text-decoration: underline dotted #6366f1; /* Dotted underline to indicate interactivity */
+            text-decoration-thickness: 2px;
+            color: #a78bfa; /* A slightly different color to stand out */
+            cursor: help; /* Changes the mouse cursor to a question mark */
+            position: relative; /* Essential for positioning the tooltip */
+            display: inline-block; /* Ensures the position property works correctly */
+        }
+
+        .term-tooltip {
+            visibility: hidden; /* Hidden by default */
+            width: 300px;
+            background-color: #18181b;
+            color: #e4e4e7;
+            text-align: left;
+            border-radius: 8px;
+            padding: 15px;
+            position: absolute;
+            z-index: 10;
+            bottom: 125%; /* Position above the term */
+            left: 50%;
+            margin-left: -150px; /* Center the tooltip */
+            opacity: 0;
+            transition: opacity 0.3s;
+            border: 1px solid #52525b;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+            font-size: 14px; /* Ensure tooltip text is readable */
+            line-height: 1.5;
+            text-decoration: none; /* Remove underline from the tooltip text */
+            pointer-events: none; /* Tooltip itself shouldn't be interactive */
+        }
+        
+        /* Show the tooltip on hover */
+        .technical-term:hover .term-tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* --- END OF NEW STYLES --- */
+        /* --- STYLES FOR RESIZABLE SIDEBAR --- */
+
+        .resizer {
+            flex-shrink: 0;
+            width: 5px;
+            cursor: col-resize; /* The cursor indicates it can be resized horizontally */
+            background-color: #0a0a0a; /* Same as the body background */
+            transition: background-color 0.2s ease;
+        }
+
+        .resizer:hover {
+            background-color: #6366f1; /* Highlight on hover */
+        }
+
+        .tree-sidebar {
+            /* This ensures the sidebar doesn't shrink on its own */
+            flex-shrink: 0;
+            width: 320px; /* This will be our default and minimum width */
+        }
+
+        /* --- END OF RESIZER STYLES --- */
+        /* --- TREE STATUS INDICATOR STYLES --- */
+
+.tree-status-indicator {
+    display: inline-block; /* Allows it to sit next to text */
+    vertical-align: middle; /* Aligns it nicely with the text and emoji */
+    width: 14px;
+    height: 14px;
+    margin-right: 8px; /* Space between the circle and the emoji */
+    border-radius: 50%;
+    background-color: transparent;
+    border: 1.5px solid #52525b; /* Unread hollow circle */
+    transition: all 0.3s ease;
+    flex-shrink: 0; /* Prevents it from being squished */
+}
+
+.tree-status-indicator.read {
+    background-color: #22c55e; /* Green for 'read' */
+    border-color: #22c55e;
+}
+
+.tree-status-indicator.read::before {
+    content: '';
+    display: block;
+    width: 100%;
+    height: 100%;
+    /* Same embedded SVG checkmark, will scale automatically */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+    background-size: 70%;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+/* --- STYLES FOR QUIZ --- */
+.quiz-option {
+    padding: 15px;
+    border: 2px solid #3f3f46;
+    background: #27272a;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.quiz-option:hover {
+    border-color: #6366f1;
+    background: #3f3f46;
+}
+.quiz-option.selected {
+    border-color: #a78bfa;
+    background: #4c1d95;
+    color: white;
+}
+.quiz-option.correct {
+    border-color: #22c55e;
+    background: #166534;
+}
+.quiz-option.incorrect {
+    border-color: #dc2626;
+    background: #991b1b;
+}
+#quizFeedback.correct { color: #22c55e; }
+#quizFeedback.incorrect { color: #ef4444; }
+    </style>
+</head>
+<body>
+    <!-- This is the new Landing Page View -->
+<div id="landingView" class="view active">
+    <div class="landing-header">
+        <h1>Your Learning Topics</h1>
+        <button class="new-topic-btn" id="newTopicBtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14m-7-7h14"/></svg>
+            Learn a new topic
+        </button>
+    </div>
+    <div id="topicGrid">
+        <!-- Topic cards will be added here later -->
+    </div>
+</div>
+<div id="learningView" class="view">
+
+    <div class="app-wrapper">
+        <div class="tree-sidebar" id="treeSidebar">
+            <h3 id="sidebarTitle">Learning Journey Map</h3>
+                <div class="tree-container" id="treeContainer">
+                <div class="tree-node">
+                    <div class="tree-node-content active" onclick="navigateToNode('root')">
+                        <span class="tree-node-icon">🏠</span>
+                        <span class="tree-node-text">Home</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="resizer" id="dragHandle"></div>
+
+        <div class="main-container">
+            <div class="app-container">
+                <div class="navigation-controls">
+                    <button class="nav-button" id="backButton" onclick="navigateBack()" disabled>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 12H5m0 0l6-6m-6 6l6 6"/>
+                        </svg>
+                        Back
+                    </button>
+                    <button class="nav-button" id="forwardButton" onclick="navigateForward()" disabled>
+                        Forward
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M5 12h14m0 0l-6-6m6 6l-6 6"/>
+                        </svg>
+                    </button>
+                    <button class="nav-button" id="mainMenuBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+                        Main Menu
+                    </button>
+                    <div class="breadcrumb" id="breadcrumb">
+                        <span class="breadcrumb-item active">Home</span>
+                    </div>
+                </div>
+
+                <div class="main-content" id="mainContent">
+                    <div class="welcome-message">
+                        <h1>What do you want to learn?</h1>
+                        <p>Explore finance and economics through an interactive learning journey</p>
+                        <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-top: 40px;">
+                            <button class="card" style="padding: 15px 25px; cursor: pointer;" onclick="askQuestion('How does the central bank work?')">
+                                <span style="font-size: 16px;">🏦 Central Banking</span>
+                            </button>
+                            <button class="card" style="padding: 15px 25px; cursor: pointer;" onclick="askQuestion('What are securities and their types?')">
+                                <span style="font-size: 16px;">📈 Securities</span>
+                            </button>
+                            <button class="card" style="padding: 15px 25px; cursor: pointer;" onclick="askQuestion('Explain bonds and how they work')">
+                                <span style="font-size: 16px;">📊 Bonds</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <div class="error-message" id="errorMessage"></div>
+        <div class="chat-input-wrapper">
+            <input 
+                type="text" 
+                class="chat-input" 
+                id="chatInput" 
+                placeholder="Ask about finance or economics..."
+                autofocus
+            >
+            <button class="send-button" id="sendButton" onclick="sendMessage()">
+                <span id="buttonText">Send</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M5 12h14m0 0l-6-6m6 6l-6 6"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+
+    <script>
+        /**
+ * A universal "catch-all" parser that finds numbered list items
+ * anywhere in a string, whether it's plain text or embedded in JSON.
+ * @param {string} text - The raw text response from the AI.
+ * @returns {Array<Object>} An array of section objects.
+ */
+function universalParseSyllabus(text) {
+    const sections = [];
+    // This regex looks for a digit(s), a period, optional space,
+    // and then captures the text until it hits a quote, a comma, or the end of a line.
+    const regex = /\d+\.\s*([^",\n\r]+)/g;
+    let match;
+
+    // Loop through all matches found in the entire string
+    while ((match = regex.exec(text)) !== null) {
+        // match[1] is the captured text (the module title)
+        const title = match[1].trim(); 
+        
+        sections.push({
+            title: title,
+            content: "", 
+            fullContent: "",
+            isExpanded: false
+        });
+    }
+    
+    console.log("DEBUG: Universal parser found sections:", sections);
+    return sections;
+}
+        let currentQuizQuestions = [];
+        let currentQuestionIndex = 0;
+        let userScore = 0;
+        /**
+ * Shows or hides a loading spinner on the new topic modal's submit button.
+ * @param {boolean} isLoading - Whether to show the loading state.
+ */
+function showModalLoading(isLoading) {
+    const submitBtn = document.getElementById('submitTopicBtn');
+    if (isLoading) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="loading-spinner" style="width: 20px; height: 20px; border-width: 3px;"></span>Loading...';
+    } else {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Submit';
+    }
+}
+/**
+ * Parses the raw text response from the syllabus API call.
+ * @param {string} text - The raw text from the AI.
+ * @returns {Array<Object>} An array of section objects.
+ */
+
+ function gatherReadContent(node) {
+    let compiledText = '';
+
+    // A recursive inner function to traverse the tree
+    function traverse(currentNode) {
+        if (!currentNode) return;
+
+        // If the node is read and has content, add it to our "study guide"
+        if (currentNode.isRead && currentNode.content && currentNode.content.overview) {
+            // Strip HTML tags for a cleaner text to send to the AI
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = currentNode.content.overview;
+            compiledText += (tempDiv.textContent || tempDiv.innerText || "") + "\n\n";
+        }
+
+        // Recurse for all children
+        if (currentNode.children && currentNode.children.length > 0) {
+            currentNode.children.forEach(child => traverse(child));
+        }
+    }
+
+    traverse(node);
+    return compiledText;
+}
+async function fetchQuiz(textContent) {
+    showModalLoading(true); // Re-using your existing modal loader
+    const prompt = `Based *only* on the following text, create a multiple-choice quiz with 4 questions. The questions must be answerable solely from the provided text.
+
+    Your response MUST be a valid JSON object. Do not include any other text or explanations. The JSON object should follow this exact structure:
+    {
+      "questions": [
+        {
+          "questionText": "A question based on the text.",
+          "options": ["Option A", "Option B", "Option C", "Option D"],
+          "correctAnswerIndex": 1 
+        }
+      ]
+    }
+
+    TEXT:
+    ---
+    ${textContent}
+    ---
+    `;
+
+    try {
+        // Using a temporary history for this specific, one-off request
+        const quizConversation = [
+            { role: "system", content: "You are a quiz generation assistant." },
+            { role: "user", content: prompt }
+        ];
+
+        const response = await fetch(BACKEND_URL + '/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: quizConversation })
+        });
+
+        if (!response.ok) throw new Error('API request failed');
+
+        const result = await response.json();
+        const botResponseText = result.choices[0].message.content;
+        
+        // Find the JSON part of the response and parse it
+        const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error("No valid JSON object found in the AI response.");
+        
+        const parsedJson = JSON.parse(jsonMatch[0]);
+        return parsedJson.questions || [];
+
+    } catch (error) {
+        console.error("Error fetching or parsing quiz:", error);
+        showError("Could not generate the quiz. The AI may have returned an invalid format.");
+        return [];
+    } finally {
+        showModalLoading(false);
+    }
+}
+let selectedOptionIndex = null; // Track which option is selected
+
+function displayQuestion() {
+    selectedOptionIndex = null;
+    const question = currentQuizQuestions[currentQuestionIndex];
+    const quizOptionsContainer = document.getElementById('quizOptions');
+    
+    document.getElementById('quizTitle').textContent = `Question ${currentQuestionIndex + 1} of ${currentQuizQuestions.length}`;
+    document.getElementById('quizQuestionText').textContent = question.questionText;
+    document.getElementById('quizFeedback').textContent = '';
+    quizOptionsContainer.innerHTML = '';
+
+    question.options.forEach((option, index) => {
+        const optionEl = document.createElement('div');
+        optionEl.className = 'quiz-option';
+        optionEl.textContent = option;
+        optionEl.onclick = () => {
+            // Remove 'selected' from any other option
+            document.querySelectorAll('.quiz-option').forEach(el => el.classList.remove('selected'));
+            // Add 'selected' to the clicked one
+            optionEl.classList.add('selected');
+            selectedOptionIndex = index;
+        };
+        quizOptionsContainer.appendChild(optionEl);
+    });
+
+    const submitBtn = document.getElementById('quizSubmitBtn');
+    submitBtn.textContent = 'Submit';
+    submitBtn.onclick = checkAnswer;
+    submitBtn.disabled = false;
+}
+
+function checkAnswer() {
+    if (selectedOptionIndex === null) {
+        alert("Please select an answer.");
+        return;
+    }
+
+    const question = currentQuizQuestions[currentQuestionIndex];
+    const feedbackEl = document.getElementById('quizFeedback');
+    const options = document.querySelectorAll('.quiz-option');
+    
+    // Disable all options after submission
+    options.forEach(opt => opt.onclick = null);
+
+    if (selectedOptionIndex === question.correctAnswerIndex) {
+        userScore++;
+        feedbackEl.textContent = "Correct!";
+        feedbackEl.className = 'correct';
+        options[selectedOptionIndex].classList.add('correct');
+    } else {
+        feedbackEl.textContent = "Incorrect. The correct answer is highlighted.";
+        feedbackEl.className = 'incorrect';
+        options[selectedOptionIndex].classList.add('incorrect');
+        options[question.correctAnswerIndex].classList.add('correct');
+    }
+
+    const submitBtn = document.getElementById('quizSubmitBtn');
+    if (currentQuestionIndex < currentQuizQuestions.length - 1) {
+        submitBtn.textContent = 'Next Question';
+        submitBtn.onclick = () => {
+            currentQuestionIndex++;
+            displayQuestion();
+        };
+    } else {
+        submitBtn.textContent = 'Show Results';
+        submitBtn.onclick = displayResults;
+    }
+}
+
+function displayResults() {
+    document.getElementById('quizArea').style.display = 'none';
+    document.getElementById('quizSubmitBtn').style.display = 'none';
+
+    const resultsEl = document.getElementById('quizResults');
+    document.getElementById('quizScoreText').textContent = `Your Score: ${userScore} / ${currentQuizQuestions.length}`;
+    resultsEl.style.display = 'block';
+}
+
+function closeQuizModal() {
+    document.getElementById('quizModal').classList.remove('active');
+    // Reset for next time
+    document.getElementById('quizArea').style.display = 'block';
+    document.getElementById('quizSubmitBtn').style.display = 'block';
+    document.getElementById('quizResults').style.display = 'none';
+}
+async function startQuiz() {
+    // 1. Gather Content
+    const quizMeBtn = document.getElementById('quizMeBtn');
+    quizMeBtn.disabled = true;
+    quizMeBtn.textContent = 'Generating...';
+
+    const textContent = gatherReadContent(currentTreeNode);
+    if (textContent.length < 100) { // Require a minimum amount of text
+        alert("You need to read more content before a quiz can be generated.");
+        quizMeBtn.disabled = false;
+        quizMeBtn.textContent = 'Quiz Me On This Topic';
+        return;
+    }
+
+    // 2. Fetch Quiz Questions
+    const questions = await fetchQuiz(textContent);
+    
+    quizMeBtn.disabled = false;
+    quizMeBtn.textContent = 'Quiz Me On This Topic';
+
+    if (!questions || questions.length === 0) {
+        return; // Error is already shown by fetchQuiz
+    }
+
+    // 3. Initialize and Display Quiz
+    currentQuizQuestions = questions;
+    currentQuestionIndex = 0;
+    userScore = 0;
+
+    document.getElementById('quizModal').classList.add('active');
+    displayQuestion();
+}
+ // REPLACE the old parseSyllabusResponse function with this new one.
+
+function parseSyllabusResponse(text) {
+    const sections = [];
+    
+    // This new, more flexible regex handles multiple list formats:
+    // - Numbered lists (e.g., "1. Title")
+    // - Hyphenated lists (e.g., "- Title")
+    // - Asterisk lists (e.g., "* Title")
+    // It also ignores leading whitespace.
+    const flexibleRegex = /^\s*(?:\d+\.|\-|\*)\s+(.+)$/gm;
+    let match;
+
+    while ((match = flexibleRegex.exec(text)) !== null) {
+        // The captured title is in match[1].
+        // We still trim it and remove any markdown bolding.
+        console.log("DEBUG: Regex found a match:", match[0]);
+
+        const title = match[1].replace(/\*\*/g, '').trim(); 
+        
+        sections.push({
+            title: title,
+            content: "", 
+            fullContent: "",
+            isExpanded: false
+        });
+    }
+    
+    // This ensures that even if the AI's response has extra text, 
+    // we can still extract the list items.
+    return sections;
+}
+        // --- NEW: In-Memory Storage for Topics ---
+let learningTopics = {};
+/**
+ * Clears and redraws the topic cards on the landing page from our storage.
+ */
+ function renderTopicCards() {
+    const grid = document.getElementById('topicGrid');
+    grid.innerHTML = ''; // Clear existing cards
+
+    const topicIds = Object.keys(learningTopics);
+
+    if (topicIds.length === 0) {
+        grid.innerHTML = '<p style="color: #71717a; font-size: 16px;">You haven\'t started any topics yet. Click "Learn a new topic" to begin!</p>';
+        return;
+    }
+
+    topicIds.forEach(topicId => {
+        const topic = learningTopics[topicId];
+        const card = document.createElement('div');
+        card.className = 'topic-card'; // Using a new class for styling
+        card.innerHTML = `<h2>${topic.fullTitle || topic.title}</h2><p>Click to continue learning.</p>`;
+
+        // This is important: tells the card which topic to load when clicked
+        card.onclick = () => loadLearningTopic(topicId); 
+
+        grid.appendChild(card);
+    });
+}
+
+/**
+ * Loads a specific topic's data into the learning view.
+ * @param {string} topicId - The ID of the topic to load.
+ */
+function loadLearningTopic(topicId) {
+    const topicData = learningTopics[topicId];
+    if (!topicData) {
+        console.error("Topic not found:", topicId);
+        return;
+    }
+
+    // Set the application's current state to the loaded topic
+    treeStructure = topicData;
+    navigationHistory = []; // Reset history for the new context
+    currentHistoryIndex = -1;
+
+    document.getElementById('sidebarTitle').textContent = treeStructure.fullTitle || treeStructure.title;
+
+    // Navigate to the topic's main screen
+    navigateToNode('root'); 
+
+    switchView('learningView');
+}
+       /**
+ * Resets the learning view and displays the initial syllabus for a new topic.
+ * @param {string} topicTitle - The title of the new topic.
+ * @param {Array<Object>} syllabusSections - An array of section objects for the syllabus.
+ * @param {string} topicId - The unique ID for this new topic.
+ */
+ function startLearningTopic(topicTitle, syllabusSections, topicId) { // <-- 1. Accept topicId
+    // 1. Reset the core data structures
+    navigationHistory = [];
+    currentHistoryIndex = -1;
+
+    // 2. Create a new root node for our topic's tree
+    treeStructure = createTreeNode(topicTitle, null, null);
+    treeStructure.id = 'root'; // Ensure the root ID is always 'root'
+
+    currentTreeNode = treeStructure;
+
+    // 3. Create the content object that our existing functions understand
+    const topicContent = {
+        overview: `An introduction to the key areas of ${topicTitle}. Select a card to begin.`,
+        sections: syllabusSections,
+        definitions: [] // No definitions for this initial view
+    };
+    treeStructure.content = topicContent;
+
+    syllabusSections.forEach(section => {
+    // The content is null for now; it will be fetched when the user clicks.
+    createTreeNode(section.title, null, treeStructure, false); 
+});
+  // --- NEW ---
+    // 2. Save the fully constructed topic data into our storage object.
+    learningTopics[topicId] = treeStructure; 
+    // --- END NEW ---
+    // 4. Update the sidebar title with the new topic
+    document.getElementById('sidebarTitle').textContent = topicTitle;
+
+    // 5. Navigate to the new root node to display its content
+    navigateToNode('root');
+
+    // 6. Switch to the learning view
+    switchView('learningView');
+}
+
+        const BACKEND_URL = 'http://localhost:3000';
+        
+        // Navigation and content management
+        let navigationHistory = [];
+        let currentHistoryIndex = -1;
+        let treeStructure = {
+            id: 'root',
+            title: 'Home',
+            content: null,
+            children: [],
+            isUserQuestion: false,
+            sectionIndex: null
+        };
+        let currentTreeNode = treeStructure;
+        let nodeIdCounter = 0;
+
+        // Current context tracking
+        let currentContext = {
+            topic: null,
+            subtopic: null,
+            fullContent: null
+        };
+
+        // Initialize conversation history
+        // Initialize conversation history
+// Initialize conversation history
+// Initialize conversation history
+
+// --- NEW: View and Modal Management Functions ---
+
+/**
+ * Hides all views and shows the one with the specified ID.
+ * @param {string} viewId - The ID of the view to show ('landingView' or 'learningView').
+ */
+ function switchView(viewId) {
+    // Hide all views first
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    // Show the requested view
+    document.getElementById(viewId).classList.add('active');
+}
+
+/**
+ * Opens the "New Topic" modal dialog.
+ */
+function openNewTopicModal() {
+    newTopicModal.classList.add('active');
+}
+
+/**
+ * Closes the "New Topic" modal dialog.
+ */
+function closeNewTopicModal() {
+    newTopicModal.classList.remove('active');
+    document.getElementById('topicInput').value = ''; // Clear input on close
+}
+
+/**
+ * Handles the submission of a new topic from the modal.
+ */
+/**
+ * Handles the submission of a new topic from the modal.
+ */
+ /**
+ * Handles the submission of a new topic from the modal.
+ */
+/**
+ * Handles the submission of a new topic from the modal by calling the Gemini API.
+ */
+ /**
+ * Handles the submission of a new topic from the modal by calling the Gemini API.
+ */
+/**
+ * Handles the submission of a new topic from the modal by calling the local backend server.
+ */
+ async function handleNewTopicSubmit() {
+    const topic = document.getElementById('topicInput').value.trim();
+    const sophistication = document.querySelector('.sophistication-option.active').dataset.level;
+
+    if (!topic) {
+        alert('Please enter a topic to learn about.');
+        return;
+    }
+
+    showModalLoading(true);
+
+// Replace this old prompt:
+// const prompt = `You are a very knowledgeable teacher...`;
+
+// With this new one:
+const prompt = `You are an expert, rigorous and intellectual curriculum designer. Your task is to design a unique syllabus for "${topic}" for a "${sophistication}" audience. Create a numbered list of 4-8 unique and compelling modules that cover on a high level the scope of the topic. These modules should be specific to the topic and not generic at all. Avoid things like historical background or other overly broad or general titles. The topics will be primarily STEM and so are more about learning concepts than learning history or context. **Provide only the titles.** Avoid generic titles like "Introduction," or "Key Concepts." The format MUST be a simple numbered list (e.g., "1. Title One", "2. Title Two"). Do not add any extra text, descriptions, or bolding.`;
+try {
+        // --- THIS IS THE CORRECTED API CALL LOGIC ---
+        // We create a temporary history for this one-off request.
+        const syllabusConversation = [
+            { role: "system", content: "You are an educational assistant specializing in creating a syllabus." },
+            { role: "user", content: prompt }
+        ];
+
+        // Make the fetch call to YOUR backend server, just like in your original code.
+        const response = await fetch(BACKEND_URL + '/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: syllabusConversation }) // Send the messages in the expected format
+        });
+        // --- END OF CORRECTION ---
+
+        if (!response.ok) {
+            // The detailed error handling we added before will now work correctly with your server.
+            let errorDetails = `Status code: ${response.status}`;
+            try {
+                const errorData = await response.json();
+                if (errorData.error && errorData.error.message) {
+                    errorDetails += ` - ${errorData.error.message}`;
+                } else if (errorData.message) {
+                    errorDetails += ` - ${errorData.message}`;
+                }
+            } catch (e) {
+                errorDetails += ` - ${response.statusText}`;
+            }
+            throw new Error(`API response was not ok. ${errorDetails}`);
+        }
+
+        const result = await response.json();
+
+        // Extract the response text, same as your original code
+       // --- REPLACE THE OLD 'if' BLOCK WITH THIS CLEANER VERSION ---
+       if (result.choices && result.choices[0] && result.choices[0].message) {
+            const responseText = result.choices[0].message.content;
+            console.log("DEBUG: Raw text received from AI:", responseText);
+
+            // Use our new, single catch-all function
+            const syllabusSections = universalParseSyllabus(responseText);
+
+            if (syllabusSections.length === 0) {
+                 throw new Error("The AI didn't return a valid syllabus. Please try a different topic.");
+            }
+
+            const newTopicId = `topic-${Date.now()}`;
+            closeNewTopicModal();
+            startLearningTopic(topic, syllabusSections, newTopicId);
+
+        } else {
+            throw new Error('Unexpected API response structure from backend.');
+        }
+        // --- END OF REPLACEMENT BLOCK ---
+
+    } catch (error) {
+        console.error("Error fetching syllabus:", error);
+        alert(`An error occurred: ${error.message}`);
+    } finally {
+        showModalLoading(false);
+    }
+}
+
+let conversationHistory = [
+            {
+                role: "system",
+                content: `You are an educational assistant specializing in finance and economics. 
+                Your response MUST be plain text with markdown formatting for bolding and lists.
+                You MUST NOT use JSON, code blocks, or backticks in your response.
+                Do not add any conversational fluff or introductory sentences.`
+            }
+        ];
+        // Parse response with markdown support
+        // Parse response with markdown support and definitions
+// Parse response which is now a full JSON object
+// This function now receives the answer text and definitions array directly
+// Replace the entire parseResponse function
+
+function parseResponse(mainContentText, definitionsArray) {
+    console.log("LOG #1 - Combining answer with definitions:", { mainContentText, definitionsArray });
+
+    const result = {
+        overview: '',
+        sections: [],
+        definitions: definitionsArray || []
+    };
+
+    // 1. First, process the entire text for markdown and paragraphs.
+    // This regex converts **text** to <strong>text</strong>
+    let processedText = mainContentText.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'); 
+
+    // This regex finds blocks of text separated by two newlines (a paragraph)
+    // and wraps each block in <p> tags for proper spacing.
+    processedText = processedText
+        .split(/\n\s*\n/) // Split by one or more empty lines
+        .map(p => p.trim()) // Trim whitespace from each paragraph
+        .filter(p => p) // Remove any empty paragraphs
+        .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`) // Wrap in <p> and convert single newlines to <br>
+        .join('');
+
+    // 2. Now, assign the fully processed text to the overview.
+    // The rest of the function is simpler now.
+    result.overview = processedText;
+
+    // The old logic for splitting into sections can be removed,
+    // as we are now treating the AI response as a single block of formatted content.
+    
+    return result;
+}
+// Create a new helper function to wrap terms in special HTML
+// In your <script> tag...
+
+    function applyTermHighlighting(text, definitions) {
+            console.log("LOG #3 - Highlighting function called.");
+            if (!definitions || definitions.length === 0) {
+                return text; // If there are no definitions, return the text as is
+            }
+
+            // *** THIS IS THE FIX ***
+            // Sort definitions by term length, longest first, to avoid nested replacements.
+            const sortedDefinitions = definitions.sort((a, b) => b.term.length - a.term.length);
+
+            // Use the new sorted array in the loop
+            sortedDefinitions.forEach(def => {
+                // The rest of your function remains the same...
+                // The regex looks for whole words to avoid replacing 'equity' inside 'private_equity'
+                const regex = new RegExp(`\\b${def.term}\\b(?![^<]*?>)`, 'gi');
+                
+                const sanitizedDefinition = def.definition.replace(/"/g, '&quot;');
+                const replacement = `<span class="technical-term">${def.term}<span class="term-tooltip">${sanitizedDefinition}</span></span>`;
+
+                text = text.replace(regex, replacement);
+            });
+
+            return text;
+        }
+        // Create tree node
+        function createTreeNode(title, content, parent, isUserQuestion = false) {
+            const node = {
+                id: `node-${++nodeIdCounter}`,
+                title: title.length > 30 ? title.substring(0, 30) + '...' : title,
+                fullTitle: title,
+                content: content,
+                parent: parent,
+                children: [],
+                isUserQuestion: isUserQuestion,
+                sectionIndex: null,
+                isRead: false
+            };
+            
+            if (parent) {
+                parent.children.push(node);
+                // Update section indices for all non-question siblings
+                updateSectionIndices(parent);
+            }
+            
+            return node;
+        }
+
+        // Update section indices for children
+        function updateSectionIndices(parent) {
+            let sectionCount = 0;
+            parent.children.forEach(child => {
+                if (!child.isUserQuestion) {
+                    sectionCount++;
+                    child.sectionIndex = sectionCount;
+                }
+            });
+        }
+
+        // Update tree visualization
+        function updateTreeVisualization() {
+            const container = document.getElementById('treeContainer');
+            container.innerHTML = renderTreeNode(treeStructure);
+            
+            // Auto-scroll to show the active node
+            setTimeout(() => {
+                const activeNode = container.querySelector('.tree-node-content.active');
+                if (activeNode) {
+                    activeNode.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'end' });
+                }
+            }, 100);
+        }
+
+        // Render tree node
+        function renderTreeNode(node, level = 0) {
+            const icon = node.id === 'root' ? '🏠' : 
+                        node.isUserQuestion ? '❓' : 
+                        node.sectionIndex ? `${node.sectionIndex}.` : '📄';
+            
+            // Conditionally create the status indicator HTML, excluding the root node
+            const statusIndicatorHTML = node.id !== 'root' ? 
+                `<div class="tree-status-indicator ${node.isRead ? 'read' : ''}"></div>` : 
+                '';
+
+            let html = `
+                <div class="tree-node" style="margin-left: ${level * 25}px;">
+                    <div class="tree-node-content ${node === currentTreeNode ? 'active' : ''}" 
+                         onclick="navigateToNode('${node.id}')"
+                         title="${node.fullTitle || node.title}">
+                        
+                        ${statusIndicatorHTML}
+
+                        <span class="tree-node-icon">${icon}</span>
+                        <span class="tree-node-text">${node.title}</span>
+                    </div>
+            `;
+            
+            if (node.children.length > 0) {
+                html += '<div class="tree-children">';
+                node.children.forEach(child => {
+                    html += renderTreeNode(child, level + 1);
+                });
+                html += '</div>';
+            }
+            
+            html += '</div>';
+            return html;
+        }
+        // Navigate to tree node
+        async function navigateToNode(nodeId) {
+            const node = findNodeById(treeStructure, nodeId);
+            if (node) {
+                if (node.children.length === 0 && !node.content && node.id !== 'root') {
+            
+            // This function fetches the content from the API. It will then call
+            // navigateToNode again, but the second time the content will exist.
+            await elaborateOnTopic(node, false);             
+            // Stop the rest of this function from running, because elaborateOnTopic
+            // has already handled the navigation.
+            return; 
+        }
+                // *** LOGIC TO MARK NODE AS READ IS ADDED HERE ***
+                // We only mark it as read if it's a content node (doesn't have children).
+                // The status of parent nodes is determined by the `updateParentReadStatus` function.
+                if (node.children.length === 0) {
+                    node.isRead = true;
+                    // After marking this node, check if its parent is now fully read.
+                    updateParentReadStatus(node.parent);
+                }
+
+                // Add to navigation history
+                navigationHistory = navigationHistory.slice(0, currentHistoryIndex + 1);
+                navigationHistory.push({
+                    node: node,
+                    content: JSON.parse(JSON.stringify(node.content)), // Deep copy
+                    context: {
+                        topic: node.fullTitle || node.title,
+                        subtopic: null,
+                        fullContent: node.content
+                    }
+                });
+                currentHistoryIndex = navigationHistory.length - 1;
+                
+                currentTreeNode = node;
+                currentContext = navigationHistory[currentHistoryIndex].context;
+                
+                updateNavigation();
+                displayContent(node);
+                updateTreeVisualization(); // This will redraw the tree with the new 'read' status
+            }
+        }
+
+        // Find node by ID
+        function findNodeById(node, id) {
+            if (node.id === id) return node;
+            for (let child of node.children) {
+                const found = findNodeById(child, id);
+                if (found) return found;
+            }
+            return null;
+        }
+
+        // Update navigation buttons and breadcrumb
+        function updateNavigation() {
+            const backButton = document.getElementById('backButton');
+            const forwardButton = document.getElementById('forwardButton');
+            
+            backButton.disabled = currentHistoryIndex <= 0;
+            forwardButton.disabled = currentHistoryIndex >= navigationHistory.length - 1;
+            
+            updateBreadcrumb();
+        }
+
+        // Update breadcrumb
+        function updateBreadcrumb() {
+            const breadcrumb = document.getElementById('breadcrumb');
+            breadcrumb.innerHTML = '';
+            
+            // Build path from current node to root
+            let path = [];
+            let node = currentTreeNode;
+            while (node) {
+                path.unshift(node);
+                node = node.parent;
+            }
+            
+            path.forEach((node, index) => {
+                const crumb = document.createElement('span');
+                crumb.className = 'breadcrumb-item';
+                if (node === currentTreeNode) {
+                    crumb.classList.add('active');
+                }
+                crumb.textContent = node.title;
+                
+                breadcrumb.appendChild(crumb);
+                
+                if (index < path.length - 1) {
+                    const separator = document.createElement('span');
+                    separator.className = 'breadcrumb-separator';
+                    separator.textContent = '›';
+                    breadcrumb.appendChild(separator);
+                }
+            });
+        }
+
+        // Navigate back
+        function navigateBack() {
+            if (currentHistoryIndex > 0) {
+                currentHistoryIndex--;
+                const historyItem = navigationHistory[currentHistoryIndex];
+                currentTreeNode = historyItem.node;
+                currentContext = historyItem.context;
+                displayContent(historyItem.node, historyItem.content);
+                updateNavigation();
+                updateTreeVisualization();
+            }
+        }
+
+        // Navigate forward
+        function navigateForward() {
+            if (currentHistoryIndex < navigationHistory.length - 1) {
+                currentHistoryIndex++;
+                const historyItem = navigationHistory[currentHistoryIndex];
+                currentTreeNode = historyItem.node;
+                currentContext = historyItem.context;
+                displayContent(historyItem.node, historyItem.content);
+                updateNavigation();
+                updateTreeVisualization();
+            }
+        }
+
+        // Display content
+        function displayContent(node, preservedContent = null) {
+            const mainContent = document.getElementById('mainContent');
+            
+            if (node.id === 'root' && !node.content) {
+                mainContent.innerHTML = `
+                    <div class="welcome-message">
+                        <h1>What do you want to learn?</h1>
+                        <p>Explore finance and economics through an interactive learning journey</p>
+                        <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-top: 40px;">
+                            <button class="card" style="padding: 15px 25px; cursor: pointer;" onclick="askQuestion('How does the central bank work?')">
+                                <span style="font-size: 16px;">🏦 Central Banking</span>
+                            </button>
+                            <button class="card" style="padding: 15px 25px; cursor: pointer;" onclick="askQuestion('What are securities and their types?')">
+                                <span style="font-size: 16px;">📈 Securities</span>
+                            </button>
+                            <button class="card" style="padding: 15px 25px; cursor: pointer;" onclick="askQuestion('Explain bonds and how they work')">
+                                <span style="font-size: 16px;">📊 Bonds</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                updatePlaceholder(false);
+            } else if (node.content || preservedContent) {
+                renderContent(preservedContent || node.content, node.fullTitle || node.title);
+                updatePlaceholder(true);
+            }
+        }
+
+        // Render content
+function renderContent(parsedContent, userQuestion = null) {
+    console.log("LOG #2 - Content renderer received definitions:", parsedContent.definitions);
+    const mainContent = document.getElementById('mainContent');
+            mainContent.innerHTML = '';
+
+            if (userQuestion) {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'topic-overview';
+                questionDiv.innerHTML = `<h3 style="font-size: 20px; margin-bottom: 0;">Your Question:</h3><p style="margin-top: 10px;">"${userQuestion}"</p>`;
+                mainContent.appendChild(questionDiv);
+            }
+
+            if (parsedContent.overview) {
+                const overviewDiv = document.createElement('div');
+                overviewDiv.className = 'topic-overview';
+                
+                // Format the overview to handle lists
+                let formattedOverview = parsedContent.overview;
+                
+                // Convert bullet points to HTML list
+                const lines = formattedOverview.split('\n');
+                let inList = false;
+                let processedLines = [];
+                
+                lines.forEach(line => {
+                    if (line.trim().match(/^[•\-]\s+/)) {
+                        if (!inList) {
+                            processedLines.push('<ul>');
+                            inList = true;
+                        }
+                        processedLines.push(`<li>${line.trim().replace(/^[•\-]\s+/, '')}</li>`);
+                    } else {
+                        if (inList && line.trim() !== '') {
+                            processedLines.push('</ul>');
+                            inList = false;
+                        }
+                        if (line.trim() !== '') {
+                            processedLines.push(line);
+                        }
+                    }
+                });
+                
+                if (inList) {
+                    processedLines.push('</ul>');
+                }
+                
+                formattedOverview = processedLines.join('\n');
+                
+                // Highlight terms in the overview before displaying it
+                const highlightedOverview = applyTermHighlighting(formattedOverview, parsedContent.definitions);
+                overviewDiv.innerHTML = `<h2>Overview</h2><div>${highlightedOverview}</div>`;
+                mainContent.appendChild(overviewDiv);
+            }
+
+            let hasExpandedContent = false;
+
+            if (parsedContent.sections && parsedContent.sections.length > 0) {
+                const hasCards = parsedContent.sections.some(s => !s.isExpanded);
+                
+                if (hasCards) {
+                    const cardsGrid = document.createElement('div');
+                    cardsGrid.className = 'cards-grid';
+                    
+                    parsedContent.sections.forEach((section, index) => {
+                    if (!section.isExpanded) {
+                        // Find the child node that matches this section title
+                        const childNode = currentTreeNode.children.find(child => 
+                            child.fullTitle === section.title || child.title === section.title
+                        );
+                        // Check if the node exists and is read
+                        const isNodeRead = childNode ? childNode.isRead : false;
+
+                        // Pass this status to the createCard function
+                        const card = createCard(section, index, isNodeRead);
+                        cardsGrid.appendChild(card);
+                    }
+                });
+                    
+                    mainContent.appendChild(cardsGrid);
+                }
+                
+                // Display expanded content
+                parsedContent.sections.forEach(section => {
+                    if (section.isExpanded && section.fullContent) {
+                        hasExpandedContent = true;
+                        const contentDiv = document.createElement('div');
+                        contentDiv.className = 'content-section';
+                        
+                        // Format the content to handle lists
+                        let formattedContent = section.fullContent;
+                        
+                        // Convert bullet points to HTML list
+                        const lines = formattedContent.split('\n');
+                        let inList = false;
+                        let processedLines = [];
+                        
+                        lines.forEach(line => {
+                            if (line.trim().match(/^[•\-]\s+/)) {
+                                if (!inList) {
+                                    processedLines.push('<ul>');
+                                    inList = true;
+                                }
+                                processedLines.push(`<li>${line.trim().replace(/^[•\-]\s+/, '')}</li>`);
+                            } else {
+                                if (inList && line.trim() !== '') {
+                                    processedLines.push('</ul>');
+                                    inList = false;
+                                }
+                                if (line.trim() !== '') {
+                                    processedLines.push(line);
+                                }
+                            }
+                        });
+                        
+                        if (inList) {
+                            processedLines.push('</ul>');
+                        }
+                        
+                        formattedContent = processedLines.join('\n');
+                        
+                        // Highlight terms in the detailed content before displaying it
+                        const highlightedContent = applyTermHighlighting(formattedContent, parsedContent.definitions);
+                        
+                        contentDiv.innerHTML = `
+                            <h3>${section.title}</h3>
+                            <div>${highlightedContent}</div>
+                        `;
+                        mainContent.appendChild(contentDiv);
+                    }
+                });
+            }
+            
+            // Add "Tell me more" button for single expanded content or when showTellMeMore is true
+            if (parsedContent.showTellMeMore || 
+                (hasExpandedContent && parsedContent.sections && parsedContent.sections.filter(s => !s.isExpanded).length === 0) ||
+                (parsedContent.overview && (!parsedContent.sections || parsedContent.sections.length === 0))) {
+                const tellMeMoreBtn = document.createElement('button');
+                tellMeMoreBtn.className = 'tell-me-more-button';
+                tellMeMoreBtn.innerHTML = `
+                    Tell me more about this
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14m0 0l-7-7m7 7l7-7"/>
+                    </svg>
+                `;
+                tellMeMoreBtn.onclick = () => elaborateOnCurrent();
+                mainContent.appendChild(tellMeMoreBtn);
+            }
+                // --- START OF NEW CODE FOR QUIZ BUTTON ---
+    let hasReadContent = false;
+    if (currentTreeNode.children.length > 0) {
+        // Check if any of the children nodes have been read
+        hasReadContent = currentTreeNode.children.some(child => child.isRead);
+    }
+    
+    // If there is read content, show the "Quiz Me" button
+    if (hasReadContent) {
+        const quizMeBtn = document.createElement('button');
+        quizMeBtn.className = 'tell-me-more-button'; // Re-using an existing style
+        quizMeBtn.id = 'quizMeBtn';
+        quizMeBtn.innerHTML = `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8.5L14.5 2z"></path><polyline points="14 2 14 9 21 9"></polyline><path d="M12 18d-2-2-2-2"></path><path d="M12 18c2-2 2-2 0-4"></path><path d="M12 18c-2-2 0-4-2-4"></path></svg>
+            Quiz Me On This Topic
+        `;
+        quizMeBtn.onclick = () => startQuiz(); // This will be our main controller function
+        mainContent.appendChild(quizMeBtn);
+    }
+    // --- END OF NEW CODE FOR QUIZ BUTTON ---
+        }
+
+        // Create card element
+        // Update the function signature to accept isRead
+        function createCard(section, index, isRead) { 
+            const card = document.createElement('div');
+            card.className = 'card';
+            
+            const displayContent = section.content ? 
+                (section.content.length > 80 ? section.content.substring(0, 80) + '...' : section.content) : '';
+            
+            card.innerHTML = `
+                <div class="status-indicator ${isRead ? 'read' : ''}"></div>
+
+                <h3>
+                    ${section.title}
+                </h3>
+                ${displayContent ? `<p>${displayContent}</p>` : ''}
+            `;
+            
+            card.onclick = () => expandCard(section, index);
+            return card;
+
+
+
+         
+        }
+
+        // Expand card
+       // Replace the entire expandCard function
+ // REPLACE the entire function
+async function expandCard(section, index) {
+    currentContext.subtopic = section.title;
+
+    // Find the specific child node in our tree that matches the clicked card.
+    const childNodeToLoad = currentTreeNode.children.find(child => child.fullTitle === section.title);
+
+    if (childNodeToLoad) {
+        // --- THIS IS THE NEW LOGIC ---
+        // First, check if the content for this node has ALREADY been loaded.
+        if (childNodeToLoad.content) {
+            // If content exists, just navigate to it to display it. No API call needed.
+            console.log("Content already exists. Navigating directly.");
+            navigateToNode(childNodeToLoad.id);
+        } else {
+            // If content is null, THEN and only then do we fetch it from the API.
+            console.log("Content does not exist. Fetching from API.");
+            await elaborateOnTopic(childNodeToLoad, false);
+        }
+        // --- END OF NEW LOGIC ---
+    } else {
+        console.error("Could not find the tree node corresponding to the clicked card:", section.title);
+        showError("An error occurred trying to load this section.");
+    }
+}
+
+        // Update placeholder text
+        function updatePlaceholder(hasQuestion) {
+            const chatInput = document.getElementById('chatInput');
+            chatInput.placeholder = hasQuestion ? "Any further questions?" : "Ask about finance or economics...";
+        }
+
+        // Elaborate on current context
+        async function elaborateOnCurrent() {
+            const contextInfo = currentContext.subtopic || currentContext.topic;
+            if (contextInfo) {
+                // The `true` argument tells the function to generate a new list of cards.
+                await elaborateOnTopic(currentTreeNode, true);
+            }
+        }
+
+        // Ask for elaboration
+        // Elaborate on a specific topic, creating new sub-nodes in the tree
+        // REPIACE the entire function
+async function elaborateOnTopic(targetNode, generateNewCards = false) {
+    // The topic is now derived from the node we passed in.
+    const topic = targetNode.fullTitle; 
+
+    let contextPrompt = '';
+    // Use the node's parent to establish context, which is more reliable.
+    if (targetNode.parent && targetNode.parent.id !== 'root') {
+        contextPrompt = `In the context of "${targetNode.parent.fullTitle}", `;
+    }
+
+    const elaborationPrompt = generateNewCards 
+        ? `${contextPrompt}break down the sub-topic "${topic}" into a numbered list of 3-7 unique and compelling follow-up areas. Provide only the titles in a simple numbered list format. Do not add descriptions or bolding.`
+        : `You are an expert educator. Your task is to explain the topic "${topic}"${contextPrompt}.
+        
+        Your response MUST be a single, valid JSON object with no other text before or after it.
+        The JSON object must have two keys: "explanation" and "definitions".
+        
+        1.  In the "explanation" value, provide a detailed, two-paragraph explanation of the topic.
+        2.  In the "definitions" value, provide an array of objects. For each object, identify a technical term from your explanation and provide a simple, one-sentence definition for it in the context of the topic.
+        
+        Example JSON structure:
+        {
+          "explanation": "A detailed two-paragraph explanation goes here...",
+          "definitions": [
+            { "term": "Technical Term 1", "definition": "A simple one-sentence definition." },
+            { "term": "Technical Term 2", "definition": "Another simple definition." }
+          ]
+        }
+        `;
+    showLoading(true);
+
+    try {
+        conversationHistory.push({ role: "user", content: elaborationPrompt });
+        pruneConversationHistory();
+
+        const response = await fetch(BACKEND_URL + '/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: conversationHistory })
+        });
+
+        if (!response.ok) throw new Error('Failed to get response');
+
+        const data = await response.json();
+        const botResponse = data.choices[0].message.content;
+        conversationHistory.push({ role: "assistant", content: botResponse });
+
+        // There is NO MORE GUESSWORK. We are working directly on the targetNode.
+        
+        let parsed;
+        if (generateNewCards) {
+            parsed = { overview: `Here are some deeper areas to explore for ${topic}.`, sections: parseSyllabusResponse(botResponse), definitions: [] };
+            targetNode.children = [];
+            parsed.sections.forEach(section => {
+                createTreeNode(section.title, null, targetNode, false);
+            });
+        } else {
+            // --- REPLACE the old 'else' block content with this ---
+            try {
+                // The AI response should be a JSON string.
+                const botResponseText = data.choices[0].message.content;
+                const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) throw new Error("No valid JSON object found in the AI response.");
+                
+                // Parse the JSON to get the explanation and definitions
+                const structuredResponse = JSON.parse(jsonMatch[0]);
+                const explanation = structuredResponse.explanation || "No explanation provided.";
+                const definitions = structuredResponse.definitions || [];
+
+                // Use our existing parseResponse function to format the text and package the data
+                parsed = parseResponse(explanation, definitions);
+                parsed.showTellMeMore = true;
+
+            } catch (e) {
+                console.error("Failed to parse structured response from AI:", e);
+                // Fallback to plain text display if JSON fails
+                parsed = parseResponse(data.choices[0].message.content, []);
+            }
+            // --- END OF REPLACEMENT ---
+        }
+
+        targetNode.content = parsed;
+        navigateToNode(targetNode.id);
+
+    } catch (error) {
+        console.error("Error in elaborateOnTopic:", error);
+        showError('Failed to get more information. Please try again.');
+    } finally {
+        showLoading(false);
+    }
+}
+
+        // Send message
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            await askQuestion(message);
+            input.value = '';
+        }
+
+        // Ask question
+        async function askQuestion(question) {
+            showLoading(true);
+            
+            try {
+                                // Create a new top-level node for the user's question
+                const newNode = createTreeNode(
+                    question.length > 50 ? question.substring(0, 50) + '...' : question,
+                    null, // Content is initially null
+                    currentTreeNode,
+                    true
+                );
+                newNode.fullTitle = question;
+
+                // Set the context immediately
+                currentContext = { topic: question, subtopic: null, fullContent: null };
+
+                // Now, call elaborateOnTopic to get the sub-topic cards for the question.
+                // The "true" flag tells it to generate new cards.
+                await elaborateOnTopic(newNode, true);
+
+                updatePlaceholder(true);
+                } catch (error) {
+                console.error("Error in askQuestion:", error);
+                // Display the specific error message we created in our check.
+                showError(error.message || 'Failed to get response. Please check your connection.');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Show loading state
+        function showLoading(isLoading) {
+            const sendButton = document.getElementById('sendButton');
+            const buttonText = document.getElementById('buttonText');
+            const input = document.getElementById('chatInput');
+            
+            if (isLoading) {
+                sendButton.disabled = true;
+                input.disabled = true;
+                buttonText.textContent = 'Loading';
+                if (!sendButton.querySelector('.loading-spinner')) {
+                    const spinner = document.createElement('span');
+                    spinner.className = 'loading-spinner';
+                    sendButton.insertBefore(spinner, buttonText);
+                }
+            } else {
+                sendButton.disabled = false;
+                input.disabled = false;
+                buttonText.textContent = 'Send';
+                const spinner = sendButton.querySelector('.loading-spinner');
+                if (spinner) spinner.remove();
+            }
+        }
+
+        // Show error
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Event listeners
+        document.getElementById('chatInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Check backend connection
+        // Check backend connection
+// Check backend connection
+async function checkConnection() {
+            try {
+                // This message is now created here and NOT added to the main conversation history.
+                const testMessage = [{
+                    role: "system",
+                    content: "You are a health check assistant. If you receive the message 'test', respond with 'ok'."
+                }, {
+                    role: "user",
+                    content: "test"
+                }];
+
+                const response = await fetch(BACKEND_URL + '/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        messages: testMessage
+                    })
+                });
+
+                if (!response.ok) {
+                    showError('Backend not connected. Please start your server.');
+                }
+            } catch (error) {
+                showError('Backend not connected. Please start your server at ' + BACKEND_URL);
+            }
+        }
+
+        // Initialize
+        checkConnection();
+        updateTreeVisualization();
+        
+        // Add initial navigation entry
+        navigationHistory.push({
+            node: treeStructure,
+            content: null,
+            context: {
+                topic: 'Home',
+                subtopic: null,
+                fullContent: null
+            }
+        });
+    
+        currentHistoryIndex = 0;
+
+        // New function to keep the conversation history from getting too long
+        function pruneConversationHistory() {
+            const maxHistoryLength = 5; // Keeps the system prompt + the last 2 Q&A pairs
+            if (conversationHistory.length > maxHistoryLength) {
+                // It keeps the first item (system prompt) and takes the last few items
+                const keptHistory = conversationHistory.slice(-maxHistoryLength + 1);
+                conversationHistory = [conversationHistory[0], ...keptHistory];
+            }
+        }
+        // --- RESIZABLE SIDEBAR LOGIC ---
+
+        // Wait until the document is fully loaded to run this script
+        document.addEventListener('DOMContentLoaded', function () {
+            const handle = document.getElementById('dragHandle');
+            const sidebar = document.getElementById('treeSidebar');
+            
+            // A flag to check if we are currently dragging
+            let isDragging = false;
+            let startX;
+            let startWidth;
+
+            // When the mouse button is pressed down on the handle
+            handle.addEventListener('mousedown', function (e) {
+                // Prevent default browser actions, like text selection
+                e.preventDefault();
+                
+                isDragging = true;
+                startX = e.clientX; // Record the initial mouse X position
+                startWidth = parseInt(document.defaultView.getComputedStyle(sidebar).width, 10); // Record the initial width of the sidebar
+                
+                // Add listeners to the whole document to track mouse movement and release
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseup', handleMouseUp);
+                
+                // Add a style to the body to prevent text selection during drag
+                document.body.style.userSelect = 'none';
+                document.body.style.pointerEvents = 'none'; // Prevents other elements from interfering
+            });
+
+            // When the mouse is moved anywhere on the page
+            function handleMouseMove(e) {
+                if (!isDragging) return;
+                
+                // Calculate the distance the mouse has moved
+                const dx = e.clientX - startX;
+                
+                // Calculate the new width and apply it.
+                // We enforce a minimum and maximum width to prevent the layout from breaking.
+                const newWidth = Math.max(200, Math.min(600, startWidth + dx));
+                sidebar.style.width = newWidth + 'px';
+            }
+
+            // When the mouse button is released
+            function handleMouseUp() {
+                if (!isDragging) return;
+                
+                isDragging = false;
+                
+                // IMPORTANT: Remove the listeners from the document
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+
+                // Restore the default body styles
+                document.body.style.userSelect = '';
+                document.body.style.pointerEvents = '';
+            }
+             // --- NEW: DOM Element References ---
+         const landingView = document.getElementById('landingView');
+        const learningView = document.getElementById('learningView');
+        const newTopicModal = document.getElementById('newTopicModal');
+        // --- NEW: Event Listeners ---
+document.getElementById('newTopicBtn').addEventListener('click', openNewTopicModal);
+document.getElementById('cancelTopicBtn').addEventListener('click', closeNewTopicModal);
+document.getElementById('submitTopicBtn').addEventListener('click', handleNewTopicSubmit);
+document.getElementById('mainMenuBtn').addEventListener('click', () => {
+    renderTopicCards(); // Redraw the landing page
+
+    switchView('landingView');
+});
+// Handle clicks on the sophistication slider
+document.getElementById('sophisticationSlider').addEventListener('click', (e) => {
+    if (e.target.classList.contains('sophistication-option')) {
+        // Remove 'active' from all options
+        document.querySelectorAll('.sophistication-option').forEach(opt => opt.classList.remove('active'));
+        // Add 'active' to the clicked option
+        e.target.classList.add('active');
+    }
+});
+
+// Close modal if user clicks on the overlay background
+newTopicModal.addEventListener('click', (e) => {
+    if (e.target === newTopicModal) {
+        closeNewTopicModal();
+    }
+});
+
+// Initialize the app on the landing page
+switchView('landingView');
+        });
+        // Checks if all children of a node are read and updates the parent's status
+        function updateParentReadStatus(parentNode) {
+            // Do nothing if there's no parent or the parent has no children
+            if (!parentNode || !parentNode.children || parentNode.children.length === 0) {
+                return;
+            }
+
+            // Check if every child node is marked as read
+            const allChildrenAreRead = parentNode.children.every(child => child.isRead);
+
+            // Update the parent's read status
+            parentNode.isRead = allChildrenAreRead;
+        }
+        
+    </script>
+    <!-- New Topic Modal -->
+<div class="modal-overlay" id="newTopicModal">
+    <div class="modal-content">
+        <h2>Start a New Topic</h2>
+        <label for="topicInput">I want to learn about:</label>
+        <input type="text" id="topicInput" class="modal-input" placeholder="e.g., 'Quantum Physics' or 'Ancient Rome'">
+
+        <label>Sophistication Level:</label>
+        <div class="sophistication-slider" id="sophisticationSlider">
+            <div class="sophistication-option active" data-level="Simple">Simple</div>
+            <div class="sophistication-option" data-level="Detailed">Detailed</div>
+            <div class="sophistication-option" data-level="Expert">Expert</div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="modal-btn cancel" id="cancelTopicBtn">Cancel</button>
+            <button class="modal-btn submit" id="submitTopicBtn">Submit</button>
+        </div>
+    </div>
+</div>
+<div class="modal-overlay" id="quizModal">
+    <div class="modal-content" style="max-width: 700px;">
+        <h2 id="quizTitle">Topic Quiz</h2>
+        <div id="quizArea">
+            <p id="quizQuestionText" style="font-size: 18px; margin-bottom: 25px;"></p>
+            <div id="quizOptions" class="cards-grid" style="grid-template-columns: 1fr; gap: 10px;">
+                </div>
+            <p id="quizFeedback" style="margin-top: 20px; font-weight: 600;"></p>
+        </div>
+        <div id="quizResults" style="display: none;">
+            <h3>Quiz Complete!</h3>
+            <p id="quizScoreText" style="font-size: 24px; margin: 20px 0;"></p>
+            <button class="modal-btn submit" onclick="closeQuizModal()">Finish</button>
+        </div>
+        <div class="modal-actions" style="margin-top: 30px;">
+             <button class="modal-btn cancel" onclick="closeQuizModal()">Close</button>
+             <button class="modal-btn submit" id="quizSubmitBtn">Submit</button>
+        </div>
+    </div>
+</div>
+</body>
+</html>
