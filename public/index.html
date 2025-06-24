@@ -987,7 +987,7 @@ const firebaseConfig = {
   measurementId: "G-N4N54809FB"
 };
 
-// Initialize Firebase
+// Initialize Fireba
 const app = firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
@@ -1043,7 +1043,7 @@ async function saveTopicsToFirestore() {
                 // that Firestore can store.
                 topics: JSON.parse(JSON.stringify(learningTopics)) 
             });
-            console.log("Topics saved successfully!");
+            console.log("Topics saved successsfully!");
         } catch (error) {
             console.error("Error saving topics: ", error);
         }
