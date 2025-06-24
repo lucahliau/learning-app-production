@@ -129,6 +129,14 @@
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 20px;
 }
+/* --- Add this new rule to your <style> block --- */
+    #topicGrid.empty {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* Sets the grid to take up a significant portion of the view height */
+    min-height: 60vh; 
+}
 
 /* --- ADD THESE NEW STYLES FOR THE TOPIC CARD --- */
 .topic-card {
@@ -1689,13 +1697,21 @@ let currentTopicId = null; // <-- ADD THIS LINE
  /**
  * Clears and redraws the topic cards on the landing page from our storage.
  */
-function renderTopicCards() {
+/**
+ * Clears and redraws the topic cards on the landing page from our storage.
+ */
+ function renderTopicCards() {
     const grid = document.getElementById('topicGrid');
     grid.innerHTML = ''; // Clear existing cards
+
+    // Remove the 'empty' class by default
+    grid.classList.remove('empty'); 
 
     const topicIds = Object.keys(learningTopics);
 
     if (topicIds.length === 0) {
+        // Add the 'empty' class when there are no topics
+        grid.classList.add('empty'); 
         grid.innerHTML = '<p style="color: #71717a; font-size: 16px; text-align: center;">You haven\'t started any topics yet. Click "Learn a new topic" to begin!</p>';
         return;
     }
@@ -1704,8 +1720,7 @@ function renderTopicCards() {
         const topic = learningTopics[topicId];
         const card = document.createElement('div');
         
-        // This is the only change needed. The rest of the logic is the same.
-        card.className = 'topic-card'; // This class now has proper styles from the <style> block
+        card.className = 'topic-card';
         
         card.innerHTML = `
             <h2>${topic.fullTitle || topic.title}</h2>
