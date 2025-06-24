@@ -1190,6 +1190,27 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script>
+        /**
+ * Creates the HTML for the category and sophistication tags.
+ * @param {object} topicNode The topic's main node containing category and sophistication.
+ * @returns {string} The HTML string for the tags.
+ */
+function createTagsHTML(topicNode) {
+    const category = topicNode.category || 'General';
+    const sophistication = topicNode.sophistication || 'Simple';
+    const categoryColor = getCategoryColor(category); // Uses existing helper
+
+    return `
+        <div class="tags-container" style="padding: 5px 10px 0;">
+            <div class="tag" style="background-color: ${categoryColor};">
+                ${category}
+            </div>
+            <div class="tag" style="background-color: #e5e7eb; color: #4b5563;">
+                ${sophistication}
+            </div>
+        </div>
+    `;
+}
 /**
  * Returns a background color based on the category name.
  * @param {string} category The category name.
@@ -1826,8 +1847,7 @@ function loadLearningTopic(topicId) {
     currentHistoryIndex = -1;
 
     // Applied here for the sidebar title when loading a topic
-    document.getElementById('sidebarTitle').textContent = toTitleCase(treeStructure.fullTitle || treeStructure.title);
-
+    document.getElementById('sidebarTitle').innerHTML = createTagsHTML(treeStructure);
     navigateToNode('root');
     switchView('learningView');
 }
@@ -1877,8 +1897,7 @@ function startLearningTopic(topicTitle, syllabusSections, topicId, category, sop
 
     learningTopics[topicId] = treeStructure; 
     
-    document.getElementById('sidebarTitle').textContent = toTitleCase(topicTitle);
-
+    document.getElementById('sidebarTitle').innerHTML = createTagsHTML(treeStructure);
     navigateToNode('root');
     switchView('learningView');
     saveTopicsToFirestore();
