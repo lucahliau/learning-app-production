@@ -3404,10 +3404,9 @@ newTopicModal.addEventListener('click', (e) => {
 
 // Initialize the app on the landing page
 switchView('landingView');
-// --- REVISED: Tooltip Repositioning Logic ---
+// --- FINAL REVISION: Tooltip Repositioning Logic ---
 const mainContent = document.getElementById('mainContent');
 
-// Use event delegation to handle hovers on dynamically added terms
 mainContent.addEventListener('mouseover', (event) => {
     const term = event.target.closest('.technical-term');
     if (!term) return;
@@ -3415,27 +3414,28 @@ mainContent.addEventListener('mouseover', (event) => {
     const tooltip = term.querySelector('.term-tooltip');
     if (!tooltip) return;
 
-    // 1. Make the tooltip visible so we can measure it
+    // Make the tooltip visible
     tooltip.classList.add('visible');
 
-    // 2. Use requestAnimationFrame to wait for the browser to render the tooltip
-    // before we try to measure and move it. This prevents timing issues.
+    // Defer the measurement to prevent timing issues, ensuring the element is rendered.
     requestAnimationFrame(() => {
-        const rect = tooltip.getBoundingClientRect();
-        const viewportWidth = window.innerWidth;
-        const PADDING = 10; // The minimum space from the edge of the window
+        // **THE FIX**: Get the bounding box of the main content area, which is the actual boundary.
+        const containerRect = mainContent.getBoundingClientRect();
+        const tooltipRect = tooltip.getBoundingClientRect();
+        const PADDING = 15; // A little more space from the edge
 
         let deltaX = 0;
-        // Check if it's overflowing the right edge
-        if (rect.right > viewportWidth - PADDING) {
-            deltaX = (viewportWidth - PADDING) - rect.right; // Negative value to move left
+        
+        // Check for overflow against the CONTAINER's right edge
+        if (tooltipRect.right > containerRect.right - PADDING) {
+            deltaX = (containerRect.right - PADDING) - tooltipRect.right;
         } 
-        // Check if it's overflowing the left edge
-        else if (rect.left < PADDING) {
-            deltaX = PADDING - rect.left; // Positive value to move right
+        // Check for overflow against the CONTAINER's left edge
+        else if (tooltipRect.left < containerRect.left + PADDING) {
+            deltaX = (containerRect.left + PADDING) - tooltipRect.left;
         }
 
-        // Apply the correction if needed
+        // Apply the calculated shift if necessary
         if (deltaX !== 0) {
             tooltip.style.transform = `translateX(${deltaX}px)`;
         }
@@ -3450,11 +3450,11 @@ mainContent.addEventListener('mouseout', (event) => {
     if (tooltip) {
         // Hide the tooltip
         tooltip.classList.remove('visible');
-        // IMPORTANT: Reset the transform so it's recalculated correctly on the next hover
+        // Reset the transform so it can be recalculated on the next hover
         tooltip.style.transform = '';
     }
 });
-// --- END OF REVISED LOGIC ---
+// --- END OF FINAL REVISION ---
 
 
         });
