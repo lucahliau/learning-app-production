@@ -1065,6 +1065,48 @@
 /* We can remove the specific margin from the category-tag now */
 .topic-card .category-tag {
     /* The .tag class now handles the shared styles */
+}/* --- Styles for Sort Controls --- */
+.sort-btn {
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    color: #4b5563;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+.sort-btn:hover {
+    background: #f3f4f6;
+}
+.sort-btn.active {
+    background: #6366f1;
+    color: white;
+    border-color: #6366f1;
+}
+
+/* --- Styles for Category Sorting View --- */
+#topicGrid.category-view {
+    display: block; /* Change from grid to block to allow for headers */
+}
+.category-header {
+    font-size: 22px;
+    color: #11182c;
+    margin-top: 30px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e5e7eb;
+}
+/* Remove margin for the very first header */
+.category-header:first-of-type {
+    margin-top: 0;
+}
+/* Re-applies the grid layout for topics within each category */
+.topic-grid-layout {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
 }
 
             </style>
@@ -1096,7 +1138,14 @@
     <!-- This is the new Landing Page View -->
 <div id="landingView" class="view active">
     <div class="landing-header">
-        <h1>Your Learning Topics</h1>
+        <div style="display: flex; align-items: center; gap: 30px;">
+            <h1>Your Learning Topics</h1>
+            <div id="sortControls">
+                <span style="color: #6b7280; font-weight: 500; font-size: 14px; margin-right: 10px;">Sort by:</span>
+                <button class="sort-btn active" data-sort="recent">Most Recent</button>
+                <button class="sort-btn" data-sort="category">By Category</button>
+            </div>
+        </div>
         <div style="display: flex; gap: 15px;">
             <button class="new-topic-btn" id="newTopicBtn">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14m-7-7h14"/></svg>
@@ -1815,50 +1864,126 @@ let currentTopicId = null; // <-- ADD THIS LINE
 /**
  * Clears and redraws the topic cards on the landing page from our storage.
  */
- function renderTopicCards() {
+ // --- NEW SORTING AND RENDERING LOGIC ---
+
+// Add this state variable near the top of your script
+let currentSort = 'recent';
+
+/**
+ * Creates the DOM element for a single topic card.
+ * @param {object} topic The topic data object, including its ID.
+ * @returns {HTMLElement} The card element.
+ */
+function createTopicCardDOM(topic) {
+    const card = document.createElement('div');
+    card.className = 'topic-card';
+    
+    // This logic is extracted from the old renderTopicCards function
+    const category = topic.category || 'General';
+    const categoryColor = getCategoryColor(category);
+    const sophistication = topic.sophistication || 'Simple';
+
+    card.innerHTML = `
+        <div class="tags-container">
+            <div class="tag" style="background-color: ${categoryColor};">
+                ${category}
+            </div>
+            <div class="tag" style="background-color: #e5e7eb; color: #4b5563;">
+                ${sophistication}
+            </div>
+        </div>
+        <h2>${toTitleCase(topic.fullTitle || topic.title)}</h2>
+        <p>Click to continue learning.</p>
+    `;
+
+    // Use the topic's ID for the click handler
+    card.onclick = () => loadLearningTopic(topic.id);
+    return card;
+}
+
+
+/**
+ * Clears and redraws the topic cards on the landing page based on the current sort order.
+ */
+function renderTopicCards() {
     const grid = document.getElementById('topicGrid');
     grid.innerHTML = ''; 
 
-    grid.classList.remove('empty'); 
+    // Convert topics object to a usable array, making sure to include the ID
+    const topicsArray = Object.entries(learningTopics).map(([id, data]) => ({ ...data, id: id }));
 
-    const topicIds = Object.keys(learningTopics);
-
-    if (topicIds.length === 0) {
-        grid.classList.add('empty'); 
+    if (topicsArray.length === 0) {
+        grid.className = 'empty topic-grid-layout'; 
         grid.innerHTML = '<p style="color: #71717a; font-size: 16px; text-align: center;">You haven\'t started any topics yet. Click "Learn a new topic" to begin!</p>';
         return;
     }
 
-    topicIds.forEach(topicId => {
-        const topic = learningTopics[topicId];
-        const card = document.createElement('div');
+    if (currentSort === 'recent') {
+        grid.className = 'topic-grid-layout'; // Use the standard grid layout
+        // Sort by most recently opened
+        topicsArray.sort((a, b) => (b.lastOpened || 0) - (a.lastOpened || 0));
         
-        card.className = 'topic-card';
+        topicsArray.forEach(topic => {
+            const card = createTopicCardDOM(topic);
+            grid.appendChild(card);
+        });
+
+    } else if (currentSort === 'category') {
+        grid.className = 'category-view'; // Use the new block layout for headers
         
-        // 1. Get data for both tags
-        const category = topic.category || 'General';
-        const categoryColor = getCategoryColor(category);
-        const sophistication = topic.sophistication || 'Simple';
+        // Group topics by their category
+        const grouped = topicsArray.reduce((acc, topic) => {
+            const category = topic.category || 'General';
+            if (!acc[category]) acc[category] = [];
+            acc[category].push(topic);
+            return acc;
+        }, {});
 
-        // 2. This is the new card structure with the tags container and title-cased heading
-        card.innerHTML = `
-            <div class="tags-container">
-                <div class="tag" style="background-color: ${categoryColor};">
-                    ${category}
-                </div>
-                <div class="tag" style="background-color: #e5e7eb; color: #4b5563;">
-                    ${sophistication}
-                </div>
-            </div>
-            <h2>${toTitleCase(topic.fullTitle || topic.title)}</h2>
-            <p>Click to continue learning.</p>
-        `;
+        // Sort the category names alphabetically
+        const sortedCategories = Object.keys(grouped).sort();
 
-        card.onclick = () => loadLearningTopic(topicId);
+        sortedCategories.forEach(category => {
+            // Add category header
+            const header = document.createElement('h2');
+            header.className = 'category-header';
+            header.textContent = category;
+            grid.appendChild(header);
 
-        grid.appendChild(card);
-    });
+            // Create a sub-grid for this category's topics
+            const categoryGrid = document.createElement('div');
+            categoryGrid.className = 'topic-grid-layout';
+            grid.appendChild(categoryGrid);
+
+            // Sort topics within this category by most recent
+            const topicsInCategory = grouped[category];
+            topicsInCategory.sort((a, b) => (b.lastOpened || 0) - (a.lastOpened || 0));
+            
+            topicsInCategory.forEach(topic => {
+                const card = createTopicCardDOM(topic);
+                categoryGrid.appendChild(card);
+            });
+        });
+    }
 }
+
+
+// --- Add this event listener setup inside your main script execution area ---
+// (e.g., inside the DOMContentLoaded listener)
+
+document.getElementById('sortControls').addEventListener('click', (e) => {
+    if (e.target.matches('.sort-btn')) {
+        // Ignore click if the button is already active
+        if (e.target.classList.contains('active')) return;
+
+        // Update the active state on buttons
+        document.querySelectorAll('.sort-btn').forEach(btn => btn.classList.remove('active'));
+        e.target.classList.add('active');
+
+        // Get the new sort preference and re-render the topic cards
+        currentSort = e.target.dataset.sort;
+        renderTopicCards();
+    }
+});
 
 /**
  * Loads a specific topic's data into the learning view.
@@ -1872,6 +1997,7 @@ function loadLearningTopic(topicId) {
         console.error("Topic not found:", topicId);
         return;
     }
+    topicData.lastOpened = Date.now(); // ADD THIS LINE
 
     treeStructure = topicData;
     navigationHistory = [];
@@ -1912,7 +2038,7 @@ function startLearningTopic(topicTitle, syllabusSections, topicId, category, sop
     treeStructure.id = 'root';
     treeStructure.category = category; 
     treeStructure.sophistication = sophistication; // <-- STORE THE SOPHISTICATION LEVEL
-
+    treeStructure.lastOpened = Date.now(); // ADD THIS LINE
     currentTreeNode = treeStructure;
 
     const topicContent = {
