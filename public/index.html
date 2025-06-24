@@ -2469,13 +2469,13 @@ function updateBreadcrumb() {
             let hasExpandedContent = false;
 
             if (parsedContent.sections && parsedContent.sections.length > 0) {
-                const hasCards = parsedContent.sections.some(s => !s.isExpanded);
+            const hasCards = parsedContent.sections.some(s => !s.isExpanded);
+            
+            if (hasCards) {
+                const cardsGrid = document.createElement('div');
+                cardsGrid.className = 'cards-grid';
                 
-                if (hasCards) {
-                    const cardsGrid = document.createElement('div');
-                    cardsGrid.className = 'cards-grid';
-                    
-                    parsedContent.sections.forEach((section, index) => {
+                parsedContent.sections.forEach((section, index) => {
                     if (!section.isExpanded) {
                         // Find the child node that matches this section title
                         const childNode = currentTreeNode.children.find(child => 
@@ -2483,15 +2483,17 @@ function updateBreadcrumb() {
                         );
                         // Check if the node exists and is read
                         const isNodeRead = childNode ? childNode.isRead : false;
+                        // --- GET THE UNIQUE NODE ID ---
+                        const childNodeId = childNode ? childNode.id : null;
 
-                        // Pass this status to the createCard function
-                        const card = createCard(section, index, isNodeRead);
+                        // --- PASS THE ID TO THE createCard FUNCTION ---
+                        const card = createCard(section, index, isNodeRead, childNodeId);
                         cardsGrid.appendChild(card);
                     }
                 });
-                    
-                    mainContent.appendChild(cardsGrid);
-                }
+                
+                mainContent.appendChild(cardsGrid);
+            }
                 
                 // Display expanded content
                 parsedContent.sections.forEach(section => {
@@ -2583,7 +2585,9 @@ function updateBreadcrumb() {
 
         // Create card element
         // Update the function signature to accept isRead
-        function createCard(section, index, isRead) { 
+        // Create card element
+        // Update the function signature to accept isRead and childNodeId
+        function createCard(section, index, isRead, childNodeId) { 
             const card = document.createElement('div');
             card.className = 'card';
             
@@ -2599,41 +2603,38 @@ function updateBreadcrumb() {
                 ${displayContent ? `<p>${displayContent}</p>` : ''}
             `;
             
-            card.onclick = () => expandCard(section, index);
+            // This now calls a new, more reliable function using the unique node ID
+            if (childNodeId) {
+                card.onclick = () => expandCardById(childNodeId);
+            }
             return card;
-
-
-
-         
         }
 
         // Expand card
        // Replace the entire expandCard function
  // REPLACE the entire function
-async function expandCard(section, index) {
-    currentContext.subtopic = section.title;
+// Expand card by its unique ID, replacing the old title-based lookup
+async function expandCardById(nodeId) {
+            // Find the child node directly by its unique ID within the current node's children
+            const childNodeToLoad = currentTreeNode.children.find(child => child.id === nodeId);
 
-    // Find the specific child node in our tree that matches the clicked card.
-    const childNodeToLoad = currentTreeNode.children.find(child => child.fullTitle === section.title);
+            if (childNodeToLoad) {
+                // Set the context based on the reliably found node
+                currentContext.subtopic = childNodeToLoad.fullTitle;
 
-    if (childNodeToLoad) {
-        // --- THIS IS THE NEW LOGIC ---
-        // First, check if the content for this node has ALREADY been loaded.
-        if (childNodeToLoad.content) {
-            // If content exists, just navigate to it to display it. No API call needed.
-            console.log("Content already exists. Navigating directly.");
-            navigateToNode(childNodeToLoad.id);
-        } else {
-            // If content is null, THEN and only then do we fetch it from the API.
-            console.log("Content does not exist. Fetching from API.");
-            await elaborateOnTopic(childNodeToLoad, false);
+                // This logic remains the same: check if content exists or fetch it
+                if (childNodeToLoad.content) {
+                    console.log("Content already exists. Navigating directly.");
+                    navigateToNode(childNodeToLoad.id);
+                } else {
+                    console.log("Content does not exist. Fetching from API.");
+                    await elaborateOnTopic(childNodeToLoad, false);
+                }
+            } else {
+                console.error("Could not find the tree node corresponding to the clicked card ID:", nodeId);
+                showError("An error occurred trying to load this section.");
+            }
         }
-        // --- END OF NEW LOGIC ---
-    } else {
-        console.error("Could not find the tree node corresponding to the clicked card:", section.title);
-        showError("An error occurred trying to load this section.");
-    }
-}
 
         // Update placeholder text
         function updatePlaceholder(hasQuestion) {
