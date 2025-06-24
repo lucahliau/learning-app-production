@@ -82,6 +82,42 @@
                     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
                     gap: 20px;
                 }
+                #topicGrid {
+    width: 100%;
+    max-width: 1200px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+/* --- ADD THESE NEW STYLES FOR THE TOPIC CARD --- */
+.topic-card {
+    background: #ffffff; /* White background for the card */
+    border: 1px solid #e5e7eb; /* Light gray border for the outline */
+    border-radius: 16px; /* Rounded corners */
+    padding: 25px; /* Space inside the card */
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+}
+
+.topic-card:hover {
+    transform: translateY(-5px); /* Lifts the card up on hover */
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1); /* Stronger shadow on hover */
+    border-color: #6366f1; /* Purple border on hover */
+}
+
+.topic-card h2 {
+    font-size: 20px;
+    color: #11182c; /* Dark text for the title */
+    margin-bottom: 8px;
+}
+
+.topic-card p {
+    font-size: 14px;
+    color: #6b7280; /* Medium gray for the description */
+    line-height: 1.4;
+}
         
                 /* --- NEW: Modal Styles --- */
                 .modal-overlay {
@@ -1523,25 +1559,33 @@ let learningTopics = {};
 /**
  * Clears and redraws the topic cards on the landing page from our storage.
  */
- function renderTopicCards() {
+ /**
+ * Clears and redraws the topic cards on the landing page from our storage.
+ */
+function renderTopicCards() {
     const grid = document.getElementById('topicGrid');
     grid.innerHTML = ''; // Clear existing cards
 
     const topicIds = Object.keys(learningTopics);
 
     if (topicIds.length === 0) {
-        grid.innerHTML = '<p style="color: #71717a; font-size: 16px;">You haven\'t started any topics yet. Click "Learn a new topic" to begin!</p>';
+        grid.innerHTML = '<p style="color: #71717a; font-size: 16px; text-align: center;">You haven\'t started any topics yet. Click "Learn a new topic" to begin!</p>';
         return;
     }
 
     topicIds.forEach(topicId => {
         const topic = learningTopics[topicId];
         const card = document.createElement('div');
-        card.className = 'topic-card'; // Using a new class for styling
-        card.innerHTML = `<h2>${topic.fullTitle || topic.title}</h2><p>Click to continue learning.</p>`;
+        
+        // This is the only change needed. The rest of the logic is the same.
+        card.className = 'topic-card'; // This class now has proper styles from the <style> block
+        
+        card.innerHTML = `
+            <h2>${topic.fullTitle || topic.title}</h2>
+            <p>Click to continue learning.</p>
+        `;
 
-        // This is important: tells the card which topic to load when clicked
-        card.onclick = () => loadLearningTopic(topicId); 
+        card.onclick = () => loadLearningTopic(topicId);
 
         grid.appendChild(card);
     });
