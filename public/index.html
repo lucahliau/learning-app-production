@@ -1085,6 +1085,18 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script>
+        /**
+ * Converts a string to Title Case.
+ * @param {string} str The string to convert.
+ * @returns {string} The Title Cased string.
+ */
+function toTitleCase(str) {
+    if (!str) return '';
+    return str.replace(
+        /\w\S*/g,
+        (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
+    );
+}
         // --- ADD THIS SNIPPET FOR SIGN OUT FUNCTIONALITY ---
 
 // Get a reference to the new sign-out button
@@ -1596,6 +1608,7 @@ function renderTopicCards() {
  * Loads a specific topic's data into the learning view.
  * @param {string} topicId - The ID of the topic to load.
  */
+// Find and replace this entire function
 function loadLearningTopic(topicId) {
     const topicData = learningTopics[topicId];
     if (!topicData) {
@@ -1603,16 +1616,14 @@ function loadLearningTopic(topicId) {
         return;
     }
 
-    // Set the application's current state to the loaded topic
     treeStructure = topicData;
-    navigationHistory = []; // Reset history for the new context
+    navigationHistory = [];
     currentHistoryIndex = -1;
 
-    document.getElementById('sidebarTitle').textContent = treeStructure.fullTitle || treeStructure.title;
+    // Applied here for the sidebar title when loading a topic
+    document.getElementById('sidebarTitle').textContent = toTitleCase(treeStructure.fullTitle || treeStructure.title);
 
-    // Navigate to the topic's main screen
-    navigateToNode('root'); 
-
+    navigateToNode('root');
     switchView('learningView');
 }
        /**
@@ -1621,43 +1632,35 @@ function loadLearningTopic(topicId) {
  * @param {Array<Object>} syllabusSections - An array of section objects for the syllabus.
  * @param {string} topicId - The unique ID for this new topic.
  */
- function startLearningTopic(topicTitle, syllabusSections, topicId) { // <-- 1. Accept topicId
-    // 1. Reset the core data structures
+ // Find and replace this entire function
+function startLearningTopic(topicTitle, syllabusSections, topicId) {
     navigationHistory = [];
     currentHistoryIndex = -1;
 
-    // 2. Create a new root node for our topic's tree
     treeStructure = createTreeNode(topicTitle, null, null);
-    treeStructure.id = 'root'; // Ensure the root ID is always 'root'
+    treeStructure.id = 'root';
 
     currentTreeNode = treeStructure;
 
-    // 3. Create the content object that our existing functions understand
     const topicContent = {
-        overview: `An introduction to the key areas of ${topicTitle}. Select a card to begin.`,
+        overview: `An introduction to the key areas of ${toTitleCase(topicTitle)}. Select a card to begin.`, // Applied here
         sections: syllabusSections,
-        definitions: [] // No definitions for this initial view
+        definitions: []
     };
     treeStructure.content = topicContent;
 
     syllabusSections.forEach(section => {
-    // The content is null for now; it will be fetched when the user clicks.
-    createTreeNode(section.title, null, treeStructure, false); 
-});
-  // --- NEW ---
-    // 2. Save the fully constructed topic data into our storage object.
+        createTreeNode(section.title, null, treeStructure, false); 
+    });
+
     learningTopics[topicId] = treeStructure; 
-    // --- END NEW ---
-    // 4. Update the sidebar title with the new topic
-    document.getElementById('sidebarTitle').textContent = topicTitle;
+    
+    // Applied here for the main sidebar title
+    document.getElementById('sidebarTitle').textContent = toTitleCase(topicTitle);
 
-    // 5. Navigate to the new root node to display its content
     navigateToNode('root');
-
-    // 6. Switch to the learning view
     switchView('learningView');
-    saveTopicsToFirestore(); // <-- ADD THIS LINE
-
+    saveTopicsToFirestore();
 }
 
         const BACKEND_URL = '/api';
@@ -1936,40 +1939,40 @@ function parseResponse(mainContentText, definitionsArray) {
         }
 
         // Render tree node
-        function renderTreeNode(node, level = 0) {
-            const icon = node.id === 'root' ? '🏠' : 
-                        node.isUserQuestion ? '❓' : 
-                        node.sectionIndex ? `${node.sectionIndex}.` : '📄';
-            
-            // Conditionally create the status indicator HTML, excluding the root node
-            const statusIndicatorHTML = node.id !== 'root' ? 
-                `<div class="tree-status-indicator ${node.isRead ? 'read' : ''}"></div>` : 
-                '';
+        // Find and replace this entire function
+function renderTreeNode(node, level = 0) {
+    const icon = node.id === 'root' ? '' :
+                node.isUserQuestion ? '❓' :
+                node.sectionIndex ? `${node.sectionIndex}.` : '';
+    
+    const statusIndicatorHTML = node.id !== 'root' ? 
+        `<div class="tree-status-indicator ${node.isRead ? 'read' : ''}"></div>` : 
+        '';
 
-            let html = `
-                <div class="tree-node" style="margin-left: ${level * 25}px;">
-                    <div class="tree-node-content ${node === currentTreeNode ? 'active' : ''}" 
-                         onclick="navigateToNode('${node.id}')"
-                         title="${node.fullTitle || node.title}">
-                        
-                        ${statusIndicatorHTML}
+    let html = `
+        <div class="tree-node" style="margin-left: ${level * 25}px;">
+            <div class="tree-node-content ${node === currentTreeNode ? 'active' : ''}" 
+                 onclick="navigateToNode('${node.id}')"
+                 title="${toTitleCase(node.fullTitle || node.title)}"> {/* Applied here for hover */}
+                
+                ${statusIndicatorHTML}
 
-                        <span class="tree-node-icon">${icon}</span>
-                        <span class="tree-node-text">${node.title}</span>
-                    </div>
-            `;
-            
-            if (node.children.length > 0) {
-                html += '<div class="tree-children">';
-                node.children.forEach(child => {
-                    html += renderTreeNode(child, level + 1);
-                });
-                html += '</div>';
-            }
-            
-            html += '</div>';
-            return html;
-        }
+                <span class="tree-node-icon">${icon}</span>
+                <span class="tree-node-text">${toTitleCase(node.title)}</span> {/* Applied here for display */}
+            </div>
+    `;
+    
+    if (node.children.length > 0) {
+        html += '<div class="tree-children">';
+        node.children.forEach(child => {
+            html += renderTreeNode(child, level + 1);
+        });
+        html += '</div>';
+    }
+    
+    html += '</div>';
+    return html;
+}
         // Navigate to tree node
         async function navigateToNode(nodeId) {
             const node = findNodeById(treeStructure, nodeId);
@@ -2036,36 +2039,36 @@ function parseResponse(mainContentText, definitionsArray) {
         }
 
         // Update breadcrumb
-        function updateBreadcrumb() {
-            const breadcrumb = document.getElementById('breadcrumb');
-            breadcrumb.innerHTML = '';
-            
-            // Build path from current node to root
-            let path = [];
-            let node = currentTreeNode;
-            while (node) {
-                path.unshift(node);
-                node = node.parent;
-            }
-            
-            path.forEach((node, index) => {
-                const crumb = document.createElement('span');
-                crumb.className = 'breadcrumb-item';
-                if (node === currentTreeNode) {
-                    crumb.classList.add('active');
-                }
-                crumb.textContent = node.title;
-                
-                breadcrumb.appendChild(crumb);
-                
-                if (index < path.length - 1) {
-                    const separator = document.createElement('span');
-                    separator.className = 'breadcrumb-separator';
-                    separator.textContent = '›';
-                    breadcrumb.appendChild(separator);
-                }
-            });
+        // Find and replace this entire function
+function updateBreadcrumb() {
+    const breadcrumb = document.getElementById('breadcrumb');
+    breadcrumb.innerHTML = '';
+    
+    let path = [];
+    let node = currentTreeNode;
+    while (node) {
+        path.unshift(node);
+        node = node.parent;
+    }
+    
+    path.forEach((node, index) => {
+        const crumb = document.createElement('span');
+        crumb.className = 'breadcrumb-item';
+        if (node === currentTreeNode) {
+            crumb.classList.add('active');
         }
+        crumb.textContent = toTitleCase(node.title); // Applied here
+
+        breadcrumb.appendChild(crumb);
+        
+        if (index < path.length - 1) {
+            const separator = document.createElement('span');
+            separator.className = 'breadcrumb-separator';
+            separator.textContent = '›';
+            breadcrumb.appendChild(separator);
+        }
+    });
+}
 
         // Navigate back
         function navigateBack() {
@@ -2123,17 +2126,18 @@ function parseResponse(mainContentText, definitionsArray) {
         }
 
         // Render content
-function renderContent(parsedContent, userQuestion = null) {
+        function renderContent(parsedContent, userQuestion = null) {
     console.log("LOG #2 - Content renderer received definitions:", parsedContent.definitions);
     const mainContent = document.getElementById('mainContent');
-            mainContent.innerHTML = '';
+    mainContent.innerHTML = '';
 
-            if (userQuestion) {
-                const questionDiv = document.createElement('div');
-                questionDiv.className = 'topic-overview';
-                questionDiv.innerHTML = `<h3 style="font-size: 20px; margin-bottom: 0;">Your Question:</h3><p style="margin-top: 10px;">"${userQuestion}"</p>`;
-                mainContent.appendChild(questionDiv);
-            }
+    if (userQuestion) {
+        const questionDiv = document.createElement('div');
+        questionDiv.className = 'topic-overview';
+        // Applied here for the question title
+        questionDiv.innerHTML = `<h3 style="font-size: 20px; margin-bottom: 0;">Your Question:</h3><p style="margin-top: 10px;">"${toTitleCase(userQuestion)}"</p>`;
+        mainContent.appendChild(questionDiv);
+    }
 
             if (parsedContent.overview) {
                 const overviewDiv = document.createElement('div');
@@ -2353,13 +2357,19 @@ async function expandCard(section, index) {
         }
 
         // Elaborate on current context
-        async function elaborateOnCurrent() {
-            const contextInfo = currentContext.subtopic || currentContext.topic;
-            if (contextInfo) {
-                // The `true` argument tells the function to generate a new list of cards.
-                await elaborateOnTopic(currentTreeNode, true);
-            }
-        }
+        // This is the new, corrected function
+async function elaborateOnCurrent() {
+    // Get the full title of the current node we are viewing
+    const currentTitle = currentTreeNode.fullTitle || currentTreeNode.title;
+
+    if (currentTitle) {
+        // Construct a question string, just as if the user had typed it
+        const question = `Tell me more about ${currentTitle}`;
+        
+        // Use the existing askQuestion function, which correctly creates a child node
+        await askQuestion(question);
+    }
+}
 
         // Ask for elaboration
         // Elaborate on a specific topic, creating new sub-nodes in the tree
