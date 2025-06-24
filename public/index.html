@@ -1039,30 +1039,28 @@ auth.onAuthStateChanged(user => {
  * @param {object} topicsObject - The original learningTopics object.
  * @returns {object} A clean copy of the object suitable for JSON stringification.
  */
- function removeCircularReferences(topicsObject) {
-    // Create a new object to avoid modifying the original in-memory data
-    const newObject = JSON.parse(JSON.stringify(topicsObject));
+ /**
+ * Recursively creates a deep copy of a topic node and its children,
+ * omitting the 'parent' property to make it safe for Firestore.
+ * @param {object} originalNode The node to clean.
+ * @returns {object} A clean, saveable copy of the node and its descendants.
+ */
+function createSaveableCopy(originalNode) {
+    const newNode = {};
 
-    // A recursive function to traverse through all nodes
-    function traverse(node) {
-        // If the node has a 'parent' property, delete it
-        if (node.parent) {
-            delete node.parent;
-        }
-        // If the node has children, run the same function on each child
-        if (node.children && node.children.length > 0) {
-            node.children.forEach(child => traverse(child));
-        }
-    }
-
-    // Start the traversal process for each topic in our new object
-    for (const key in newObject) {
-        if (Object.hasOwnProperty.call(newObject, key)) {
-            traverse(newObject[key]);
+    // Copy all properties from the original node to the new one, EXCEPT 'parent'.
+    for (const key in originalNode) {
+        if (key !== 'parent' && Object.hasOwnProperty.call(originalNode, key)) {
+            newNode[key] = originalNode[key];
         }
     }
 
-    return newObject;
+    // If the original node has children, recursively clean them.
+    if (originalNode.children && originalNode.children.length > 0) {
+        newNode.children = originalNode.children.map(child => createSaveableCopy(child));
+    }
+
+    return newNode;
 }
 
 
@@ -1074,11 +1072,18 @@ async function saveTopicsToFirestore() {
         console.log("User found:", user.uid);
         
         try {
-            // --- THIS IS THE FIX ---
-            // Create a clean version of the data without circular references
-            const topicsToSave = removeCircularReferences(learningTopics);
+            // --- THIS IS THE NEW FIX ---
+            const topicsToSave = {};
 
-            // LOG: Let's see the clean data
+            // Go through each main topic in your learningTopics object
+            for (const topicId in learningTopics) {
+                if (Object.hasOwnProperty.call(learningTopics, topicId)) {
+                    // Create a clean, saveable copy of each topic's tree structure
+                    topicsToSave[topicId] = createSaveableCopy(learningTopics[topicId]);
+                }
+            }
+            // --------------------------
+
             console.log("Clean data to be saved:", topicsToSave);
             
             await db.collection('userTopics').doc(user.uid).set({
