@@ -871,9 +871,8 @@
                 /* --- NEW STYLES FOR TERM DEFINITIONS --- */
         
                 .technical-term {
-                    text-decoration: underline dotted #6366f1; /* Dotted underline to indicate interactivity */
-                    text-decoration-thickness: 2px;
-                    color: #a78bfa; /* A slightly different color to stand out */
+                    text-decoration: none; /* This removes the underline */
+                    color: #a78bfa; /* This keeps the purple color you like */
                     cursor: help; /* Changes the mouse cursor to a question mark */
                     position: relative; /* Essential for positioning the tooltip */
                     display: inline-block; /* Ensures the position property works correctly */
@@ -2458,7 +2457,7 @@ function updateBreadcrumb() {
                 
                 // Highlight terms in the overview before displaying it
                 const highlightedOverview = applyTermHighlighting(formattedOverview, parsedContent.definitions);
-                overviewDiv.innerHTML = `<h2>Overview</h2><div>${highlightedOverview}</div>`;
+                overviewDiv.innerHTML = `<h2>${toTitleCase(currentTreeNode.fullTitle || currentTreeNode.title)}</h2><div>${highlightedOverview}</div>`;
                 mainContent.appendChild(overviewDiv);
             }
 
