@@ -949,10 +949,15 @@
 <div id="landingView" class="view active">
     <div class="landing-header">
         <h1>Your Learning Topics</h1>
-        <button class="new-topic-btn" id="newTopicBtn">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14m-7-7h14"/></svg>
-            Learn a new topic
-        </button>
+        <div style="display: flex; gap: 15px;">
+            <button class="new-topic-btn" id="newTopicBtn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14m-7-7h14"/></svg>
+                Learn a new topic
+            </button>
+            <button class="nav-button" id="signOutBtn" style="border-width: 2px;">
+                Sign Out
+            </button>
+        </div>
     </div>
     <div id="topicGrid">
         <!-- Topic cards will be added here later -->
@@ -1043,6 +1048,27 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script>
+        // --- ADD THIS SNIPPET FOR SIGN OUT FUNCTIONALITY ---
+
+// Get a reference to the new sign-out button
+const signOutBtn = document.getElementById('signOutBtn');
+
+// Add a click event listener to the button
+signOutBtn.addEventListener('click', () => {
+    // Use the Firebase auth object to sign the user out
+    auth.signOut()
+        .then(() => {
+            // This .then() block runs on successful sign-out
+            console.log("User signed out successfully.");
+            // You don't need to do anything else here.
+            // The `onAuthStateChanged` listener will automatically detect the sign-out
+            // and show the login screen.
+        })
+        .catch((error) => {
+            // This .catch() block runs if there was an error
+            console.error("Sign-out error:", error);
+        });
+});
         // Import the functions you need from the SDKs you need
 
 // TODO: Add SDKs for Firebase products that you want to use
