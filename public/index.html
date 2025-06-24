@@ -2296,6 +2296,7 @@ function startLearningTopic(topicTitle, syllabusSections, topicId, category, sop
     navigateToNode('root');
     switchView('learningView');
     saveTopicsToFirestore();
+    
     treeStructure.children.forEach(childNode => {
         prefetchNodeContent(childNode);
     });
