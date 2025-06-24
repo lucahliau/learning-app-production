@@ -927,7 +927,8 @@
                 }
                 
                 /* Show the tooltip on hover */
-                .technical-term:hover .term-tooltip {
+                /* This class will be toggled by JavaScript to show the tooltip */
+                .term-tooltip.visible {
                     visibility: visible;
                     opacity: 1;
                 }
@@ -3403,6 +3404,56 @@ newTopicModal.addEventListener('click', (e) => {
 
 // Initialize the app on the landing page
 switchView('landingView');
+// --- NEW: Tooltip Repositioning Logic ---
+const mainContent = document.getElementById('mainContent');
+
+// Use event delegation to handle hovers on dynamically added terms
+mainContent.addEventListener('mouseover', (event) => {
+    const term = event.target.closest('.technical-term');
+    if (!term) return;
+
+    const tooltip = term.querySelector('.term-tooltip');
+    if (!tooltip) return;
+
+    // 1. Make the tooltip visible so we can measure it
+    tooltip.classList.add('visible');
+
+    // 2. Get its position and the viewport width
+    const rect = tooltip.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const PADDING = 10; // The minimum space from the edge of the window
+
+    // 3. Calculate if it's overflowing and by how much
+    let deltaX = 0;
+    if (rect.right > viewportWidth - PADDING) {
+        // It's off the right edge, so we calculate a negative value to move it left
+        deltaX = (viewportWidth - PADDING) - rect.right;
+    } else if (rect.left < PADDING) {
+        // It's off the left edge, so we calculate a positive value to move it right
+        deltaX = PADDING - rect.left;
+    }
+
+    // 4. Apply the correction if needed
+    if (deltaX !== 0) {
+        tooltip.style.transform = `translateX(${deltaX}px)`;
+    }
+});
+
+mainContent.addEventListener('mouseout', (event) => {
+    const term = event.target.closest('.technical-term');
+    if (!term) return;
+
+    const tooltip = term.querySelector('.term-tooltip');
+    if (tooltip) {
+        // Hide the tooltip
+        tooltip.classList.remove('visible');
+        // IMPORTANT: Reset the transform so it's recalculated correctly on the next hover
+        tooltip.style.transform = '';
+    }
+});
+// --- END OF NEW LOGIC ---
+
+
         });
         // Checks if all children of a node are read and updates the parent's status
         function updateParentReadStatus(parentNode) {
