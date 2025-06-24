@@ -1360,6 +1360,86 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script>
+
+        /**
+ * --- NEW: PRE-FETCHING FUNCTION ---
+ * Fetches the content for a given node in the background without showing a UI loading state.
+ * This is used to pre-load content for cards before the user clicks on them.
+ * @param {object} node - The tree node to fetch content for.
+ */
+async function prefetchNodeContent(node) {
+    // Silently exit if content already exists or is being fetched.
+    if (node.content || node.isPrefetching) return;
+
+    // Mark as prefetching to avoid duplicate calls
+    node.isPrefetching = true;
+    console.log(`%cPrefetching: "${node.fullTitle}"`, 'color: #8b5cf6;');
+
+    const topic = node.fullTitle;
+    let contextPrompt = '';
+    if (node.parent && node.parent.id !== 'root') {
+        contextPrompt = `In the context of "${node.parent.fullTitle}", `;
+    }
+
+    const prefetchPrompt = `You are an expert educator. Your task is to explain the topic "${topic}"${contextPrompt}.
+        
+        Your response MUST be a single, valid JSON object with no other text before or after it.
+        The JSON object must have two keys: "explanation" and "definitions".
+        
+        1.  In the "explanation" value, provide a detailed, two-paragraph explanation of the topic.
+        2.  In the "definitions" value, provide an array of objects. For each object, identify a technical term from your explanation and provide a simple, one-sentence definition for it in the context of the topic.
+        
+        Example JSON structure:
+        {
+          "explanation": "A detailed two-paragraph explanation goes here...",
+          "definitions": [
+            { "term": "Technical Term 1", "definition": "A simple one-sentence definition." },
+            { "term": "Technical Term 2", "definition": "Another simple definition." }
+          ]
+        }`;
+
+    try {
+        // Use a temporary, isolated conversation for this background task
+        const prefetchConversation = [
+            { role: "system", content: "You are an educational assistant." },
+            { role: "user", content: prefetchPrompt }
+        ];
+
+        const response = await fetch(BACKEND_URL + '/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: prefetchConversation })
+        });
+
+        if (!response.ok) throw new Error(`Prefetch API failed for "${topic}"`);
+
+        const data = await response.json();
+        const botResponseText = data.choices[0].message.content;
+
+        const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error(`Prefetch found no JSON for "${topic}"`);
+
+        const structuredResponse = JSON.parse(jsonMatch[0]);
+        const explanation = structuredResponse.explanation || "No explanation provided.";
+        const definitions = structuredResponse.definitions || [];
+
+        const parsed = parseResponse(explanation, definitions);
+        parsed.showTellMeMore = true;
+
+        // --- Attach the content to the node ---
+        node.content = parsed;
+        console.log(`%c✅ Prefetch successful: "${node.fullTitle}"`, 'color: #22c55e;');
+
+        // Save the newly added content to Firestore
+        await saveTopicsToFirestore();
+
+    } catch (error) {
+        console.error("Prefetch error:", error);
+    } finally {
+        // Mark prefetching as complete regardless of outcome
+        node.isPrefetching = false;
+    }
+}
         /**
  * Creates the HTML for the category and sophistication tags.
  * @param {object} topicNode The topic's main node containing category and sophistication.
@@ -2155,6 +2235,9 @@ function startLearningTopic(topicTitle, syllabusSections, topicId, category, sop
     navigateToNode('root');
     switchView('learningView');
     saveTopicsToFirestore();
+    treeStructure.children.forEach(childNode => {
+        prefetchNodeContent(childNode);
+    });
 }
 
         const BACKEND_URL = '/api';
@@ -2973,6 +3056,12 @@ async function elaborateOnTopic(targetNode, generateNewCards = false) {
             parsed.sections.forEach(section => {
                 createTreeNode(section.title, null, targetNode, false);
             });
+            // --- START PRE-FETCHING FOR NEW QUESTION CARDS ---
+            targetNode.children.forEach(childNode => {
+                prefetchNodeContent(childNode);
+            });
+            // -----------------------------------------------
+
         } else {
             // --- REPLACE the old 'else' block content with this ---
             try {
