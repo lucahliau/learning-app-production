@@ -1022,11 +1022,35 @@
     margin-bottom: 8px; 
 }
 
-/* --- ADD THESE NEW STYLES FOR TAGS --- */
-.topic-card .tags-container {
+/* --- UNIVERSAL TAG STYLES (THE FIX) --- */
+
+/* 1. General style for the container, making it flexible with a gap */
+.tags-container {
     display: flex;
-    gap: 8px; /* Adds space between the tags */
-    margin-bottom: 12px; /* Adds space between the tags and the title */
+    gap: 8px;
+}
+
+/* 2. General style for the tags themselves, making them padded and rounded */
+.tag {
+    display: inline-block;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 20px;
+    color: #ffffff; /* Default text is white */
+}
+
+/* --- LAYOUT-SPECIFIC TWEAKS --- */
+
+/* 3. For tags inside a topic card, add space below them */
+.topic-card .tags-container {
+    margin-bottom: 12px;
+}
+
+/* 4. For tags inside the sidebar header, center them */
+#sidebarTitle .tags-container {
+    justify-content: center;
+    padding-bottom: 5px;
 }
 
 .topic-card .tag {
@@ -1042,11 +1066,7 @@
 .topic-card .category-tag {
     /* The .tag class now handles the shared styles */
 }
-/* --- ADD THIS NEW RULE FOR SIDEBAR TAGS --- */
-#sidebarTitle .tags-container {
-    justify-content: center; /* Centers the tags horizontally */
-    padding-bottom: 5px;   /* Adds a little space underneath the tags */
-}
+
             </style>
 </head>
 <body>
