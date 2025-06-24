@@ -2412,13 +2412,13 @@ function updateBreadcrumb() {
     const mainContent = document.getElementById('mainContent');
     mainContent.innerHTML = '';
 
-    if (userQuestion) {
+   /* if (userQuestion) {
         const questionDiv = document.createElement('div');
         questionDiv.className = 'topic-overview';
         // Applied here for the question title
         questionDiv.innerHTML = `<h3 style="font-size: 20px; margin-bottom: 0;">Your Question:</h3><p style="margin-top: 10px;">"${toTitleCase(userQuestion)}"</p>`;
         mainContent.appendChild(questionDiv);
-    }
+    }*/
 
             if (parsedContent.overview) {
                 const overviewDiv = document.createElement('div');
