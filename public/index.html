@@ -1231,13 +1231,9 @@
 
     <div class="app-wrapper">
         <div class="tree-sidebar" id="treeSidebar">
-            <div id="sidebarTitle" style="margin-bottom: 0px; min-height: 27px;">Learning Journey Map</div>                <div class="tree-container" id="treeContainer">
-                <div class="tree-node">
-                    <div class="tree-node-content active" onclick="navigateToNode('root')">
-                        <span class="tree-node-icon">🏠</span>
-                        <span class="tree-node-text">Home</span>
-                    </div>
-                </div>
+            <div id="sidebarTitle" style="margin-bottom: 0px; min-height: 27px;">Learning Journey Map</div>               
+             <div class="tree-container" id="treeContainer">
+                
             </div>
         </div>
         <div class="resizer" id="dragHandle"></div>
@@ -2605,101 +2601,107 @@ function updateBreadcrumb() {
             mainContent.innerHTML = '';
 
             if (parsedContent.overview) {
-                const overviewDiv = document.createElement('div');
-                overviewDiv.className = 'topic-overview';
+    const overviewDiv = document.createElement('div');
+    overviewDiv.className = 'topic-overview';
 
-                // --- NEW HEADER AND BUTTON LOGIC STARTS HERE ---
-                
-                // 1. Determine if the quiz should be active
-                const hasReadContent = currentTreeNode.children.some(child => child.isRead);
+    // 1. Determine if the quiz should be active
+    const hasReadContent = currentTreeNode.children.some(child => child.isRead);
 
-                // 2. Create a flex container for the title and button
-                const headerDiv = document.createElement('div');
-                headerDiv.className = 'topic-header';
+    // 2. Create a flex container for the title
+    const headerDiv = document.createElement('div');
+    headerDiv.className = 'topic-header';
 
-                // 3. Create the title (retrieving it from the current node)
-                const titleH2 = document.createElement('h2');
-                titleH2.textContent = toTitleCase(currentTreeNode.fullTitle || currentTreeNode.title);
-                
-                // 4. Create a wrapper for the button to handle the tooltip
-                const buttonWrapper = document.createElement('span');
-                buttonWrapper.className = 'button-tooltip-wrapper';
+    // 3. Create the title
+    const titleH2 = document.createElement('h2');
+    titleH2.textContent = toTitleCase(currentTreeNode.fullTitle || currentTreeNode.title);
+    
+    // 4. Create a wrapper for the button to handle the tooltip
+    const buttonWrapper = document.createElement('span');
+    buttonWrapper.className = 'button-tooltip-wrapper';
 
-                // 5. Create the "Quiz Me" button itself
-                const quizMeBtn = document.createElement('button');
-                quizMeBtn.id = 'quizMeBtn';
-                quizMeBtn.className = 'quiz-me-button';
-                quizMeBtn.textContent = 'Quiz Me';
-                quizMeBtn.onclick = () => startQuiz();
-                
-                buttonWrapper.appendChild(quizMeBtn); // Add button to its wrapper
+    // 5. Create the "Quiz Me" button itself
+    const quizMeBtn = document.createElement('button');
+    quizMeBtn.id = 'quizMeBtn';
+    quizMeBtn.className = 'quiz-me-button';
+    quizMeBtn.textContent = 'Quiz Me';
+    quizMeBtn.onclick = () => startQuiz();
+    
+    buttonWrapper.appendChild(quizMeBtn);
 
-                // 6. Conditionally disable the button and add the tooltip logic
-                if (!hasReadContent) {
-                    quizMeBtn.disabled = true;
-                    
-                    let tooltipTimeout;
-                    buttonWrapper.addEventListener('mouseenter', () => {
-                        if (quizMeBtn.disabled) {
-                            tooltipTimeout = setTimeout(() => {
-                                const tooltip = document.createElement('div');
-                                tooltip.className = 'quiz-tooltip show';
-                                tooltip.textContent = 'Read more content to generate a quiz';
-                                buttonWrapper.appendChild(tooltip);
-                            }, 1000); // 1-second delay
-                        }
-                    });
-
-                    buttonWrapper.addEventListener('mouseleave', () => {
-                        clearTimeout(tooltipTimeout);
-                        const existingTooltip = buttonWrapper.querySelector('.quiz-tooltip');
-                        if (existingTooltip) {
-                            existingTooltip.remove();
-                        }
-                    });
-                }
-
-                // 7. Assemble the header
-                headerDiv.appendChild(titleH2);
-                headerDiv.appendChild(buttonWrapper);
-
-                // 8. Create the container for the overview text content
-                const contentDiv = document.createElement('div');
-                let formattedOverview = parsedContent.overview;
-                // ... (existing code for formatting lists)
-                const lines = formattedOverview.split('\n');
-                let inList = false;
-                let processedLines = [];
-                lines.forEach(line => {
-                    if (line.trim().match(/^[•\-]\s+/)) {
-                        if (!inList) {
-                            processedLines.push('<ul>');
-                            inList = true;
-                        }
-                        processedLines.push(`<li>${line.trim().replace(/^[•\-]\s+/, '')}</li>`);
-                    } else {
-                        if (inList && line.trim() !== '') {
-                            processedLines.push('</ul>');
-                            inList = false;
-                        }
-                        if (line.trim() !== '') {
-                            processedLines.push(line);
-                        }
-                    }
-                });
-                if (inList) {
-                    processedLines.push('</ul>');
-                }
-                formattedOverview = processedLines.join('\n');
-                const highlightedContent = applyTermHighlighting(formattedOverview, parsedContent.definitions);
-                contentDiv.innerHTML = `<div>${highlightedContent}</div>`;
-                
-                // 9. Append the new header and the content to the main overview container
-                overviewDiv.appendChild(headerDiv);
-                overviewDiv.appendChild(contentDiv);
-                
-                mainContent.appendChild(overviewDiv);
+    // 6. Conditionally disable the button and add the tooltip logic
+    if (!hasReadContent) {
+        quizMeBtn.disabled = true;
+        
+        let tooltipTimeout;
+        buttonWrapper.addEventListener('mouseenter', () => {
+            if (quizMeBtn.disabled) {
+                tooltipTimeout = setTimeout(() => {
+                    const tooltip = document.createElement('div');
+                    tooltip.className = 'quiz-tooltip show';
+                    tooltip.textContent = 'Read more content to generate a quiz';
+                    buttonWrapper.appendChild(tooltip);
+                }, 1000); // 1-second delay
             }
+        });
+
+        buttonWrapper.addEventListener('mouseleave', () => {
+            clearTimeout(tooltipTimeout);
+            const existingTooltip = buttonWrapper.querySelector('.quiz-tooltip');
+            if (existingTooltip) {
+                existingTooltip.remove();
+            }
+        });
+    }
+
+    // 7. Assemble the header (NOW CONTAINS ONLY THE TITLE)
+    headerDiv.appendChild(titleH2);
+
+    // 8. Create the container for the overview text content
+    const contentDiv = document.createElement('div');
+    let formattedOverview = parsedContent.overview;
+    
+    const lines = formattedOverview.split('\n');
+    let inList = false;
+    let processedLines = [];
+    lines.forEach(line => {
+        if (line.trim().match(/^[•\-]\s+/)) {
+            if (!inList) {
+                processedLines.push('<ul>');
+                inList = true;
+            }
+            processedLines.push(`<li>${line.trim().replace(/^[•\-]\s+/, '')}</li>`);
+        } else {
+            if (inList && line.trim() !== '') {
+                processedLines.push('</ul>');
+                inList = false;
+            }
+            if (line.trim() !== '') {
+                processedLines.push(line);
+            }
+        }
+    });
+    if (inList) {
+        processedLines.push('</ul>');
+    }
+    formattedOverview = processedLines.join('\n');
+    const highlightedContent = applyTermHighlighting(formattedOverview, parsedContent.definitions);
+    contentDiv.innerHTML = `<div>${highlightedContent}</div>`;
+    
+    // 9. Append the header and content to the overview card
+    overviewDiv.appendChild(headerDiv);
+    overviewDiv.appendChild(contentDiv);
+    
+    // Add the overview card to the main content area
+    mainContent.appendChild(overviewDiv);
+
+    // --- CHANGE ---
+    // 10. Create a NEW container for the button and add it AFTER the overview card
+    const quizButtonContainer = document.createElement('div');
+    quizButtonContainer.style.textAlign = 'center'; // Center the button
+    quizButtonContainer.style.marginTop = '20px';    // Add space above the button
+    quizButtonContainer.appendChild(buttonWrapper);      // Add the button (and its tooltip wrapper)
+    mainContent.appendChild(quizButtonContainer);    // Add the button container to the page
+}
 
             if (parsedContent.sections && parsedContent.sections.length > 0) {
             const hasCards = parsedContent.sections.some(s => !s.isExpanded);
