@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Learning Tool</title>
             <style>
+                
                 * {
                     margin: 0;
                     padding: 0;
@@ -30,6 +31,45 @@
                 .view.active {
                     display: flex; /* Show the active view */
                 }
+
+                /* --- CHANGE 1: BREADCRUMB HEIGHT ADJUSTMENT --- */
+.breadcrumb {
+    /* We reduce the vertical padding from 15px to 10px to match the nav buttons */
+    padding: 10px 25px; 
+}
+
+/* --- CHANGE 2: STYLES FOR THE NEW DELETE BUTTON --- */
+
+/* Style for the new delete button in the nav bar */
+#deleteTopicBtn {
+    background: #ffffff;
+    color: #ef4444; /* A nice red color for the icon */
+    border: 2px solid #e5e7eb;
+    padding: 10px; /* Make padding equal for a square look */
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 15px; /* Add some space between it and the breadcrumb */
+}
+
+#deleteTopicBtn:hover {
+    background: #fee2e2; /* A light red background on hover */
+    border-color: #ef4444;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+/* Style for the 'Confirm Delete' button in the modal */
+.modal-btn.delete {
+    background: #dc2626; /* A strong red for the confirmation button */
+    color: white;
+}
+.modal-btn.delete:hover {
+    background: #b91c1c; /* A darker red on hover */
+}
         
                 #landingView {
                     flex-direction: column;
@@ -1038,6 +1078,14 @@
                     <div class="breadcrumb" id="breadcrumb">
                         <span class="breadcrumb-item active">Home</span>
                     </div>
+                    <button class="nav-button" id="deleteTopicBtn" title="Delete this topic">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                        </svg>
+                    </button>
                 </div>
 
                 <div class="main-content" id="mainContent">
@@ -1085,6 +1133,60 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script>
+
+        // --- START OF NEW JAVASCRIPT FOR DELETION ---
+
+// Get references to all the new HTML elements we added
+const deleteTopicBtn = document.getElementById('deleteTopicBtn');
+const deleteConfirmModal = document.getElementById('deleteConfirmModal');
+const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+
+// Helper functions to show and hide the modal
+function openDeleteModal() {
+    deleteConfirmModal.classList.add('active');
+}
+
+function closeDeleteModal() {
+    deleteConfirmModal.classList.remove('active');
+}
+
+// When the user clicks the trash can icon, open the confirmation modal
+deleteTopicBtn.addEventListener('click', openDeleteModal);
+
+// If the user clicks 'Cancel' or outside the modal, just close it
+cancelDeleteBtn.addEventListener('click', closeDeleteModal);
+deleteConfirmModal.addEventListener('click', (e) => {
+    if (e.target === deleteConfirmModal) {
+        closeDeleteModal();
+    }
+});
+
+// This is the main logic for when the user confirms the deletion
+confirmDeleteBtn.addEventListener('click', async () => {
+    if (!currentTopicId) {
+        alert("Error: No topic is currently loaded.");
+        return;
+    }
+
+    // Step 1: Delete the topic from our local JavaScript object
+    delete learningTopics[currentTopicId];
+    console.log(`Locally deleted topic: ${currentTopicId}`);
+
+    // Step 2: Save the updated (smaller) topics object to Firestore.
+    // This overwrites the old data, effectively deleting the topic from the database.
+    await saveTopicsToFirestore();
+    console.log("Deletion saved to Firestore.");
+
+    // Step 3: Close the modal
+    closeDeleteModal();
+
+    // Step 4: Go back to the main menu and refresh the list of topic cards
+    renderTopicCards();
+    switchView('landingView');
+});
+
+// --- END OF NEW JAVASCRIPT FOR DELETION ---
         /**
  * Converts a string to Title Case.
  * @param {string} str The string to convert.
@@ -1569,6 +1671,7 @@ function parseSyllabusResponse(text) {
 }
         // --- NEW: In-Memory Storage for Topics ---
 let learningTopics = {};
+let currentTopicId = null; // <-- ADD THIS LINE
 /**
  * Clears and redraws the topic cards on the landing page from our storage.
  */
@@ -1610,6 +1713,7 @@ function renderTopicCards() {
  */
 // Find and replace this entire function
 function loadLearningTopic(topicId) {
+    currentTopicId = topicId; 
     const topicData = learningTopics[topicId];
     if (!topicData) {
         console.error("Topic not found:", topicId);
@@ -1996,6 +2100,7 @@ function renderTreeNode(node, level = 0) {
                     // After marking this node, check if its parent is now fully read.
                     updateParentReadStatus(node.parent);
                 }
+                saveTopicsToFirestore(); // Save the change in the node's "read" status
 
                 // Add to navigation history
                 navigationHistory = navigationHistory.slice(0, currentHistoryIndex + 1);
@@ -2459,6 +2564,8 @@ async function elaborateOnTopic(targetNode, generateNewCards = false) {
 
         targetNode.content = parsed;
         navigateToNode(targetNode.id);
+        saveTopicsToFirestore(); // Save the newly added content and children to Firestore
+
 
     } catch (error) {
         console.error("Error in elaborateOnTopic:", error);
@@ -2783,6 +2890,18 @@ googleSignInBtn.addEventListener('click', () => {
         <div class="modal-actions" style="margin-top: 30px;">
              <button class="modal-btn cancel" onclick="closeQuizModal()">Close</button>
              <button class="modal-btn submit" id="quizSubmitBtn">Submit</button>
+        </div>
+    </div>
+</div>
+<div class="modal-overlay" id="deleteConfirmModal">
+    <div class="modal-content">
+        <h2>Confirm Deletion</h2>
+        <p style="margin-bottom: 30px; font-size: 16px; color: #4b5563; text-align: center;">
+            Are you sure you want to permanently delete this topic and all of its content? This action cannot be undone.
+        </p>
+        <div class="modal-actions">
+            <button class="modal-btn cancel" id="cancelDeleteBtn">Cancel</button>
+            <button class="modal-btn delete" id="confirmDeleteBtn">Confirm Delete</button>
         </div>
     </div>
 </div>
