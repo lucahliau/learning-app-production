@@ -1052,6 +1052,12 @@
     justify-content: center;
     padding-bottom: 5px;
 }
+/* --- Styles for the sidebar title spacing and border --- */
+#sidebarTitle {
+    margin-bottom: 10px;  /* This is the halved space below the border */
+    padding-bottom: 10px; /* This is the space between the tags and the border */
+    border-bottom: 1px solid #e5e7eb; /* The new thin grey border */
+}
 
 .topic-card .tag {
     display: inline-block;
@@ -1115,7 +1121,7 @@
 
     <div class="app-wrapper">
         <div class="tree-sidebar" id="treeSidebar">
-            <div id="sidebarTitle" style="margin-bottom: 20px; min-height: 27px;">Learning Journey Map</div>                <div class="tree-container" id="treeContainer">
+            <div id="sidebarTitle" style="margin-bottom: 0px; min-height: 27px;">Learning Journey Map</div>                <div class="tree-container" id="treeContainer">
                 <div class="tree-node">
                     <div class="tree-node-content active" onclick="navigateToNode('root')">
                         <span class="tree-node-icon">🏠</span>
