@@ -2149,14 +2149,14 @@ function parseResponse(mainContentText, definitionsArray) {
                 return text; // If there are no definitions, return the text as is
             }
 
-            // *** THIS IS THE FIX ***
-            // Sort definitions by term length, longest first, to avoid nested replacements.
+            // --- THIS IS THE FIX ---
+            // Sort definitions by the length of the term, longest first.
+            // This ensures "private equity" is processed before "equity".
             const sortedDefinitions = definitions.sort((a, b) => b.term.length - a.term.length);
 
-            // Use the new sorted array in the loop
+            // Now, loop through the correctly sorted definitions
             sortedDefinitions.forEach(def => {
-                // The rest of your function remains the same...
-                // The regex looks for whole words to avoid replacing 'equity' inside 'private_equity'
+                // The regex looks for whole words to avoid replacing text inside other HTML tags
                 const regex = new RegExp(`\\b${def.term}\\b(?![^<]*?>)`, 'gi');
                 
                 const sanitizedDefinition = def.definition.replace(/"/g, '&quot;');
