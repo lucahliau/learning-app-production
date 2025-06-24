@@ -1032,21 +1032,36 @@ auth.onAuthStateChanged(user => {
     }
 });
 // Function to save the entire learningTopics object to Firestore
+// Replace the existing function with this one
 async function saveTopicsToFirestore() {
+    // LOG 1: Confirm the function is being called
+    console.log("Attempting to save topics...");
+
     const user = auth.currentUser;
+
     if (user) {
-        // We will save all topics under a single document, identified by the user's unique ID.
-        // The document will be in a collection called 'userTopics'.
+        // LOG 2: Confirm we have a user and their ID
+        console.log("User found:", user.uid);
+        
+        // LOG 3: Log the exact data being sent to Firestore
+        console.log("Data to be saved:", learningTopics);
+
         try {
             await db.collection('userTopics').doc(user.uid).set({
-                // We need to convert your tree structure to a plain JSON object
-                // that Firestore can store.
-                topics: JSON.parse(JSON.stringify(learningTopics)) 
+                // The 'topics' key is important, it matches your loading function
+                topics: JSON.parse(JSON.stringify(learningTopics))
             });
-            console.log("Topics saved succesfully!");
+            
+            // LOG 4: This will only appear on a successful save
+            console.log("SUCCESS: Topics saved to Firestore!");
+
         } catch (error) {
-            console.error("Error saving topics: ", error);
+            // LOG 5: This will show us the exact error if the save fails
+            console.error("FIRESTORE SAVE ERROR:", error);
         }
+    } else {
+        // LOG 6: This will tell us if the function ran without a logged-in user
+        console.log("Save failed: No user is currently logged in.");
     }
 }
 
