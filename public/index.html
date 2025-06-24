@@ -2296,7 +2296,7 @@ function startLearningTopic(topicTitle, syllabusSections, topicId, category, sop
     navigateToNode('root');
     switchView('learningView');
     saveTopicsToFirestore();
-    
+
     treeStructure.children.forEach(childNode => {
         prefetchNodeContent(childNode);
     });
@@ -2396,7 +2396,7 @@ function closeNewTopicModal() {
     ];
 
     // This new prompt asks for a JSON object with two keys: "category" and "syllabus".
-    const prompt = `You are an expert, rigorous and intellectual curriculum designer. Your task is to design a unique syllabus for "${topic}" for a "${sophistication}" audience.
+    const prompt = `You are an expert, rigorous and intellectual curriculum designer who follows tasks they have been set with precision and speed. Your task is to design a unique syllabus for "${topic}" for a "${sophistication}" audience.
 
 Your task is to perform two steps:
 1.  Categorize this topic into ONE of the following predefined categories: ${categories.join(', ')}.
