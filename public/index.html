@@ -1941,9 +1941,9 @@ function parseResponse(mainContentText, definitionsArray) {
         // Render tree node
         // Find and replace this entire function
 function renderTreeNode(node, level = 0) {
-    const icon = node.id === 'root' ? '' :
+    const icon = node.id === 'root' ? ' ' :
                 node.isUserQuestion ? '❓' :
-                node.sectionIndex ? `${node.sectionIndex}.` : '';
+                node.sectionIndex ? `${node.sectionIndex}.` : ' ';
     
     const statusIndicatorHTML = node.id !== 'root' ? 
         `<div class="tree-status-indicator ${node.isRead ? 'read' : ''}"></div>` : 
