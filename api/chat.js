@@ -23,7 +23,7 @@ app.post('/api/chat', async (req, res) => {
 
     // --- CHANGE 3: Structure the request for OpenAI ---
     const requestData = {
-        model: 'gpt-3.5-turbo', // Or any other model you prefer, like 'gpt-4'
+        model: 'o4-mini', // Or any other model you prefer, like 'gpt-4'
         messages: messages,
     };
 
