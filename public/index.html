@@ -1021,6 +1021,27 @@
     /* We already had this, just ensure margin-bottom is set */
     margin-bottom: 8px; 
 }
+
+/* --- ADD THESE NEW STYLES FOR TAGS --- */
+.topic-card .tags-container {
+    display: flex;
+    gap: 8px; /* Adds space between the tags */
+    margin-bottom: 12px; /* Adds space between the tags and the title */
+}
+
+.topic-card .tag {
+    display: inline-block;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 20px;
+    color: #ffffff; /* Default text color is white */
+}
+
+/* We can remove the specific margin from the category-tag now */
+.topic-card .category-tag {
+    /* The .tag class now handles the shared styles */
+}
             </style>
 </head>
 <body>
@@ -1762,16 +1783,22 @@ let currentTopicId = null; // <-- ADD THIS LINE
         
         card.className = 'topic-card';
         
-        // Get the category and its corresponding color
+        // 1. Get data for both tags
         const category = topic.category || 'General';
         const categoryColor = getCategoryColor(category);
+        const sophistication = topic.sophistication || 'Simple';
 
-        // This is the new card structure with the category tag
+        // 2. This is the new card structure with the tags container and title-cased heading
         card.innerHTML = `
-            <div class="category-tag" style="background-color: ${categoryColor};">
-                ${category}
+            <div class="tags-container">
+                <div class="tag" style="background-color: ${categoryColor};">
+                    ${category}
+                </div>
+                <div class="tag" style="background-color: #e5e7eb; color: #4b5563;">
+                    ${sophistication}
+                </div>
             </div>
-            <h2>${topic.fullTitle || topic.title}</h2>
+            <h2>${toTitleCase(topic.fullTitle || topic.title)}</h2>
             <p>Click to continue learning.</p>
         `;
 
@@ -1818,13 +1845,22 @@ function loadLearningTopic(topicId) {
  * @param {string} topicId - The unique ID for this new topic.
  * @param {string} category - The category assigned to this topic.
  */
- function startLearningTopic(topicTitle, syllabusSections, topicId, category) {
+ /**
+ * Resets the learning view and displays the initial syllabus for a new topic.
+ * @param {string} topicTitle - The title of the new topic.
+ * @param {Array<Object>} syllabusSections - An array of section objects for the syllabus.
+ * @param {string} topicId - The unique ID for this new topic.
+ * @param {string} category - The category assigned to this topic.
+ * @param {string} sophistication - The sophistication level for the topic.
+ */
+function startLearningTopic(topicTitle, syllabusSections, topicId, category, sophistication) {
     navigationHistory = [];
     currentHistoryIndex = -1;
 
     treeStructure = createTreeNode(topicTitle, null, null);
     treeStructure.id = 'root';
-    treeStructure.category = category; // <-- STORE THE CATEGORY HERE
+    treeStructure.category = category; 
+    treeStructure.sophistication = sophistication; // <-- STORE THE SOPHISTICATION LEVEL
 
     currentTreeNode = treeStructure;
 
@@ -1998,7 +2034,7 @@ Example format:
         const newTopicId = `topic-${Date.now()}`;
         closeNewTopicModal();
         // Pass the new category to the startLearningTopic function
-        startLearningTopic(topic, syllabusSections, newTopicId, category); 
+        startLearningTopic(topic, syllabusSections, newTopicId, category, sophistication);
 
     } catch (error) {
         console.error("Error fetching syllabus:", error);
