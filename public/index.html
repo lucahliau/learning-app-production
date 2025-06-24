@@ -414,7 +414,6 @@
                     display: flex;
                     flex-direction: column;
                     padding: 20px;
-                    padding-bottom: 100px;
                     overflow: hidden;
                     height: 100vh;
                 }
@@ -744,17 +743,11 @@
                 }
         
                 .chat-container {
-                    position: fixed;
-                    bottom: 0;
-                    left: 0;
-                    right: 0;
-                    /* CHANGE: White chat container */
+                    /* All fixed positioning properties have been removed. */
                     background: #ffffff;
-                    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+                    border-top: 1px solid #e5e7eb; /* Separates it from content above */
                     padding: 20px;
-                    z-index: 1000;
-                    /* CHANGE: Light border on top */
-                    border-top: 1px solid #e5e7eb;
+                    flex-shrink: 0; /* Prevents it from shrinking in the flex layout */
                 }
         
                 .chat-input-wrapper {
@@ -1181,28 +1174,29 @@
                         </div>
                     </div>
                 </div>
+                <div class="chat-container">
+                    <div class="error-message" id="errorMessage"></div>
+                    <div class="chat-input-wrapper">
+                        <input 
+                            type="text" 
+                            class="chat-input" 
+                            id="chatInput" 
+                            placeholder="Ask about finance or economics..."
+                            autofocus
+                        >
+                        <button class="send-button" id="sendButton" onclick="sendMessage()">
+                            <span id="buttonText">Send</span>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M5 12h14m0 0l-6-6m6 6l-6 6"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="chat-container">
-        <div class="error-message" id="errorMessage"></div>
-        <div class="chat-input-wrapper">
-            <input 
-                type="text" 
-                class="chat-input" 
-                id="chatInput" 
-                placeholder="Ask about finance or economics..."
-                autofocus
-            >
-            <button class="send-button" id="sendButton" onclick="sendMessage()">
-                <span id="buttonText">Send</span>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M5 12h14m0 0l-6-6m6 6l-6 6"/>
-                </svg>
-            </button>
-        </div>
-    </div>
+    
 </div>
 <div class="modal-overlay" id="deleteConfirmModal">
     <div class="modal-content">
