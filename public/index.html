@@ -743,11 +743,13 @@
                 }
         
                 .chat-container {
-                    /* All fixed positioning properties have been removed. */
-                    background: #ffffff;
-                    border-top: 1px solid #e5e7eb; /* Separates it from content above */
+                    margin-top: 20px; /* Adds space between the main content and this container */
+                    border-radius: 20px; /* Rounds the corners of the container */
                     padding: 20px;
-                    flex-shrink: 0; /* Prevents it from shrinking in the flex layout */
+                    background: #ffffff;
+                    border: 1px solid #e5e7eb; /* A full border looks better with rounded corners */
+                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); /* A subtle shadow to match other elements */
+                    flex-shrink: 0; 
                 }
         
                 .chat-input-wrapper {
