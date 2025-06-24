@@ -1048,19 +1048,9 @@
 }
 
 /* 4. For tags inside the sidebar header, center them */
-/* --- UPDATED SIDEBAR HEADER STYLES --- */
-
-/* 1. Styles the main header container */
-
-#sidebarTitle {
-    /* Adds a thin grey border at the bottom */
-    border-bottom: 1px solid #e5e7eb; 
-}
-/* 2. Styles the tags container specifically within the header */
 #sidebarTitle .tags-container {
     justify-content: center;
-    /* This padding adds 8px of space below the tags, before the border */
-    padding: 0 10px 8px 10px; 
+    padding-bottom: 5px;
 }
 
 .topic-card .tag {
@@ -1125,8 +1115,8 @@
 
     <div class="app-wrapper">
         <div class="tree-sidebar" id="treeSidebar">
-            <div id="sidebarTitle">Learning Journey Map</div>
-                            <div class="tree-node">
+            <div id="sidebarTitle" style="margin-bottom: 20px; min-height: 27px;">Learning Journey Map</div>                <div class="tree-container" id="treeContainer">
+                <div class="tree-node">
                     <div class="tree-node-content active" onclick="navigateToNode('root')">
                         <span class="tree-node-icon">🏠</span>
                         <span class="tree-node-text">Home</span>
@@ -2409,108 +2399,34 @@ function updateBreadcrumb() {
                 `;
                 updatePlaceholder(false);
             } else if (node.content || preservedContent) {
-                renderContent(preservedContent || node.content, node);
-                                updatePlaceholder(true);
+                renderContent(preservedContent || node.content, node.fullTitle || node.title);
+                updatePlaceholder(true);
             }
         }
 
         // Render content
-        f// Find and replace the entire renderContent function with this corrected version
-
-function renderContent(parsedContent, node) {
+        function renderContent(parsedContent, userQuestion = null) {
     console.log("LOG #2 - Content renderer received definitions:", parsedContent.definitions);
     const mainContent = document.getElementById('mainContent');
     mainContent.innerHTML = '';
 
-    // CASE 2: Only show the "Your Question" card if the node was created by a user's question.
-    if (node.isUserQuestion) {
+    if (userQuestion) {
         const questionDiv = document.createElement('div');
         questionDiv.className = 'topic-overview';
-        questionDiv.innerHTML = `<h3 style="font-size: 20px; margin-bottom: 0;">Your Question:</h3><p style="margin-top: 10px;">"${toTitleCase(node.fullTitle)}"</p>`;
+        // Applied here for the question title
+        questionDiv.innerHTML = `<h3 style="font-size: 20px; margin-bottom: 0;">Your Question:</h3><p style="margin-top: 10px;">"${toTitleCase(userQuestion)}"</p>`;
         mainContent.appendChild(questionDiv);
     }
-    // For all other cases (base topic, syllabus items), this card will now be skipped.
 
-    if (parsedContent.overview) {
-        // Determine the title for the main content card.
-        const cardTitle = (node.id === 'root') 
-            ? 'Overview' // For the base topic node, the title is "Overview".
-            : toTitleCase(node.fullTitle); // For all sub-nodes, the title is the node's own title.
-
-        const overviewDiv = document.createElement('div');
-        overviewDiv.className = 'topic-overview';
-        
-        let formattedOverview = parsedContent.overview;
-        
-        // (The existing code for formatting lists remains unchanged)
-        const lines = formattedOverview.split('\n');
-        let inList = false;
-        let processedLines = [];
-        
-        lines.forEach(line => {
-            if (line.trim().match(/^[•\-]\s+/)) {
-                if (!inList) {
-                    processedLines.push('<ul>');
-                    inList = true;
-                }
-                processedLines.push(`<li>${line.trim().replace(/^[•\-]\s+/, '')}</li>`);
-            } else {
-                if (inList && line.trim() !== '') {
-                    processedLines.push('</ul>');
-                    inList = false;
-                }
-                if (line.trim() !== '') {
-                    processedLines.push(line);
-                }
-            }
-        });
-        
-        if (inList) {
-            processedLines.push('</ul>');
-        }
-        
-        formattedOverview = processedLines.join('\n');
-        
-        const highlightedOverview = applyTermHighlighting(formattedOverview, parsedContent.definitions);
-        
-        // Use the dynamic cardTitle we determined above.
-        overviewDiv.innerHTML = `<h2>${cardTitle}</h2><div>${highlightedOverview}</div>`;
-        mainContent.appendChild(overviewDiv);
-    }
-
-    let hasExpandedContent = false;
-
-    if (parsedContent.sections && parsedContent.sections.length > 0) {
-        const hasCards = parsedContent.sections.some(s => !s.isExpanded);
-        
-        if (hasCards) {
-            const cardsGrid = document.createElement('div');
-            cardsGrid.className = 'cards-grid';
-            
-            parsedContent.sections.forEach((section, index) => {
-                if (!section.isExpanded) {
-                    const childNode = currentTreeNode.children.find(child => 
-                        child.fullTitle === section.title || child.title === section.title
-                    );
-                    const isNodeRead = childNode ? childNode.isRead : false;
-
-                    const card = createCard(section, index, isNodeRead);
-                    cardsGrid.appendChild(card);
-                }
-            });
-            
-            mainContent.appendChild(cardsGrid);
-        }
-        
-        parsedContent.sections.forEach(section => {
-            if (section.isExpanded && section.fullContent) {
-                hasExpandedContent = true;
-                const contentDiv = document.createElement('div');
-                contentDiv.className = 'content-section';
+            if (parsedContent.overview) {
+                const overviewDiv = document.createElement('div');
+                overviewDiv.className = 'topic-overview';
                 
-                let formattedContent = section.fullContent;
+                // Format the overview to handle lists
+                let formattedOverview = parsedContent.overview;
                 
-                const lines = formattedContent.split('\n');
+                // Convert bullet points to HTML list
+                const lines = formattedOverview.split('\n');
                 let inList = false;
                 let processedLines = [];
                 
@@ -2536,50 +2452,129 @@ function renderContent(parsedContent, node) {
                     processedLines.push('</ul>');
                 }
                 
-                formattedContent = processedLines.join('\n');
+                formattedOverview = processedLines.join('\n');
                 
-                const highlightedContent = applyTermHighlighting(formattedContent, parsedContent.definitions);
-                
-                contentDiv.innerHTML = `
-                    <h3>${section.title}</h3>
-                    <div>${highlightedContent}</div>
-                `;
-                mainContent.appendChild(contentDiv);
+                // Highlight terms in the overview before displaying it
+                const highlightedOverview = applyTermHighlighting(formattedOverview, parsedContent.definitions);
+                overviewDiv.innerHTML = `<h2>Overview</h2><div>${highlightedOverview}</div>`;
+                mainContent.appendChild(overviewDiv);
             }
-        });
-    }
 
-    if (parsedContent.showTellMeMore || 
-        (hasExpandedContent && parsedContent.sections && parsedContent.sections.filter(s => !s.isExpanded).length === 0) ||
-        (parsedContent.overview && (!parsedContent.sections || parsedContent.sections.length === 0))) {
-        const tellMeMoreBtn = document.createElement('button');
-        tellMeMoreBtn.className = 'tell-me-more-button';
-        tellMeMoreBtn.innerHTML = `
-            Tell me more about this
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 5v14m0 0l-7-7m7 7l7-7"/>
-            </svg>
-        `;
-        tellMeMoreBtn.onclick = () => elaborateOnCurrent();
-        mainContent.appendChild(tellMeMoreBtn);
-    }
+            let hasExpandedContent = false;
+
+            if (parsedContent.sections && parsedContent.sections.length > 0) {
+                const hasCards = parsedContent.sections.some(s => !s.isExpanded);
+                
+                if (hasCards) {
+                    const cardsGrid = document.createElement('div');
+                    cardsGrid.className = 'cards-grid';
+                    
+                    parsedContent.sections.forEach((section, index) => {
+                    if (!section.isExpanded) {
+                        // Find the child node that matches this section title
+                        const childNode = currentTreeNode.children.find(child => 
+                            child.fullTitle === section.title || child.title === section.title
+                        );
+                        // Check if the node exists and is read
+                        const isNodeRead = childNode ? childNode.isRead : false;
+
+                        // Pass this status to the createCard function
+                        const card = createCard(section, index, isNodeRead);
+                        cardsGrid.appendChild(card);
+                    }
+                });
+                    
+                    mainContent.appendChild(cardsGrid);
+                }
+                
+                // Display expanded content
+                parsedContent.sections.forEach(section => {
+                    if (section.isExpanded && section.fullContent) {
+                        hasExpandedContent = true;
+                        const contentDiv = document.createElement('div');
+                        contentDiv.className = 'content-section';
+                        
+                        // Format the content to handle lists
+                        let formattedContent = section.fullContent;
+                        
+                        // Convert bullet points to HTML list
+                        const lines = formattedContent.split('\n');
+                        let inList = false;
+                        let processedLines = [];
+                        
+                        lines.forEach(line => {
+                            if (line.trim().match(/^[•\-]\s+/)) {
+                                if (!inList) {
+                                    processedLines.push('<ul>');
+                                    inList = true;
+                                }
+                                processedLines.push(`<li>${line.trim().replace(/^[•\-]\s+/, '')}</li>`);
+                            } else {
+                                if (inList && line.trim() !== '') {
+                                    processedLines.push('</ul>');
+                                    inList = false;
+                                }
+                                if (line.trim() !== '') {
+                                    processedLines.push(line);
+                                }
+                            }
+                        });
+                        
+                        if (inList) {
+                            processedLines.push('</ul>');
+                        }
+                        
+                        formattedContent = processedLines.join('\n');
+                        
+                        // Highlight terms in the detailed content before displaying it
+                        const highlightedContent = applyTermHighlighting(formattedContent, parsedContent.definitions);
+                        
+                        contentDiv.innerHTML = `
+                            <h3>${section.title}</h3>
+                            <div>${highlightedContent}</div>
+                        `;
+                        mainContent.appendChild(contentDiv);
+                    }
+                });
+            }
+            
+            // Add "Tell me more" button for single expanded content or when showTellMeMore is true
+            if (parsedContent.showTellMeMore || 
+                (hasExpandedContent && parsedContent.sections && parsedContent.sections.filter(s => !s.isExpanded).length === 0) ||
+                (parsedContent.overview && (!parsedContent.sections || parsedContent.sections.length === 0))) {
+                const tellMeMoreBtn = document.createElement('button');
+                tellMeMoreBtn.className = 'tell-me-more-button';
+                tellMeMoreBtn.innerHTML = `
+                    Tell me more about this
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14m0 0l-7-7m7 7l7-7"/>
+                    </svg>
+                `;
+                tellMeMoreBtn.onclick = () => elaborateOnCurrent();
+                mainContent.appendChild(tellMeMoreBtn);
+            }
+                // --- START OF NEW CODE FOR QUIZ BUTTON ---
     let hasReadContent = false;
     if (currentTreeNode.children.length > 0) {
+        // Check if any of the children nodes have been read
         hasReadContent = currentTreeNode.children.some(child => child.isRead);
     }
-
+    
+    // If there is read content, show the "Quiz Me" button
     if (hasReadContent) {
         const quizMeBtn = document.createElement('button');
-        quizMeBtn.className = 'tell-me-more-button';
+        quizMeBtn.className = 'tell-me-more-button'; // Re-using an existing style
         quizMeBtn.id = 'quizMeBtn';
         quizMeBtn.innerHTML = `
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8.5L14.5 2z"></path><polyline points="14 2 14 9 21 9"></polyline><path d="M12 18d-2-2-2-2"></path><path d="M12 18c2-2 2-2 0-4"></path><path d="M12 18c-2-2 0-4-2-4"></path></svg>
             Quiz Me On This Topic
         `;
-        quizMeBtn.onclick = () => startQuiz();
+        quizMeBtn.onclick = () => startQuiz(); // This will be our main controller function
         mainContent.appendChild(quizMeBtn);
     }
-}
+    // --- END OF NEW CODE FOR QUIZ BUTTON ---
+        }
+
         // Create card element
         // Update the function signature to accept isRead
         function createCard(section, index, isRead) { 
