@@ -3404,7 +3404,7 @@ newTopicModal.addEventListener('click', (e) => {
 
 // Initialize the app on the landing page
 switchView('landingView');
-// --- NEW: Tooltip Repositioning Logic ---
+// --- REVISED: Tooltip Repositioning Logic ---
 const mainContent = document.getElementById('mainContent');
 
 // Use event delegation to handle hovers on dynamically added terms
@@ -3418,25 +3418,28 @@ mainContent.addEventListener('mouseover', (event) => {
     // 1. Make the tooltip visible so we can measure it
     tooltip.classList.add('visible');
 
-    // 2. Get its position and the viewport width
-    const rect = tooltip.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const PADDING = 10; // The minimum space from the edge of the window
+    // 2. Use requestAnimationFrame to wait for the browser to render the tooltip
+    // before we try to measure and move it. This prevents timing issues.
+    requestAnimationFrame(() => {
+        const rect = tooltip.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const PADDING = 10; // The minimum space from the edge of the window
 
-    // 3. Calculate if it's overflowing and by how much
-    let deltaX = 0;
-    if (rect.right > viewportWidth - PADDING) {
-        // It's off the right edge, so we calculate a negative value to move it left
-        deltaX = (viewportWidth - PADDING) - rect.right;
-    } else if (rect.left < PADDING) {
-        // It's off the left edge, so we calculate a positive value to move it right
-        deltaX = PADDING - rect.left;
-    }
+        let deltaX = 0;
+        // Check if it's overflowing the right edge
+        if (rect.right > viewportWidth - PADDING) {
+            deltaX = (viewportWidth - PADDING) - rect.right; // Negative value to move left
+        } 
+        // Check if it's overflowing the left edge
+        else if (rect.left < PADDING) {
+            deltaX = PADDING - rect.left; // Positive value to move right
+        }
 
-    // 4. Apply the correction if needed
-    if (deltaX !== 0) {
-        tooltip.style.transform = `translateX(${deltaX}px)`;
-    }
+        // Apply the correction if needed
+        if (deltaX !== 0) {
+            tooltip.style.transform = `translateX(${deltaX}px)`;
+        }
+    });
 });
 
 mainContent.addEventListener('mouseout', (event) => {
@@ -3451,7 +3454,7 @@ mainContent.addEventListener('mouseout', (event) => {
         tooltip.style.transform = '';
     }
 });
-// --- END OF NEW LOGIC ---
+// --- END OF REVISED LOGIC ---
 
 
         });
