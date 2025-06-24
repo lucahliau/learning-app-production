@@ -2619,25 +2619,7 @@ function updateBreadcrumb() {
         questionDiv.innerHTML = `<h3 style="font-size: 20px; margin-bottom: 0;">Your Question:</h3><p style="margin-top: 10px;">"${toTitleCase(userQuestion)}"</p>`;
         mainContent.appendChild(questionDiv);
     }*/
-               // --- START OF NEW CODE FOR QUIZ BUTTON ---
-               let hasReadContent = false;
-    if (currentTreeNode.children.length > 0) {
-        // Check if any of the children nodes have been read
-        hasReadContent = currentTreeNode.children.some(child => child.isRead);
-    }
-    
-    // If there is read content, show the "Quiz Me" button
-    if (hasReadContent) {
-        const quizMeBtn = document.createElement('button');
-        quizMeBtn.className = 'tell-me-more-button'; // Re-using an existing style
-        quizMeBtn.id = 'quizMeBtn';
-        quizMeBtn.innerHTML = `
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8.5L14.5 2z"></path><polyline points="14 2 14 9 21 9"></polyline><path d="M12 18d-2-2-2-2"></path><path d="M12 18c2-2 2-2 0-4"></path><path d="M12 18c-2-2 0-4-2-4"></path></svg>
-            Quiz Me On This Topic
-        `;
-        quizMeBtn.onclick = () => startQuiz(); // This will be our main controller function
-        mainContent.appendChild(quizMeBtn);
-    }
+              
 
             if (parsedContent.overview) {
                 const overviewDiv = document.createElement('div');
@@ -2685,7 +2667,25 @@ function updateBreadcrumb() {
 
             if (parsedContent.sections && parsedContent.sections.length > 0) {
             const hasCards = parsedContent.sections.some(s => !s.isExpanded);
-            
+             // --- START OF NEW CODE FOR QUIZ BUTTON ---
+             let hasReadContent = false;
+    if (currentTreeNode.children.length > 0) {
+        // Check if any of the children nodes have been read
+        hasReadContent = currentTreeNode.children.some(child => child.isRead);
+    }
+    
+    // If there is read content, show the "Quiz Me" button
+    if (hasReadContent) {
+        const quizMeBtn = document.createElement('button');
+        quizMeBtn.className = 'tell-me-more-button'; // Re-using an existing style
+        quizMeBtn.id = 'quizMeBtn';
+        quizMeBtn.innerHTML = `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8.5L14.5 2z"></path><polyline points="14 2 14 9 21 9"></polyline><path d="M12 18d-2-2-2-2"></path><path d="M12 18c2-2 2-2 0-4"></path><path d="M12 18c-2-2 0-4-2-4"></path></svg>
+            Quiz Me On This Topic
+        `;
+        quizMeBtn.onclick = () => startQuiz(); // This will be our main controller function
+        mainContent.appendChild(quizMeBtn);
+    }
             if (hasCards) {
                 const cardsGrid = document.createElement('div');
                 cardsGrid.className = 'cards-grid';
