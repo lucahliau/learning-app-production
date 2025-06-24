@@ -2738,7 +2738,7 @@ function updateBreadcrumb() {
                 mainContent.innerHTML = `
                     <div class="welcome-message">
                         <h1>What do you want to learn?</h1>
-                        <p>Explore finance and economics through an interactive learning journey</p>
+                        <p>Explore topics through an interactive learning journey</p>
                         <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-top: 40px;">
                             <button class="card" style="padding: 15px 25px; cursor: pointer;" onclick="askQuestion('How does the central bank work?')">
                                 <span style="font-size: 16px;">🏦 Central Banking</span>
@@ -3068,7 +3068,7 @@ async function elaborateOnTopic(targetNode, generateNewCards = false) {
         The JSON object must have two keys: "explanation" and "definitions".
         
         1.  In the "explanation" value, provide a detailed, two-paragraph explanation of the topic.
-        2.  In the "definitions" value, provide an array of objects. For each object, identify a technical term from your explanation and provide a simple, one-sentence definition for it in the context of the topic.
+        2.  In the "definitions" value, provide an array of objects. For each object, identify a technical term (only if it is not straightforward or obvious) from your explanation and provide a simple, one-sentence definition for it in the context of the topic.
         
         Example JSON structure:
         {
