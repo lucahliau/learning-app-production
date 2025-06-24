@@ -2775,7 +2775,8 @@ function updateBreadcrumb() {
         }
 
         // Render content
-        function renderContent(parsedContent, userQuestion = null) {
+       // Render content
+       function renderContent(parsedContent, userQuestion = null) {
     console.log("LOG #2 - Content renderer received definitions:", parsedContent.definitions);
     const mainContent = document.getElementById('mainContent');
     mainContent.innerHTML = '';
@@ -2895,6 +2896,8 @@ if (canQuiz) {
                 const cardsGrid = document.createElement('div');
                 cardsGrid.className = 'cards-grid';
                 
+                const parentNodeId = currentTreeNode.id;
+
                 parsedContent.sections.forEach((section, index) => {
                     if (!section.isExpanded) {
                         // Find the child node that matches this section title
@@ -2907,7 +2910,7 @@ if (canQuiz) {
                         const childNodeId = childNode ? childNode.id : null;
 
                         // --- PASS THE ID TO THE createCard FUNCTION ---
-                        const card = createCard(section, index, isNodeRead, childNodeId);
+                        const card = createCard(section, index, isNodeRead, childNodeId, parentNodeId);
                         cardsGrid.appendChild(card);
                     }
                 });
@@ -2990,7 +2993,9 @@ if (canQuiz) {
         // Update the function signature to accept isRead
         // Create card element
         // Update the function signature to accept isRead and childNodeId
-        function createCard(section, index, isRead, childNodeId) { 
+        // Create card element
+        // Update the function signature to accept isRead and childNodeId
+        function createCard(section, index, isRead, childNodeId, parentNodeId) { 
             const card = document.createElement('div');
             card.className = 'card';
             
@@ -3008,7 +3013,7 @@ if (canQuiz) {
             
             // This now calls a new, more reliable function using the unique node ID
             if (childNodeId) {
-                card.onclick = () => expandCardById(childNodeId);
+                card.onclick = () => expandCardById(parentNodeId, childNodeId);
             }
             return card;
         }
@@ -3020,6 +3025,7 @@ if (canQuiz) {
 // Expand card
        // Replace the entire expandCard function
  // REPLACE the entire function
+// Expand card by its unique ID, replacing the old title-based lookup
 // Expand card by its unique ID, replacing the old title-based lookup
 async function expandCardById(parentNodeId, nodeId) {
             // Find the parent node first to ensure we are in the correct context
