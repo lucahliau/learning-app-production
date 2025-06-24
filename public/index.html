@@ -1033,34 +1033,64 @@ auth.onAuthStateChanged(user => {
 });
 // Function to save the entire learningTopics object to Firestore
 // Replace the existing function with this one
-async function saveTopicsToFirestore() {
-    // LOG 1: Confirm the function is being called
-    console.log("Attempting to save topics...");
+/**
+ * Creates a deep copy of the learning topics object and removes the circular
+ * 'parent' properties so it can be safely saved to Firestore.
+ * @param {object} topicsObject - The original learningTopics object.
+ * @returns {object} A clean copy of the object suitable for JSON stringification.
+ */
+ function removeCircularReferences(topicsObject) {
+    // Create a new object to avoid modifying the original in-memory data
+    const newObject = JSON.parse(JSON.stringify(topicsObject));
 
+    // A recursive function to traverse through all nodes
+    function traverse(node) {
+        // If the node has a 'parent' property, delete it
+        if (node.parent) {
+            delete node.parent;
+        }
+        // If the node has children, run the same function on each child
+        if (node.children && node.children.length > 0) {
+            node.children.forEach(child => traverse(child));
+        }
+    }
+
+    // Start the traversal process for each topic in our new object
+    for (const key in newObject) {
+        if (Object.hasOwnProperty.call(newObject, key)) {
+            traverse(newObject[key]);
+        }
+    }
+
+    return newObject;
+}
+
+
+async function saveTopicsToFirestore() {
+    console.log("Attempting to save topics...");
     const user = auth.currentUser;
 
     if (user) {
-        // LOG 2: Confirm we have a user and their ID
         console.log("User found:", user.uid);
         
-        // LOG 3: Log the exact data being sent to Firestore
-        console.log("Data to be saved:", learningTopics);
-
         try {
+            // --- THIS IS THE FIX ---
+            // Create a clean version of the data without circular references
+            const topicsToSave = removeCircularReferences(learningTopics);
+
+            // LOG: Let's see the clean data
+            console.log("Clean data to be saved:", topicsToSave);
+            
             await db.collection('userTopics').doc(user.uid).set({
-                // The 'topics' key is important, it matches your loading function
-                topics: JSON.parse(JSON.stringify(learningTopics))
+                topics: topicsToSave
             });
             
-            // LOG 4: This will only appear on a successful save
             console.log("SUCCESS: Topics saved to Firestore!");
 
         } catch (error) {
-            // LOG 5: This will show us the exact error if the save fails
             console.error("FIRESTORE SAVE ERROR:", error);
         }
     } else {
-        // LOG 6: This will tell us if the function ran without a logged-in user
         console.log("Save failed: No user is currently logged in.");
     }
 }
