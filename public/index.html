@@ -3016,9 +3016,21 @@ if (canQuiz) {
        // Replace the entire expandCard function
  // REPLACE the entire function
 // Expand card by its unique ID, replacing the old title-based lookup
-async function expandCardById(nodeId) {
-            // Find the child node directly by its unique ID within the current node's children
-            const childNodeToLoad = currentTreeNode.children.find(child => child.id === nodeId);
+// Expand card
+       // Replace the entire expandCard function
+ // REPLACE the entire function
+// Expand card by its unique ID, replacing the old title-based lookup
+async function expandCardById(parentNodeId, nodeId) {
+            // Find the parent node first to ensure we are in the correct context
+            const parentNode = findNodeById(treeStructure, parentNodeId);
+            if (!parentNode) {
+                console.error("Could not find the parent node for the clicked card:", parentNodeId);
+                showError("An error occurred: Cannot find the card's context.");
+                return;
+            }
+
+            // Now, find the child node directly within that parent's children
+            const childNodeToLoad = parentNode.children.find(child => child.id === nodeId);
 
             if (childNodeToLoad) {
                 // Set the context based on the reliably found node
@@ -3033,7 +3045,7 @@ async function expandCardById(nodeId) {
                     await elaborateOnTopic(childNodeToLoad, false);
                 }
             } else {
-                console.error("Could not find the tree node corresponding to the clicked card ID:", nodeId);
+                console.error("Could not find the tree node corresponding to the clicked card ID:", nodeId, "within parent:", parentNodeId);
                 showError("An error occurred trying to load this section.");
             }
         }
