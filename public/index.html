@@ -3051,8 +3051,7 @@ async function elaborateOnCurrent() {
     const currentTitle = currentTreeNode.fullTitle || currentTreeNode.title;
 
     if (currentTitle) {
-        // Construct a question string, just as if the user had typed it
-        const question = `Tell me more about ${currentTitle}`;
+        const question = `More about ${currentTitle}`;
         
         // Use the existing askQuestion function, which correctly creates a child node
         await askQuestion(question);
@@ -3115,7 +3114,7 @@ async function elaborateOnCurrent() {
         
         let parsed;
         if (generateNewCards) {
-            parsed = { overview: `Here are some deeper areas to explore for ${topic}.`, sections: parseSyllabusResponse(botResponse), definitions: [] };
+            parsed = { overview: `Here are some deeper areas to explore.`, sections: parseSyllabusResponse(botResponse), definitions: [] };
             targetNode.children = [];
             parsed.sections.forEach(section => {
                 createTreeNode(section.title, null, targetNode, false);
