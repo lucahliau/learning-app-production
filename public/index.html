@@ -1042,6 +1042,11 @@
 .topic-card .category-tag {
     /* The .tag class now handles the shared styles */
 }
+/* --- ADD THIS NEW RULE FOR SIDEBAR TAGS --- */
+#sidebarTitle .tags-container {
+    justify-content: center; /* Centers the tags horizontally */
+    padding-bottom: 5px;   /* Adds a little space underneath the tags */
+}
             </style>
 </head>
 <body>
@@ -1090,8 +1095,7 @@
 
     <div class="app-wrapper">
         <div class="tree-sidebar" id="treeSidebar">
-            <h3 id="sidebarTitle">Learning Journey Map</h3>
-                <div class="tree-container" id="treeContainer">
+            <div id="sidebarTitle" style="margin-bottom: 20px; min-height: 27px;">Learning Journey Map</div>                <div class="tree-container" id="treeContainer">
                 <div class="tree-node">
                     <div class="tree-node-content active" onclick="navigateToNode('root')">
                         <span class="tree-node-icon">🏠</span>
@@ -1195,13 +1199,19 @@
  * @param {object} topicNode The topic's main node containing category and sophistication.
  * @returns {string} The HTML string for the tags.
  */
-function createTagsHTML(topicNode) {
+/**
+ * Creates the HTML for the category and sophistication tags.
+ * @param {object} topicNode The topic's main node containing category and sophistication.
+ * @returns {string} The HTML string for the tags.
+ */
+ function createTagsHTML(topicNode) {
     const category = topicNode.category || 'General';
     const sophistication = topicNode.sophistication || 'Simple';
-    const categoryColor = getCategoryColor(category); // Uses existing helper
+    const categoryColor = getCategoryColor(category);
 
+    // This now returns clean HTML, relying on the stylesheet for layout.
     return `
-        <div class="tags-container" style="padding: 5px 10px 0;">
+        <div class="tags-container">
             <div class="tag" style="background-color: ${categoryColor};">
                 ${category}
             </div>
