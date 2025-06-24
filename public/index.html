@@ -2065,7 +2065,7 @@ document.getElementById('sortControls').addEventListener('click', (e) => {
  */
 // Find and replace this entire function
 function loadLearningTopic(topicId) {
-    currentTopicId = topicId; 
+    //currentTopicId = topicId; // This line is the issue
     const topicData = learningTopics[topicId];
     if (!topicData) {
         console.error("Topic not found:", topicId);
