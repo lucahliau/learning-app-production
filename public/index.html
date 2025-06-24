@@ -849,6 +849,29 @@
     </style>
 </head>
 <body>
+    <div id="authView" style="display: flex; justify-content: center; align-items: center; height: 100vh;">
+        <div style="background: #18181b; padding: 40px; border-radius: 20px; width: 400px; border: 1px solid #27272a;">
+            <h2>Login or Sign Up</h2>
+            
+            <input type="email" id="emailInput" placeholder="Email" class="modal-input">
+            <input type="password" id="passwordInput" placeholder="Password" class="modal-input">
+            <p id="authError" style="color: #dc2626; margin-bottom: 15px;"></p>
+            <div style="display: flex; gap: 15px;">
+                <button id="loginBtn" class="modal-btn submit" style="flex: 1;">Login</button>
+                <button id="signupBtn" class="modal-btn submit" style="flex: 1;">Sign Up</button>
+            </div>
+        
+            <div style="margin: 20px 0; text-align: center; color: #71717a;">OR</div>
+        
+            <button id="googleSignInBtn" class="modal-btn" style="width: 100%; background: #fff; color: #000; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 48 48"><g><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.42-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path><path fill="none" d="M0 0h48v48H0z"></path></g></svg>
+                Sign in with Google
+            </button>
+        </div>
+    </div>
+    
+    <div id="appContainer" style="display: none;">
+        </div>
     <!-- This is the new Landing Page View -->
 <div id="landingView" class="view active">
     <div class="landing-header">
@@ -943,8 +966,131 @@
     </div>
 </div>
 
-
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script>
+        // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyBkDl26l4dEQWp5E3-i-Tg1NzkAYDC4ELE",
+  authDomain: "my-learning-app-8b760.firebaseapp.com",
+  projectId: "my-learning-app-8b760",
+  storageBucket: "my-learning-app-8b760.firebasestorage.app",
+  messagingSenderId: "449522463774",
+  appId: "1:449522463774:web:3eb0d9e6bd9164e8972a0f",
+  measurementId: "G-N4N54809FB"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+const auth = firebase.auth();
+const db = firebase.firestore();
+const googleProvider = new firebase.auth.GoogleAuthProvider();
+
+
+// At the top of your script, get references to the new elements
+const authView = document.getElementById('authView');
+const appContainer = document.getElementById('appContainer');
+const loginBtn = document.getElementById('loginBtn');
+const signupBtn = document.getElementById('signupBtn');
+const emailInput = document.getElementById('emailInput');
+const passwordInput = document.getElementById('passwordInput');
+const authError = document.getElementById('authError');
+
+// --- Authentication Logic ---
+
+// Listen for login/signup button clicks
+loginBtn.addEventListener('click', () => {
+    auth.signInWithEmailAndPassword(emailInput.value, passwordInput.value)
+        .catch(error => { authError.textContent = error.message; });
+});
+
+signupBtn.addEventListener('click', () => {
+    auth.createUserWithEmailAndPassword(emailInput.value, passwordInput.value)
+        .catch(error => { authError.textContent = error.message; });
+});
+
+// This is the gatekeeper. It checks if a user is logged in or not.
+auth.onAuthStateChanged(user => {
+    if (user) {
+        // User is signed in.
+        authView.style.display = 'none'; // Hide login form
+        appContainer.style.display = 'block'; // Show the main app
+
+        // This is where we will load their saved data! (Phase 4)
+        loadTopicsFromFirestore(user.uid); 
+    } else {
+        // User is signed out.
+        authView.style.display = 'flex'; // Show login form
+        appContainer.style.display = 'none'; // Hide the main app
+    }
+});
+// Function to save the entire learningTopics object to Firestore
+async function saveTopicsToFirestore() {
+    const user = auth.currentUser;
+    if (user) {
+        // We will save all topics under a single document, identified by the user's unique ID.
+        // The document will be in a collection called 'userTopics'.
+        try {
+            await db.collection('userTopics').doc(user.uid).set({
+                // We need to convert your tree structure to a plain JSON object
+                // that Firestore can store.
+                topics: JSON.parse(JSON.stringify(learningTopics)) 
+            });
+            console.log("Topics saved successfully!");
+        } catch (error) {
+            console.error("Error saving topics: ", error);
+        }
+    }
+}
+
+// Function to load topics when a user logs in
+async function loadTopicsFromFirestore(userId) {
+    try {
+        const doc = await db.collection('userTopics').doc(userId).get();
+        if (doc.exists) {
+            const data = doc.data();
+            // Important: We need a way to restore the circular 'parent' references
+            // that JSON.stringify removes.
+            learningTopics = restoreParents(data.topics);
+            console.log("Topics loaded successfully!");
+        } else {
+            console.log("No saved topics found for this user. Starting fresh.");
+            learningTopics = {}; // Start with an empty object
+        }
+        // After loading, render the cards on the landing page
+        renderTopicCards();
+    } catch (error) {
+        console.error("Error loading topics: ", error);
+    }
+}
+
+// Helper function to restore the parent-child links in your tree
+function restoreParents(topics) {
+    Object.values(topics).forEach(topic => {
+        function traverse(node, parent) {
+            node.parent = parent;
+            if (node.children) {
+                node.children.forEach(child => traverse(child, node));
+            }
+        }
+        traverse(topic, null);
+    });
+    return topics;
+}
+// You also need a logout button. Add this to your main app's navigation controls.
+// <button id="logoutBtn" class="nav-button">Logout</button>
+// And add the event listener for it:
+// document.getElementById('logoutBtn').addEventListener('click', () => auth.signOut());
+
         /**
  * A universal "catch-all" parser that finds numbered list items
  * anywhere in a string, whether it's plain text or embedded in JSON.
@@ -1318,6 +1464,8 @@ function loadLearningTopic(topicId) {
 
     // 6. Switch to the learning view
     switchView('learningView');
+    saveTopicsToFirestore(); // <-- ADD THIS LINE
+
 }
 
         const BACKEND_URL = '';
@@ -2358,7 +2506,41 @@ switchView('landingView');
             // Update the parent's read status
             parentNode.isRead = allChildrenAreRead;
         }
-        
+        // --- STAGE 1 & 2: Get the button and listen for a click ---
+
+// Get a reference to the HTML button with the id 'googleSignInBtn'
+const googleSignInBtn = document.getElementById('googleSignInBtn');
+
+// Tell the button to listen for a 'click' and run the code inside when it happens
+googleSignInBtn.addEventListener('click', () => {
+    
+    // --- STAGE 3: Define the action to perform on click ---
+
+    // Clear out any old error messages from previous attempts
+    authError.textContent = ''; 
+
+    // This command opens the Google Sign-in popup window
+    auth.signInWithPopup(googleProvider)
+
+        // --- STAGE 4: Handle the result (Success or Failure) ---
+
+        // The .then() block runs ONLY if the sign-in was successful
+        .then((result) => {
+            console.log("Google Sign-in successful!", result.user.displayName);
+
+            // IMPORTANT: You don't need to do anything else here to show the app.
+            // The 'onAuthStateChanged' function is always listening in the background.
+            // It will automatically detect this successful login and show your app.
+        })
+
+        // The .catch() block runs ONLY if there was an error
+        .catch((error) => {
+            console.error("Google Sign-in error:", error.message);
+            
+            // It's helpful to show the error message to the user on the screen.
+            authError.textContent = error.message; 
+        });
+});
     </script>
     <!-- New Topic Modal -->
 <div class="modal-overlay" id="newTopicModal">
