@@ -736,6 +736,21 @@
                     gap: 10px;
                     margin: 20px 0;
                 }
+                .quiz-me-more-button {
+                    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+                    color: white;
+                    border: none;
+                    padding: 15px 10px;
+                    border-radius: 12px;
+                    cursor: pointer;
+                    font-size: 16px;
+                    font-weight: 600;
+                    transition: all 0.3s ease;
+                    display: inline-flex;
+                    align-items: right;
+                    gap: 10px;
+                    margin: 20px 0;
+                }
         
                 .tell-me-more-button:hover {
                     transform: translateY(-2px);
@@ -2677,7 +2692,7 @@ function updateBreadcrumb() {
     // If there is read content, show the "Quiz Me" button
     if (hasReadContent) {
         const quizMeBtn = document.createElement('button');
-        quizMeBtn.className = 'tell-me-more-button'; // Re-using an existing style
+        quizMeBtn.className = 'quiz-me-more-button'; // Re-using an existing style
         quizMeBtn.id = 'quizMeBtn';
         quizMeBtn.innerHTML = `
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8.5L14.5 2z"></path><polyline points="14 2 14 9 21 9"></polyline><path d="M12 18d-2-2-2-2"></path><path d="M12 18c2-2 2-2 0-4"></path><path d="M12 18c-2-2 0-4-2-4"></path></svg>
