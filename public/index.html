@@ -2065,7 +2065,7 @@ document.getElementById('sortControls').addEventListener('click', (e) => {
  */
 // Find and replace this entire function
 function loadLearningTopic(topicId) {
-    //currentTopicId = topicId; // This line is the issue
+    currentTopicId = topicId; // This line is the issue
     const topicData = learningTopics[topicId];
     if (!topicData) {
         console.error("Topic not found:", topicId);
@@ -2608,106 +2608,61 @@ function updateBreadcrumb() {
 
         // Render content
         function renderContent(parsedContent, userQuestion = null) {
-            console.log("LOG #2 - Content renderer received definitions:", parsedContent.definitions);
-            const mainContent = document.getElementById('mainContent');
-            mainContent.innerHTML = '';
+    console.log("LOG #2 - Content renderer received definitions:", parsedContent.definitions);
+    const mainContent = document.getElementById('mainContent');
+    mainContent.innerHTML = '';
 
-            if (parsedContent.overview) {if (parsedContent.overview) {
-    const overviewDiv = document.createElement('div');
-    overviewDiv.className = 'topic-overview';
+   /* if (userQuestion) {
+        const questionDiv = document.createElement('div');
+        questionDiv.className = 'topic-overview';
+        // Applied here for the question title
+        questionDiv.innerHTML = `<h3 style="font-size: 20px; margin-bottom: 0;">Your Question:</h3><p style="margin-top: 10px;">"${toTitleCase(userQuestion)}"</p>`;
+        mainContent.appendChild(questionDiv);
+    }*/
 
-    // ... (logic for hasReadContent, headerDiv, titleH2 is the same)
-    const hasReadContent = currentTreeNode.children.some(child => child.isRead);
-    const headerDiv = document.createElement('div');
-    headerDiv.className = 'topic-header';
-    const titleH2 = document.createElement('h2');
-    titleH2.textContent = toTitleCase(currentTreeNode.fullTitle || currentTreeNode.title);
-    
-    // --- CHANGE 1: Create the button with an icon inside it ---
-    const buttonWrapper = document.createElement('span');
-    buttonWrapper.className = 'button-tooltip-wrapper';
-    const quizMeBtn = document.createElement('button');
-    quizMeBtn.id = 'quizMeBtn';
-    quizMeBtn.className = 'quiz-me-button';
-    // Use innerHTML to add the icon's SVG next to the text
-    quizMeBtn.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M15.09 16.05A6.47 6.47 0 0 1 12 18a6.47 6.47 0 0 1-3.09-2M12 18v4"/>
-            <path d="M8 12.05A6.47 6.47 0 0 1 12 6a6.47 6.47 0 0 1 4 6.05V14a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2Z"/>
-            <path d="M12 2v4"/>
-        </svg>
-        <span>Quiz Me</span>
-    `;
-    quizMeBtn.onclick = () => startQuiz();
-    buttonWrapper.appendChild(quizMeBtn);
+            if (parsedContent.overview) {
+                const overviewDiv = document.createElement('div');
+                overviewDiv.className = 'topic-overview';
+                
+                // Format the overview to handle lists
+                let formattedOverview = parsedContent.overview;
+                
+                // Convert bullet points to HTML list
+                const lines = formattedOverview.split('\n');
+                let inList = false;
+                let processedLines = [];
+                
+                lines.forEach(line => {
+                    if (line.trim().match(/^[•\-]\s+/)) {
+                        if (!inList) {
+                            processedLines.push('<ul>');
+                            inList = true;
+                        }
+                        processedLines.push(`<li>${line.trim().replace(/^[•\-]\s+/, '')}</li>`);
+                    } else {
+                        if (inList && line.trim() !== '') {
+                            processedLines.push('</ul>');
+                            inList = false;
+                        }
+                        if (line.trim() !== '') {
+                            processedLines.push(line);
+                        }
+                    }
+                });
+                
+                if (inList) {
+                    processedLines.push('</ul>');
+                }
+                
+                formattedOverview = processedLines.join('\n');
+                
+                // Highlight terms in the overview before displaying it
+                const highlightedOverview = applyTermHighlighting(formattedOverview, parsedContent.definitions);
+                overviewDiv.innerHTML = `<h2>${toTitleCase(currentTreeNode.fullTitle || currentTreeNode.title)}</h2><div>${highlightedOverview}</div>`;
+                mainContent.appendChild(overviewDiv);
+            }
 
-    // ... (logic for disabling button is the same)
-    if (!hasReadContent) {
-        quizMeBtn.disabled = true;
-        let tooltipTimeout;
-        buttonWrapper.addEventListener('mouseenter', () => {
-            if (quizMeBtn.disabled) {
-                tooltipTimeout = setTimeout(() => {
-                    const tooltip = document.createElement('div');
-                    tooltip.className = 'quiz-tooltip show';
-                    tooltip.textContent = 'Read more content to generate a quiz';
-                    buttonWrapper.appendChild(tooltip);
-                }, 1000);
-            }
-        });
-        buttonWrapper.addEventListener('mouseleave', () => {
-            clearTimeout(tooltipTimeout);
-            const existingTooltip = buttonWrapper.querySelector('.quiz-tooltip');
-            if (existingTooltip) {
-                existingTooltip.remove();
-            }
-        });
-    }
-
-    // ... (logic for assembling overviewDiv is the same)
-    headerDiv.appendChild(titleH2);
-    const contentDiv = document.createElement('div');
-    let formattedOverview = parsedContent.overview;
-    const lines = formattedOverview.split('\n');
-    let inList = false;
-    let processedLines = [];
-    lines.forEach(line => {
-        if (line.trim().match(/^[•\-]\s+/)) {
-            if (!inList) {
-                processedLines.push('<ul>');
-                inList = true;
-            }
-            processedLines.push(`<li>${line.trim().replace(/^[•\-]\s+/, '')}</li>`);
-        } else {
-            if (inList && line.trim() !== '') {
-                processedLines.push('</ul>');
-                inList = false;
-            }
-            if (line.trim() !== '') {
-                processedLines.push(line);
-            }
-        }
-    });
-    if (inList) {
-        processedLines.push('</ul>');
-    }
-    formattedOverview = processedLines.join('\n');
-    const highlightedContent = applyTermHighlighting(formattedOverview, parsedContent.definitions);
-    contentDiv.innerHTML = `<div>${highlightedContent}</div>`;
-    overviewDiv.appendChild(headerDiv);
-    overviewDiv.appendChild(contentDiv);
-    mainContent.appendChild(overviewDiv);
-    
-    // --- CHANGE 2: Align the button's container to the right ---
-    const quizButtonContainer = document.createElement('div');
-    quizButtonContainer.style.textAlign = 'right'; // Aligns the button to the right
-    quizButtonContainer.style.marginTop = '20px';
-    // Add some padding to the right to make sure it doesn't touch the edge
-    quizButtonContainer.style.paddingRight = '5px'; 
-    quizButtonContainer.appendChild(buttonWrapper);
-    mainContent.appendChild(quizButtonContainer);
-}
-            }
+            let hasExpandedContent = false;
 
             if (parsedContent.sections && parsedContent.sections.length > 0) {
             const hasCards = parsedContent.sections.some(s => !s.isExpanded);
@@ -2802,8 +2757,28 @@ function updateBreadcrumb() {
                 tellMeMoreBtn.onclick = () => elaborateOnCurrent();
                 mainContent.appendChild(tellMeMoreBtn);
             }
-             
+                // --- START OF NEW CODE FOR QUIZ BUTTON ---
+    let hasReadContent = false;
+    if (currentTreeNode.children.length > 0) {
+        // Check if any of the children nodes have been read
+        hasReadContent = currentTreeNode.children.some(child => child.isRead);
+    }
+    
+    // If there is read content, show the "Quiz Me" button
+    if (hasReadContent) {
+        const quizMeBtn = document.createElement('button');
+        quizMeBtn.className = 'tell-me-more-button'; // Re-using an existing style
+        quizMeBtn.id = 'quizMeBtn';
+        quizMeBtn.innerHTML = `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8.5L14.5 2z"></path><polyline points="14 2 14 9 21 9"></polyline><path d="M12 18d-2-2-2-2"></path><path d="M12 18c2-2 2-2 0-4"></path><path d="M12 18c-2-2 0-4-2-4"></path></svg>
+            Quiz Me On This Topic
+        `;
+        quizMeBtn.onclick = () => startQuiz(); // This will be our main controller function
+        mainContent.appendChild(quizMeBtn);
+    }
+    // --- END OF NEW CODE FOR QUIZ BUTTON ---
         }
+
 
         // Create card element
         // Update the function signature to accept isRead
