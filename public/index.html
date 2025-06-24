@@ -746,10 +746,17 @@
     font-size: 16px;
     font-weight: 600;
     transition: all 0.3s ease;
-    display: flex;
+    display: inline-flex; /* Changed back to inline-flex */
     align-items: center;
     gap: 10px;
-    margin: 10px 0 10px auto;
+    margin: 0; /* The new wrapper will handle margins */
+}
+
+/* Add this new rule right after the one above */
+.quiz-me-more-button:disabled {
+    background: #e5e7eb; /* Light gray background */
+    color: #9ca3af;   /* Muted text color */
+    cursor: not-allowed;
 }
         
                 .tell-me-more-button:hover {
@@ -2682,25 +2689,62 @@ function updateBreadcrumb() {
 
             if (parsedContent.sections && parsedContent.sections.length > 0) {
             const hasCards = parsedContent.sections.some(s => !s.isExpanded);
-             // --- START OF NEW CODE FOR QUIZ BUTTON ---
-             let hasReadContent = false;
-    if (currentTreeNode.children.length > 0) {
-        // Check if any of the children nodes have been read
-        hasReadContent = currentTreeNode.children.some(child => child.isRead);
+             // This new logic will create the button permanently and add the tooltip.
+    const canQuiz = currentTreeNode.children.length > 0;
+
+if (canQuiz) {
+    const hasReadContent = currentTreeNode.children.some(child => child.isRead);
+
+    // A container to handle right-alignment and margin
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.textAlign = 'right';
+    buttonContainer.style.margin = '10px 0';
+
+    // A wrapper for positioning the tooltip relative to the button
+    const tooltipWrapper = document.createElement('div');
+    tooltipWrapper.className = 'button-tooltip-wrapper';
+
+    // Create the button
+    const quizMeBtn = document.createElement('button');
+    quizMeBtn.className = 'quiz-me-more-button';
+    quizMeBtn.id = 'quizMeBtn';
+    quizMeBtn.innerHTML = `
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8.5L14.5 2z"></path><polyline points="14 2 14 9 21 9"></polyline><path d="M12 18d-2-2-2-2"></path><path d="M12 18c2-2 2-2 0-4"></path><path d="M12 18c-2-2 0-4-2-4"></path></svg>
+        Quiz Me On This Topic
+    `;
+    quizMeBtn.onclick = () => startQuiz();
+
+    // Create the tooltip element
+    const tooltip = document.createElement('div');
+    tooltip.className = 'quiz-tooltip';
+    tooltip.textContent = 'Read more content to generate a quiz';
+
+    // Disable the button if no content is read
+    if (!hasReadContent) {
+        quizMeBtn.disabled = true;
     }
-    
-    // If there is read content, show the "Quiz Me" button
-    if (hasReadContent) {
-        const quizMeBtn = document.createElement('button');
-        quizMeBtn.className = 'quiz-me-more-button'; // Re-using an existing style
-        quizMeBtn.id = 'quizMeBtn';
-        quizMeBtn.innerHTML = `
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8.5L14.5 2z"></path><polyline points="14 2 14 9 21 9"></polyline><path d="M12 18d-2-2-2-2"></path><path d="M12 18c2-2 2-2 0-4"></path><path d="M12 18c-2-2 0-4-2-4"></path></svg>
-            Quiz Me On This Topic
-        `;
-        quizMeBtn.onclick = () => startQuiz(); // This will be our main controller function
-        mainContent.appendChild(quizMeBtn);
-    }
+
+    // Add hover events to show/hide the tooltip with a delay
+    let tooltipTimeout;
+    tooltipWrapper.addEventListener('mouseenter', () => {
+        if (quizMeBtn.disabled) {
+            tooltipTimeout = setTimeout(() => {
+                tooltip.classList.add('show');
+            }, 1000); // 1-second delay
+        }
+    });
+
+    tooltipWrapper.addEventListener('mouseleave', () => {
+        clearTimeout(tooltipTimeout);
+        tooltip.classList.remove('show');
+    });
+
+    // Assemble the parts
+    tooltipWrapper.appendChild(quizMeBtn);
+    tooltipWrapper.appendChild(tooltip);
+    buttonContainer.appendChild(tooltipWrapper);
+    mainContent.appendChild(buttonContainer);
+}
             if (hasCards) {
                 const cardsGrid = document.createElement('div');
                 cardsGrid.className = 'cards-grid';
