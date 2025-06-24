@@ -1940,25 +1940,27 @@ function parseResponse(mainContentText, definitionsArray) {
 
         // Render tree node
         // Find and replace this entire function
+f// Find and replace this entire function
 function renderTreeNode(node, level = 0) {
-    const icon = node.id === 'root' ? ' ' :
+    const icon = node.id === 'root' ? '' :
                 node.isUserQuestion ? '❓' :
-                node.sectionIndex ? `${node.sectionIndex}.` : ' ';
+                node.sectionIndex ? `${node.sectionIndex}.` : '';
     
     const statusIndicatorHTML = node.id !== 'root' ? 
         `<div class="tree-status-indicator ${node.isRead ? 'read' : ''}"></div>` : 
         '';
 
+    // The comment is now outside of the HTML string
     let html = `
         <div class="tree-node" style="margin-left: ${level * 25}px;">
             <div class="tree-node-content ${node === currentTreeNode ? 'active' : ''}" 
                  onclick="navigateToNode('${node.id}')"
-                 title="${toTitleCase(node.fullTitle || node.title)}"> {/* Applied here for hover */}
+                 title="${toTitleCase(node.fullTitle || node.title)}"> 
                 
                 ${statusIndicatorHTML}
 
                 <span class="tree-node-icon">${icon}</span>
-                <span class="tree-node-text">${toTitleCase(node.title)}</span> {/* Applied here for display */}
+                <span class="tree-node-text">${toTitleCase(node.title)}</span>
             </div>
     `;
     
