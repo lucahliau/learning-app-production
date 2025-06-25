@@ -1925,7 +1925,13 @@ function renderHybridTimeline(container, hybridData) {
  * This is used to pre-load content for cards before the user clicks on them.
  * @param {object} node - The tree node to fetch content for.
  */
-async function prefetchNodeContent(node) {
+/**
+ * --- UPDATED WITH FULL PROMPT ---
+ * Fetches the content for a given node in the background without showing a UI loading state.
+ * This is used to pre-load content for cards before the user clicks on them.
+ * @param {object} node - The tree node to fetch content for.
+ */
+ async function prefetchNodeContent(node) {
     // Silently exit if content already exists or is being fetched.
     if (node.content || node.isPrefetching) return;
 
@@ -1939,22 +1945,38 @@ async function prefetchNodeContent(node) {
         contextPrompt = `In the context of "${node.parent.fullTitle}", `;
     }
 
-    const prefetchPrompt = `You are an expert educator. Your task is to explain the topic "${topic}"${contextPrompt}.
+    // --- THIS IS THE NEW, FULL PROMPT, COPIED FROM elaborateOnTopic ---
+    const prefetchPrompt = `You are an expert educator who carries out tasks with precision and speed. Your task is to explain the topic "${topic}"${contextPrompt}.
         
-        Your response MUST be a single, valid JSON object with no other text before or after it.
-        The JSON object must have two keys: "explanation" and "definitions".
-        
-        1.  In the "explanation" value, provide a detailed, two-paragraph explanation of the topic.
-        2.  In the "definitions" value, provide an array of objects. For each object, identify a technical term from your explanation and provide a simple, one-sentence definition for it in the context of the topic.
-        
-        Example JSON structure:
-        {
-          "explanation": "A detailed two-paragraph explanation goes here...",
-          "definitions": [
-            { "term": "Technical Term 1", "definition": "A simple one-sentence definition." },
-            { "term": "Technical Term 2", "definition": "Another simple definition." }
-          ]
-        }`;
+Your response MUST be a single, valid JSON object with no other text before or after it.
+The JSON object must have three keys: "explanation", "definitions", and an optional "visualAssets".
+
+1.  In the "explanation" value, provide a detailed, explanation of the topic with at least 2 paragraphs.
+2.  In the "definitions" value, provide an array of objects. For each object, identify a technical term from your explanation and provide a simple, one-sentence definition for it in the context of the topic. Only add/define these technical terms if they are truly technical and not straightforward, and their definition is specific to the context. Terms like focus, endurance, mental toughness which are obvious should not be included. 
+3.  In the "visualAssets" value, (this key is optional), analyze your explanation. If a visual aid would enhance understanding, add this key. If not, OMIT this key entirely.
+    * If included, it must be an array of objects. Each object represents one visual asset.
+    * For each asset, provide a "type" and "data".
+
+Here are the available asset types and their required data formats:
+
+* **For a function graph (e.g., for math equations):**
+    * "type": "implicit_plotter"
+    * "data": (String) A single string with one or more equations separated by semicolons (e.g., "y=x^2; y=sin(x)").
+
+* **For a timeline (for historical events, periods, or both):**
+    * "type": "hybrid_timeline"
+    * "data": (Array of Objects) An array of items. Each item must have a "type" key ('period' or 'event').
+        * If type is 'period', include "name", "startStr", and "endStr".
+        * If type is 'event', include "name" and "dateStr".
+        * Example: [{ "type": "period", "name": "Roman Republic", "startStr": "509 BC", "endStr": "27 BC" }, { "type": "event", "name": "Caesar's Assassination", "dateStr": "44 BC" }]
+
+* **For a bar chart:**
+    * "type": "bar_chart"
+    * "data": (String) A multi-line string with each line in "Label: Value" format.
+
+* **For a pie chart:**
+    * "type": "pie_chart"
+    * "data": (String) A multi-line string with each line in "Label: Percentage" format.`;
 
     try {
         // Use a temporary, isolated conversation for this background task
@@ -1980,8 +2002,10 @@ async function prefetchNodeContent(node) {
         const structuredResponse = JSON.parse(jsonMatch[0]);
         const explanation = structuredResponse.explanation || "No explanation provided.";
         const definitions = structuredResponse.definitions || [];
+        const visualAssets = structuredResponse.visualAssets || []; // Handle visual assets
 
         const parsed = parseResponse(explanation, definitions);
+        parsed.visualAssets = visualAssets; // Add assets to the parsed content
         parsed.showTellMeMore = true;
 
         // --- Attach the content to the node ---
@@ -1993,6 +2017,7 @@ async function prefetchNodeContent(node) {
 
     } catch (error) {
         console.error("Prefetch error:", error);
+        // We don't show a UI error here as it's a background process
     } finally {
         // Mark prefetching as complete regardless of outcome
         node.isPrefetching = false;
