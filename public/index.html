@@ -2631,7 +2631,8 @@ function loadLearningTopic(topicId) {
  * @param {string} sophistication - The sophistication level for the topic.
  */
  function startLearningTopic(topicTitle, syllabusSections, topicId, category, sophistication, visualAssets = null) {
-        currentTopicId = topicId;
+    console.log("Step 2: visualAssets passed into startLearningTopic:", visualAssets);
+    currentTopicId = topicId;
     navigationHistory = [];
     currentHistoryIndex = -1;
 
@@ -2825,6 +2826,7 @@ Example for a non-history topic (note the absence of visualAssets):
         if (!category || !syllabus) {
             throw new Error("AI response was missing 'category' or 'syllabus'.");
         }
+        console.log("Step 1: visualAssets received from API:", visualAssets);
 
         const syllabusSections = universalParseSyllabus(syllabus);
 
@@ -3159,6 +3161,7 @@ function updateBreadcrumb() {
         // Render content
        // Render content
        function renderContent(parsedContent, userQuestion = null) {
+        console.log("Step 3: Content received by renderContent:", parsedContent);
             const mainContent = document.getElementById('mainContent');
             mainContent.innerHTML = '';
             
