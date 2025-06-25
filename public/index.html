@@ -1777,6 +1777,20 @@ const getDayOfYear = (date) => {
 };
 
 const parseDateToFractionalYear = (dateStr) => {
+    // --- NEW DYNAMIC LOGIC START ---
+    // Check for variations of "Present", "Current", etc.
+    if (/present|current|today|now/i.test(dateStr)) {
+        // Get the actual current date
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        
+        // Use your existing helper functions to calculate the fractional year
+        const daysInYear = isLeapYear(currentYear) ? 366 : 365;
+        const dayOfYear = getDayOfYear(now);
+        
+        return currentYear + (dayOfYear / daysInYear);
+    }
+    // --- NEW DYNAMIC LOGIC END ---
     let cleanedStr = dateStr.replace(/c\.|ca\./, '').trim();
     const bcMatch = cleanedStr.match(/(\d+)\s*BC/i);
     if (bcMatch) return -parseInt(bcMatch[1], 10);
