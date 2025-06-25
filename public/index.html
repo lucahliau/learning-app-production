@@ -2770,7 +2770,7 @@ The JSON object must have two required keys ("category", "syllabus") and one opt
 3.  **"visualAssets" (Optional)**: If the topic is inherently historical or best understood chronologically (e.g., a history topic), include this key. If not, OMIT this key entirely.
     * If included, it MUST be an array containing a single object for a timeline.
     * The object's "type" MUST be "hybrid_timeline".
-    * The object's "data" MUST be an array of event and/or period objects covering the topic's key milestones.
+    * The object's "data" MUST be an array of event and/or period objects covering the topic's key milestones. An event must have a single date (e.g. a year) - if it spans more than 1 year or 1 date it should be classified as a period.
         * An event requires "name" and "dateStr".
         * A period requires "name", "startStr", and "endStr".
 
