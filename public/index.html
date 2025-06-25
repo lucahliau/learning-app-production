@@ -1798,6 +1798,8 @@ const parseDateToFractionalYear = (dateStr) => {
 };
 // REPLACE your old renderHybridTimeline function with this one
 
+// REPLACE your old renderHybridTimeline function with this one
+
 function renderHybridTimeline(container, hybridData) {
     // 1. Create the timeline's HTML frame inside the container
     container.innerHTML = `
@@ -1810,6 +1812,7 @@ function renderHybridTimeline(container, hybridData) {
         </div>`;
 
     // 2. Find the elements we just created
+    const timelineContainerWrapper = container.querySelector('.timeline-container-wrapper'); // Get reference to the visible container
     const timelineWrapper = container.querySelector('.timeline-wrapper');
     const timelineLine = container.querySelector('.timeline-line');
     if (!timelineWrapper || !timelineLine) return; // Exit if setup failed
@@ -1838,9 +1841,9 @@ function renderHybridTimeline(container, hybridData) {
     const periodVerticalLevel = 25;
     const eventVerticalLevels = [85, 110, 150];
     
-    // --- NEW LOGIC START ---
+    // --- LOGIC START ---
 
-    // A. First, do a "dry run" to calculate the natural width without creating elements
+    // A. Dry run to calculate the natural width
     let lastItemStartPos_dry = 40;
     let lastItemStartYear_dry = processedData.length > 0 ? (processedData[0].type === 'period' ? processedData[0].startYear : processedData[0].year) : 0;
     let activePeriod_dry = null;
@@ -1863,22 +1866,23 @@ function renderHybridTimeline(container, hybridData) {
         }
         lastItemStartYear_dry = currentItemStartYear;
     });
-    const totalNaturalWidth = lastItemStartPos_dry + 200; // Add padding
+    const totalNaturalWidth = lastItemStartPos_dry + 200;
 
-    // B. Calculate the stretch factor
-    const containerWidth = timelineWrapper.clientWidth;
+    // B. Calculate stretch factor using the CORRECT container
+    // --- THIS IS THE FIX ---
+    const containerWidth = timelineContainerWrapper.clientWidth; 
     const targetWidth = containerWidth * 0.9;
     let stretchFactor = 1;
     if (totalNaturalWidth < targetWidth) {
         stretchFactor = targetWidth / totalNaturalWidth;
     }
 
-    // --- NEW LOGIC END ---
+    // --- LOGIC END ---
 
     let lastTopEnd = -Infinity, lastBottomEnd = -Infinity;
     let eventTopLevel = 0, eventBottomLevel = 0;
     
-    let lastItemStartPos = 40 * stretchFactor; // Apply stretch factor to initial padding
+    let lastItemStartPos = 40 * stretchFactor;
     let lastItemStartYear = processedData.length > 0 ? (processedData[0].type === 'period' ? processedData[0].startYear : processedData[0].year) : 0;
     let activePeriod = null;
 
@@ -1894,14 +1898,12 @@ function renderHybridTimeline(container, hybridData) {
             itemStartPos = activePeriod.startPos + (percentageThrough * activePeriod.braceWidth);
         } else {
             const timeFromLastItem = currentItemStartYear - lastItemStartYear;
-            // Apply stretch factor to the calculated gap
             itemStartPos = lastItemStartPos + (scaleValue(timeFromLastItem) * stretchFactor);
             activePeriod = null;
         }
 
         if (item.type === 'period') {
             const minCardWidth = 130;
-            // Apply stretch factor to the width of the period brace
             const braceWidth = scaleValue(item.duration) * stretchFactor;
             const cardWidth = Math.max(braceWidth, minCardWidth);
             const cardStartPos = itemStartPos + (braceWidth - cardWidth) / 2;
@@ -1948,7 +1950,7 @@ function renderHybridTimeline(container, hybridData) {
                 eventElement.style.marginBottom = `${currentEventLevel}px`;
                 lastTopEnd = itemStartPos + cardWidth / 2;
             } else {
-                if (itemStartPos - cardWidth / 2 < lastBottomEnd + 10) eventBottomLevel = (eventBottomLevel + 1) % eventVerticalLevels.length;
+                if (itemStartPos - cardWidth / 2 < lastBottomEnd + 10) bottomLevel = (eventBottomLevel + 1) % eventVerticalLevels.length;
                 currentEventLevel = eventVerticalLevels[eventBottomLevel];
                 eventElement.style.marginTop = `${currentEventLevel}px`;
                 lastBottomEnd = itemStartPos + cardWidth / 2;
@@ -1963,11 +1965,10 @@ function renderHybridTimeline(container, hybridData) {
         lastItemStartYear = currentItemStartYear;
     });
 
-    const totalWidth = lastItemStartPos + (200 * stretchFactor); // Apply stretch factor to final padding
+    const totalWidth = lastItemStartPos + (200 * stretchFactor);
     timelineWrapper.style.width = `${totalWidth}px`;
     timelineLine.style.width = `${totalWidth}px`;
 }
-
 
 
 /**
