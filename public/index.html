@@ -1318,15 +1318,11 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f9fafb; /* Light gray background */
+            background: #f9fafb;
             min-height: 100vh;
-            color: #374151; /* Dark gray for primary text */
-            display: flex;
-            /* New: Added a wrapper for multiple sections */
-            flex-direction: column; 
-            align-items: center;
-            padding: 40px 20px; /* More vertical padding */
-            gap: 40px; /* Space between sections */
+            color: #374151;
+            /* This prevents the main body from ever scrolling, which is correct for this layout */
+            overflow: hidden;
         }
 
         /* --- LAB CONTAINER STYLES --- */
@@ -3364,7 +3360,7 @@ The JSON object must have three keys: "explanation", "definitions", and an optio
 
 1.  In the "explanation" value, provide a detailed, explanation of the topic with at least 2 paragraphs.
 2.  In the "definitions" value, provide an array of objects. For each object, identify a technical term from your explanation and provide a simple, one-sentence definition for it in the context of the topic. Only add/define these technical terms if they are truly technical and not straightforward, and their definition is specific to the context. Terms like focus, endurance, mental toughness which are obvious should not be included. 
-3.  In the "visualAssets" value, (this key is optional), analyze your explanation. If a visual aid would significantly enhance understanding, add this key. If not, OMIT this key entirely.
+3.  In the "visualAssets" value, (this key is optional), analyze your explanation. If a visual aid would enhance understanding, add this key. If not, OMIT this key entirely.
     * If included, it must be an array of objects. Each object represents one visual asset.
     * For each asset, provide a "type" and "data".
 
