@@ -3209,28 +3209,23 @@ function updateBreadcrumb() {
         assetContainer.style.marginTop = '40px';
         
         // Call the appropriate render function, passing the container to be filled
-        switch (asset.type) {
-            case 'implicit_plotter':
-                renderImplicitPlotter(assetContainer, asset.data);
-                break;
-            case 'hybrid_timeline':
-                renderHybridTimeline(assetContainer, asset.data);
-                break;
-            case 'bar_chart':
-                // Note: The specific bar/pie chart render functions would also
-                // need to be updated to this pattern to work correctly.
-                // This fix is focused on the timeline.
-                const barChartId = 'asset-' + Date.now() + Math.random().toString(36).substring(2, 9);
-                assetContainer.innerHTML = `<h1>Bar Chart</h1><div class="chart-container bar-chart-container"><canvas id="${barChartId}"></canvas></div>`;
-                renderBarChart(barChartId, asset.data);
-                break;
-            case 'pie_chart':
-                const pieChartId = 'asset-' + Date.now() + Math.random().toString(36).substring(2, 9);
-                const legendId = 'legend-' + pieChartId;
-                assetContainer.innerHTML = `<h1>Pie Chart</h1><div class="chart-container pie-chart-wrapper"><div class="pie-chart-container"><canvas id="${pieChartId}"></canvas></div><div class="pie-legend-container" id="${legendId}"></div></div>`;
-                renderPieChart(pieChartId, legendId, asset.data);
-                break;
-        }
+        // --- ADD THIS CORRECTED CODE IN ITS PLACE ---
+const assetType = asset.type.trim(); // Trim whitespace to be safe
+
+if (assetType === 'hybrid_timeline') {
+    renderHybridTimeline(assetContainer, asset.data);
+} else if (assetType === 'implicit_plotter') {
+    renderImplicitPlotter(assetContainer, asset.data);
+} else if (assetType === 'bar_chart') {
+    const barChartId = 'asset-' + Date.now() + Math.random().toString(36).substring(2, 9);
+    assetContainer.innerHTML = `<h1>Bar Chart</h1><div class="chart-container bar-chart-container"><canvas id="${barChartId}"></canvas></div>`;
+    renderBarChart(barChartId, asset.data);
+} else if (assetType === 'pie_chart') {
+    const pieChartId = 'asset-' + Date.now() + Math.random().toString(36).substring(2, 9);
+    const legendId = 'legend-' + pieChartId;
+    assetContainer.innerHTML = `<h1>Pie Chart</h1><div class="chart-container pie-chart-wrapper"><div class="pie-chart-container"><canvas id="${pieChartId}"></canvas></div><div class="pie-legend-container" id="${legendId}"></div></div>`;
+    renderPieChart(pieChartId, legendId, asset.data);
+}
         
         // Append the fully prepared container to the page once
         mainContent.appendChild(assetContainer);
