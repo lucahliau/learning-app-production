@@ -1925,45 +1925,59 @@ function renderHybridTimeline(container, hybridData) {
                 timelineWrapper.appendChild(brace);
             } else { // type === 'event'
     const cardWidth = 140;
-    const eventElement = document.createElement('div');
-    eventElement.className = `hybrid-event ${isTop ? 'top' : 'bottom'}`;
-    eventElement.style.left = `${finalStartPos}px`;
-    eventElement.style.transform = 'translateX(-50%)'; // Set initial centering
-    eventElement.innerHTML = `<div class="hybrid-event-title">${item.name}</div><div class="hybrid-event-date">${item.dateStr}</div>`;
     
-    // --- NEW JAVASCRIPT HOVER LOGIC START ---
-    eventElement.addEventListener('mouseover', () => {
-        eventElement.style.zIndex = '10';
-        eventElement.style.transform = 'translateX(-50%) scale(1.1)'; // Combine centering and scaling
-        eventElement.style.textShadow = '0 2px 8px rgba(0, 0, 0, 0.3)';
+    // 1. Create an invisible wrapper that gets positioned on the timeline
+    const eventWrapper = document.createElement('div');
+    eventWrapper.className = `hybrid-event ${isTop ? 'top' : 'bottom'}`;
+    eventWrapper.style.left = `${finalStartPos}px`;
+    eventWrapper.style.transform = 'translateX(-50%)'; // The wrapper handles centering
+
+    // 2. Create a separate container for just the text content
+    const textElement = document.createElement('div');
+    textElement.className = 'hybrid-event-content'; // A new class for clarity
+    textElement.style.transition = 'transform 0.2s ease-in-out'; // Add transition here
+    textElement.innerHTML = `<div class="hybrid-event-title">${item.name}</div><div class="hybrid-event-date">${item.dateStr}</div>`;
+
+    // 3. Apply the hover listeners ONLY to the text container
+    textElement.addEventListener('mouseover', () => {
+        // The z-index is applied to the entire wrapper to bring both text and line to the front
+        eventWrapper.style.zIndex = '10'; 
+        textElement.style.transform = 'scale(1.1)'; // Only scale the text
+        textElement.style.textShadow = '0 2px 8px rgba(0, 0, 0, 0.3)';
     });
 
-    eventElement.addEventListener('mouseout', () => {
-        eventElement.style.zIndex = '5'; // Return to default z-index
-        eventElement.style.transform = 'translateX(-50%)'; // Return to just centering
-        eventElement.style.textShadow = 'none';
+    textElement.addEventListener('mouseout', () => {
+        eventWrapper.style.zIndex = '5';
+        textElement.style.transform = 'scale(1)'; // Revert scale to normal
+        textElement.style.textShadow = 'none';
     });
-    // --- NEW JAVASCRIPT HOVER LOGIC END ---
 
+    // 4. Create the connector as before
     const connector = document.createElement('div');
     connector.className = `hybrid-event-connector ${isTop ? 'top' : 'bottom'}`;
+    
+    // --- The rest of the logic remains the same ---
 
     let currentEventLevel;
     if (isTop) {
         if (finalStartPos - cardWidth / 2 < lastTopEnd + 10) eventTopLevel = (eventTopLevel + 1) % eventVerticalLevels.length;
         currentEventLevel = eventVerticalLevels[eventTopLevel];
-        eventElement.style.marginBottom = `${currentEventLevel}px`;
+        eventWrapper.style.marginBottom = `${currentEventLevel}px`;
         lastTopEnd = finalStartPos + cardWidth / 2;
     } else {
         if (finalStartPos - cardWidth / 2 < lastBottomEnd + 10) bottomLevel = (eventBottomLevel + 1) % eventVerticalLevels.length;
         currentEventLevel = eventVerticalLevels[bottomLevel];
-        eventElement.style.marginTop = `${currentEventLevel}px`;
+        eventWrapper.style.marginTop = `${currentEventLevel}px`;
         lastBottomEnd = finalStartPos + cardWidth / 2;
     }
     
     connector.style.setProperty('--connector-height', `${currentEventLevel}px`);
-    eventElement.appendChild(connector);
-    timelineWrapper.appendChild(eventElement);
+    
+    // 5. Append text and connector as SIBLINGS to the wrapper
+    eventWrapper.appendChild(textElement);
+    eventWrapper.appendChild(connector);
+    
+    timelineWrapper.appendChild(eventWrapper);
 }
         });
     });
