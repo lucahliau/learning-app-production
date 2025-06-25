@@ -1616,13 +1616,12 @@
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
-/* 3. A specific hover effect for the TEXT-ONLY events */
+/* 3. A specific hover effect for the TEXT-ONLY events *//*
 .hybrid-event:hover {
     z-index: 10;
-    transform: translateX(-50%) scale(1.1); /* CHANGE THIS LINE */
-    /* Optional: Adds a subtle shadow to the text itself to help it "pop" */
+    transform: translateX(-50%) scale(1.1); 
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
+}*/
             </style>
 
 <script>
@@ -1925,33 +1924,47 @@ function renderHybridTimeline(container, hybridData) {
                 brace.style.width = `${finalBraceWidth}px`;
                 timelineWrapper.appendChild(brace);
             } else { // type === 'event'
-                const cardWidth = 140;
-                const eventElement = document.createElement('div');
-                eventElement.className = `hybrid-event ${isTop ? 'top' : 'bottom'}`;
-                eventElement.style.left = `${finalStartPos}px`;
-                eventElement.style.transform = 'translateX(-50%)';
-                eventElement.innerHTML = `<div class="hybrid-event-title">${item.name}</div><div class="hybrid-event-date">${item.dateStr}</div>`;
-                
-                const connector = document.createElement('div');
-                connector.className = `hybrid-event-connector ${isTop ? 'top' : 'bottom'}`;
+    const cardWidth = 140;
+    const eventElement = document.createElement('div');
+    eventElement.className = `hybrid-event ${isTop ? 'top' : 'bottom'}`;
+    eventElement.style.left = `${finalStartPos}px`;
+    eventElement.style.transform = 'translateX(-50%)'; // Set initial centering
+    eventElement.innerHTML = `<div class="hybrid-event-title">${item.name}</div><div class="hybrid-event-date">${item.dateStr}</div>`;
+    
+    // --- NEW JAVASCRIPT HOVER LOGIC START ---
+    eventElement.addEventListener('mouseover', () => {
+        eventElement.style.zIndex = '10';
+        eventElement.style.transform = 'translateX(-50%) scale(1.1)'; // Combine centering and scaling
+        eventElement.style.textShadow = '0 2px 8px rgba(0, 0, 0, 0.3)';
+    });
 
-                let currentEventLevel;
-                if (isTop) {
-                    if (finalStartPos - cardWidth / 2 < lastTopEnd + 10) eventTopLevel = (eventTopLevel + 1) % eventVerticalLevels.length;
-                    currentEventLevel = eventVerticalLevels[eventTopLevel];
-                    eventElement.style.marginBottom = `${currentEventLevel}px`;
-                    lastTopEnd = finalStartPos + cardWidth / 2;
-                } else {
-                    if (finalStartPos - cardWidth / 2 < lastBottomEnd + 10) bottomLevel = (eventBottomLevel + 1) % eventVerticalLevels.length;
-                    currentEventLevel = eventVerticalLevels[bottomLevel];
-                    eventElement.style.marginTop = `${currentEventLevel}px`;
-                    lastBottomEnd = finalStartPos + cardWidth / 2;
-                }
-                
-                connector.style.setProperty('--connector-height', `${currentEventLevel}px`);
-                eventElement.appendChild(connector);
-                timelineWrapper.appendChild(eventElement);
-            }
+    eventElement.addEventListener('mouseout', () => {
+        eventElement.style.zIndex = '5'; // Return to default z-index
+        eventElement.style.transform = 'translateX(-50%)'; // Return to just centering
+        eventElement.style.textShadow = 'none';
+    });
+    // --- NEW JAVASCRIPT HOVER LOGIC END ---
+
+    const connector = document.createElement('div');
+    connector.className = `hybrid-event-connector ${isTop ? 'top' : 'bottom'}`;
+
+    let currentEventLevel;
+    if (isTop) {
+        if (finalStartPos - cardWidth / 2 < lastTopEnd + 10) eventTopLevel = (eventTopLevel + 1) % eventVerticalLevels.length;
+        currentEventLevel = eventVerticalLevels[eventTopLevel];
+        eventElement.style.marginBottom = `${currentEventLevel}px`;
+        lastTopEnd = finalStartPos + cardWidth / 2;
+    } else {
+        if (finalStartPos - cardWidth / 2 < lastBottomEnd + 10) bottomLevel = (eventBottomLevel + 1) % eventVerticalLevels.length;
+        currentEventLevel = eventVerticalLevels[bottomLevel];
+        eventElement.style.marginTop = `${currentEventLevel}px`;
+        lastBottomEnd = finalStartPos + cardWidth / 2;
+    }
+    
+    connector.style.setProperty('--connector-height', `${currentEventLevel}px`);
+    eventElement.appendChild(connector);
+    timelineWrapper.appendChild(eventElement);
+}
         });
     });
 }
