@@ -1602,15 +1602,26 @@
         
     }
     /* Add this to make the hover effect smooth */
+/* --- ADD THESE NEW RULES --- */
+
+/* 1. A shared rule to make the hover effect smooth for both types */
 .timeline-event, .hybrid-event {
     transition: all 0.2s ease-in-out;
 }
 
-/* This rule brings the hovered item to the front and "lifts" it */
-.timeline-event:hover, .hybrid-event:hover {
+/* 2. A specific hover effect for the CARDS with backgrounds */
+.timeline-event:hover {
     z-index: 10;
     transform: scale(1.05) translateY(-3px);
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* 3. A specific hover effect for the TEXT-ONLY events */
+.hybrid-event:hover {
+    z-index: 10;
+    transform: scale(1.1); /* Makes the text bigger */
+    /* Optional: Adds a subtle shadow to the text itself to help it "pop" */
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
             </style>
 
