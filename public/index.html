@@ -3214,6 +3214,7 @@ const assetType = asset.type.trim(); // Trim whitespace to be safe
 
 // This is the new, corrected line
 if (assetType.includes('hybrid_timeline')) {
+        console.log("INCLUDES HYBRID")
         renderHybridTimeline(assetContainer, asset.data);
 } else if (assetType === 'implicit_plotter') {
     renderImplicitPlotter(assetContainer, asset.data);
