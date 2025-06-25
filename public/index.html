@@ -1763,6 +1763,36 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script>
+
+// --- ADVANCED DATE PARSING & SCALING (No Changes) ---
+const isLeapYear = (year) => (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+const getDayOfYear = (date) => {
+    const start = new Date(date.getFullYear(), 0, 0);
+    const diff = date.getTime() - start.getTime();
+    const oneDay = 1000 * 60 * 60 * 24;
+    return Math.floor(diff / oneDay);
+};
+
+const parseDateToFractionalYear = (dateStr) => {
+    let cleanedStr = dateStr.replace(/c\.|ca\./, '').trim();
+    const bcMatch = cleanedStr.match(/(\d+)\s*BC/i);
+    if (bcMatch) return -parseInt(bcMatch[1], 10);
+    
+    cleanedStr = cleanedStr.replace(/AD/i, '').trim();
+
+    const date = new Date(cleanedStr);
+    if (!isNaN(date.getTime())) {
+        const year = date.getFullYear();
+        const daysInYear = isLeapYear(year) ? 366 : 365;
+        const dayOfYear = getDayOfYear(date);
+        return year + (dayOfYear / daysInYear);
+    }
+    
+    const yearMatch = cleanedStr.match(/^-?\d+/);
+    if (yearMatch) return parseInt(yearMatch[0], 10);
+
+    return null;
+};
 function renderHybridTimeline(container, hybridData) {
                 console.log("FINAL CHECK: renderHybridTimeline was called successfully.");
 
@@ -3778,35 +3808,6 @@ async function checkConnection() {
     const PLOT_COLORS = ['#6366f1', '#f59e0b', '#14b8a6', '#ef4444', '#8b5cf6', '#3b82f6'];
 
 
-// --- ADVANCED DATE PARSING & SCALING (No Changes) ---
-const isLeapYear = (year) => (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
-const getDayOfYear = (date) => {
-    const start = new Date(date.getFullYear(), 0, 0);
-    const diff = date.getTime() - start.getTime();
-    const oneDay = 1000 * 60 * 60 * 24;
-    return Math.floor(diff / oneDay);
-};
-
-const parseDateToFractionalYear = (dateStr) => {
-    let cleanedStr = dateStr.replace(/c\.|ca\./, '').trim();
-    const bcMatch = cleanedStr.match(/(\d+)\s*BC/i);
-    if (bcMatch) return -parseInt(bcMatch[1], 10);
-    
-    cleanedStr = cleanedStr.replace(/AD/i, '').trim();
-
-    const date = new Date(cleanedStr);
-    if (!isNaN(date.getTime())) {
-        const year = date.getFullYear();
-        const daysInYear = isLeapYear(year) ? 366 : 365;
-        const dayOfYear = getDayOfYear(date);
-        return year + (dayOfYear / daysInYear);
-    }
-    
-    const yearMatch = cleanedStr.match(/^-?\d+/);
-    if (yearMatch) return parseInt(yearMatch[0], 10);
-
-    return null;
-};
 
             function renderPeriodTimeline() {
                 const timelineWrapper = document.getElementById('period-timeline-wrapper');
