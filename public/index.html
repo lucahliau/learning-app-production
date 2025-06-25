@@ -1337,6 +1337,7 @@
             display: flex;
             flex-direction: column;
             gap: 25px; /* Space between graph and input */
+            margin: 40px auto 0; /* ADD THIS LINE: Centers the card and adds top margin */
         }
         
         .lab-container h1 {
@@ -1416,6 +1417,8 @@
             overflow-x: auto;
             -ms-overflow-style: none;
             scrollbar-width: none;
+            display: flex; /* ADD THIS LINE */
+            justify-content: center; /* ADD THIS LINE */
         }
 
         .timeline-container-wrapper::-webkit-scrollbar {
@@ -3370,27 +3373,8 @@ function updateBreadcrumb() {
                 overviewDiv.innerHTML = `<h2>${toTitleCase(currentTreeNode.fullTitle || currentTreeNode.title)}</h2><div>${highlightedOverview}</div>`;
                 mainContent.appendChild(overviewDiv);
             }
-
-            // Render the sub-topic cards
-            if (parsedContent.sections && parsedContent.sections.length > 0) {
-                const cardsGrid = document.createElement('div');
-                cardsGrid.className = 'cards-grid';
-                const parentNodeId = currentTreeNode.id;
-
-                parsedContent.sections.forEach((section, index) => {
-                    if (!section.isExpanded) {
-                        const childNode = currentTreeNode.children.find(child => child.fullTitle === section.title || child.title === section.title);
-                        const isNodeRead = childNode ? childNode.isRead : false;
-                        const childNodeId = childNode ? childNode.id : null;
-                        const card = createCard(section, index, isNodeRead, childNodeId, parentNodeId);
-                        cardsGrid.appendChild(card);
-                    }
-                });
-                mainContent.appendChild(cardsGrid);
-            }
-
-            // --- NEW: VISUAL ASSET DISPATCHER ---
-            if (parsedContent.visualAssets && parsedContent.visualAssets.length > 0) {
+ // --- NEW: VISUAL ASSET DISPATCHER ---
+ if (parsedContent.visualAssets && parsedContent.visualAssets.length > 0) {
     parsedContent.visualAssets.forEach(asset => {
         // Create a single container for the asset
         const assetContainer = document.createElement('div');
@@ -3422,6 +3406,25 @@ if (assetType.includes('hybrid_timeline')) {
         mainContent.appendChild(assetContainer);
     });
 }
+            // Render the sub-topic cards
+            if (parsedContent.sections && parsedContent.sections.length > 0) {
+                const cardsGrid = document.createElement('div');
+                cardsGrid.className = 'cards-grid';
+                const parentNodeId = currentTreeNode.id;
+
+                parsedContent.sections.forEach((section, index) => {
+                    if (!section.isExpanded) {
+                        const childNode = currentTreeNode.children.find(child => child.fullTitle === section.title || child.title === section.title);
+                        const isNodeRead = childNode ? childNode.isRead : false;
+                        const childNodeId = childNode ? childNode.id : null;
+                        const card = createCard(section, index, isNodeRead, childNodeId, parentNodeId);
+                        cardsGrid.appendChild(card);
+                    }
+                });
+                mainContent.appendChild(cardsGrid);
+            }
+
+           
 
             // Render the "Tell me more" button if applicable
             if (parsedContent.showTellMeMore) {
