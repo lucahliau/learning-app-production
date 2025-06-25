@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Learning Tool</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.4.2/math.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
             <style>
                 
                 * {
@@ -1237,370 +1235,6 @@
     width: 80%;
 }
 /* --- END OF SKELETON LOADER STYLES --- */
-
-        /* Add these styles to your <style> block */
-            .chart-container {
-            width: 100%;
-            border: 1px solid #e5e7eb;
-            border-radius: 16px;
-            background: #fdfdff;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .bar-chart-container {
-            height: 450px;
-            padding: 20px;
-        }
-        
-        .pie-chart-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            height: 400px;
-            padding: 20px;
-        }
-        .pie-chart-container {
-            flex-grow: 1;
-            height: 100%;
-        }
-        .pie-legend-container {
-            flex-shrink: 0;
-            width: 200px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 14px;
-        }
-        .legend-color-box {
-            width: 20px;
-            height: 20px;
-            border-radius: 4px;
-        }
-        
-        /* New generic styles for text areas */
-        .input-wrapper {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .styled-textarea {
-            width: 100%;
-            padding: 15px 20px;
-            border: 2px solid #d1d5db;
-            border-radius: 12px;
-            font-size: 16px;
-            font-family: 'Courier New', Courier, monospace;
-            outline: none;
-            transition: all 0.3s ease;
-            background: #f9fafb;
-            color: #11182c;
-            min-height: 150px;
-            resize: vertical;
-        }
-        
-        .styled-textarea:focus {
-            border-color: #6366f1;
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-        }
-        /* --- CORE STYLES (Mirrored from your existing file) --- */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f9fafb; /* Light gray background */
-            min-height: 100vh;
-            color: #374151; /* Dark gray for primary text */
-            display: flex;
-            /* New: Added a wrapper for multiple sections */
-            flex-direction: column; 
-            align-items: center;
-            padding: 40px 20px; /* More vertical padding */
-            gap: 40px; /* Space between sections */
-        }
-
-        /* --- LAB CONTAINER STYLES --- */
-        .lab-container {
-            max-width: 800px;
-            width: 100%;
-            background: #ffffff; /* White background for main content */
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-            border: 1px solid #e5e7eb; /* Light border */
-            display: flex;
-            flex-direction: column;
-            gap: 25px; /* Space between graph and input */
-        }
-        
-        .lab-container h1 {
-            font-size: 28px;
-            font-weight: 700;
-            color: #11182c; /* Darker text for headers */
-            text-align: center;
-        }
-
-        /* --- GRAPH STYLES --- */
-        #graphContainer {
-            width: 100%;
-            height: 550px;
-            border: 1px solid #e5e7eb;
-            border-radius: 16px;
-            background: #fdfdff;
-            cursor: move; /* Change cursor to indicate pannable area */
-            position: relative; /* Needed for canvas overlay */
-            overflow: hidden; /* Hide anything drawn outside bounds */
-        }
-        
-        #functionGraph {
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
-        
-        /* --- INPUT STYLES (Mirrored from chat-input) --- */
-        .equation-input-wrapper {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .equation-input-wrapper label {
-            font-size: 14px;
-            color: #6b7280; /* Medium gray for labels */
-            font-weight: 600;
-        }
-        
-        .equation-input {
-            width: 100%;
-            padding: 15px 20px;
-            border: 2px solid #d1d5db; /* Light border for input */
-            border-radius: 12px;
-            font-size: 16px;
-            font-family: 'Courier New', Courier, monospace;
-            outline: none;
-            transition: all 0.3s ease;
-            background: #f9fafb; /* Light gray background */
-            color: #11182c; /* Dark text color */
-        }
-        
-        .equation-input:focus {
-            border-color: #6366f1; /* Purple focus color */
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-        }
-
-        .equation-input::placeholder {
-            color: #9ca3af; /* Medium gray for placeholder */
-        }
-
-        /* --- ERROR MESSAGE STYLE --- */
-        #error-message {
-            color: #dc2626; /* Strong red */
-            font-size: 14px;
-            height: 20px; /* Reserve space to prevent layout shifts */
-            margin-top: 5px;
-            text-align: center;
-        }
-
-        /* --- TIMELINE STYLES --- */
-        .timeline-container-wrapper {
-            width: 100%;
-            position: relative;
-            padding: 60px 0; /* Increased padding to accommodate staggered cards */
-            overflow-x: auto;
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-
-        .timeline-container-wrapper::-webkit-scrollbar {
-            display: none;
-        }
-
-        .timeline-wrapper {
-            position: relative;
-            /* CHANGE THIS LINE */
-            padding: 20px 80px; /* Was 'padding: 20px;' */
-            min-height: 250px;
-        }
-
-        .timeline-line {
-            position: absolute;
-            top: 50%;
-            left: 0;
-            height: 4px;
-            background-color: #e5e7eb;
-            transform: translateY(-2px);
-            border-radius: 2px;
-        }
-
-        .timeline-event {
-            position: absolute; 
-            background-color: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 10px 12px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            transition: all 0.3s ease;
-            z-index: 5; /* Ensure card is above braces */
-            /*text-align: center; *//* Add this line */
-        }
-        
-        .timeline-event:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-            border-color: #6366f1;
-        }
-        
-        .timeline-event.top {
-            bottom: 50%;
-        }
-
-        .timeline-event.bottom {
-            top: 50%;
-        }
-        
-        /* Event Timeline Connector */
-       
-        
-        /* Re-added the vertical connector line */
-        /* REPLACE your existing ::after rule with this one */
-        .timeline-event.event-style::after {
-            content: '';
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 2px;
-            /* Use the same color as the timeline bar */
-            background-color: #e5e7eb; 
-            z-index: 1;
-            /* The height is now controlled by a variable from the script */
-            height: var(--connector-height, 25px); 
-        }
-        
-        .timeline-event.event-style.top::before { bottom: -15px; }
-        .timeline-event.event-style.top::after { top: 100%; }
-
-        .timeline-event.event-style.bottom::before { top: -15px; }
-        .timeline-event.event-style.bottom::after { bottom: 100%; }
-        
-        .timeline-event-title {
-            font-size: 15px;
-            font-weight: 600;
-            color: #11182c;
-            margin-bottom: 4px;
-        }
-
-        .timeline-event-date {
-            font-size: 12px;
-            color: #6b7280;
-        }
-
-        /* Period Timeline Styles */
-        .period-brace {
-            position: absolute;
-            height: 10px; /* Height of the horizontal part */
-            /* CHANGE THIS COLOR */
-            border-left: 2px solid #e5e7eb;
-            /* CHANGE THIS COLOR */
-            border-right: 2px solid #e5e7eb;
-            z-index: 1;
-        }
-        .period-brace.top {
-            bottom: 50%;
-            /* CHANGE THIS COLOR */
-            border-top: 2px solid #e5e7eb;
-        }
-        .period-brace.bottom {
-            top: 50%;
-            /* CHANGE THIS COLOR */
-            border-bottom: 2px solid #e5e7eb;
-        }
-        /* Add these styles for the new zoom buttons */
-        .zoom-controls {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            display: flex;
-            flex-direction: column;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-            border: 1px solid #d1d5db;
-        }
-
-        .zoom-btn {
-            width: 40px;
-            height: 40px;
-            background-color: #ffffff;
-            border: none;
-            border-bottom: 1px solid #e5e7eb;
-            cursor: pointer;
-            font-size: 22px;
-            font-weight: 300;
-            color: #374151;
-            transition: background-color 0.2s ease;
-        }
-
-        .zoom-btn:last-child {
-            border-bottom: none;
-        }
-
-        .zoom-btn:hover {
-            background-color: #f3f4f6;
-        }
-        /* --- HYBRID TIMELINE STYLES --- */
-    .hybrid-event {
-        position: absolute;
-        text-align: center;
-        z-index: 5;
-    }
-
-    .hybrid-event-title {
-        font-size: 14px;
-        font-weight: 600;
-        color: #11182c;
-    }
-
-    .hybrid-event-date {
-        font-size: 11px;
-        color: #6b7280;
-    }
-
-    .hybrid-event-connector {
-        position: absolute;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 2px;
-        background-color: #11182c; /* Black connector line */
-        z-index: 1;
-        /* Height is set dynamically by the script */
-        height: var(--connector-height, 25px);
-    }
-
-    .hybrid-event.top {
-        bottom: 50%;
-    }
-    .hybrid-event.bottom {
-        top: 50%;
-    }
-
-    .hybrid-event-connector.top {
-        top: 100%;
-    }
-
-    .hybrid-event-connector.bottom {
-        bottom: 100%;
-    }
             </style>
 
 <script>
@@ -3143,112 +2777,215 @@ function updateBreadcrumb() {
         // Render content
        // Render content
        function renderContent(parsedContent, userQuestion = null) {
-            const mainContent = document.getElementById('mainContent');
-            mainContent.innerHTML = '';
-            
-            // Render the main text explanation (overview)
+    console.log("LOG #2 - Content renderer received definitions:", parsedContent.definitions);
+    const mainContent = document.getElementById('mainContent');
+    mainContent.innerHTML = '';
+
+   /* if (userQuestion) {
+        const questionDiv = document.createElement('div');
+        questionDiv.className = 'topic-overview';
+        // Applied here for the question title
+        questionDiv.innerHTML = `<h3 style="font-size: 20px; margin-bottom: 0;">Your Question:</h3><p style="margin-top: 10px;">"${toTitleCase(userQuestion)}"</p>`;
+        mainContent.appendChild(questionDiv);
+    }*/
+              
+
             if (parsedContent.overview) {
                 const overviewDiv = document.createElement('div');
                 overviewDiv.className = 'topic-overview';
                 
-                let formattedOverview = parsedContent.overview.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                    .split(/\n\s*\n/)
-                    .map(p => p.trim())
-                    .filter(p => p)
-                    .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
-                    .join('');
-
+                // Format the overview to handle lists
+                let formattedOverview = parsedContent.overview;
+                
+                // Convert bullet points to HTML list
+                const lines = formattedOverview.split('\n');
+                let inList = false;
+                let processedLines = [];
+                
+                lines.forEach(line => {
+                    if (line.trim().match(/^[•\-]\s+/)) {
+                        if (!inList) {
+                            processedLines.push('<ul>');
+                            inList = true;
+                        }
+                        processedLines.push(`<li>${line.trim().replace(/^[•\-]\s+/, '')}</li>`);
+                    } else {
+                        if (inList && line.trim() !== '') {
+                            processedLines.push('</ul>');
+                            inList = false;
+                        }
+                        if (line.trim() !== '') {
+                            processedLines.push(line);
+                        }
+                    }
+                });
+                
+                if (inList) {
+                    processedLines.push('</ul>');
+                }
+                
+                formattedOverview = processedLines.join('\n');
+                
+                // Highlight terms in the overview before displaying it
                 const highlightedOverview = applyTermHighlighting(formattedOverview, parsedContent.definitions);
                 overviewDiv.innerHTML = `<h2>${toTitleCase(currentTreeNode.fullTitle || currentTreeNode.title)}</h2><div>${highlightedOverview}</div>`;
                 mainContent.appendChild(overviewDiv);
             }
 
-            // Render the sub-topic cards
+            let hasExpandedContent = false;
+
             if (parsedContent.sections && parsedContent.sections.length > 0) {
+            const hasCards = parsedContent.sections.some(s => !s.isExpanded);
+             // This new logic will create the button permanently and add the tooltip.
+    const canQuiz = currentTreeNode.children.length > 0;
+
+if (canQuiz) {
+    const hasReadContent = currentTreeNode.children.some(child => child.isRead);
+
+    // A container to handle right-alignment and margin
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.textAlign = 'right';
+    buttonContainer.style.margin = '10px 0';
+
+    // A wrapper for positioning the tooltip relative to the button
+    const tooltipWrapper = document.createElement('div');
+    tooltipWrapper.className = 'button-tooltip-wrapper';
+
+    // Create the button
+    const quizMeBtn = document.createElement('button');
+    quizMeBtn.className = 'quiz-me-more-button';
+    quizMeBtn.id = 'quizMeBtn';
+    quizMeBtn.innerHTML = `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            Quiz Me On This Topic
+        `;
+    quizMeBtn.onclick = () => startQuiz();
+
+    // Create the tooltip element
+    const tooltip = document.createElement('div');
+    tooltip.className = 'quiz-tooltip';
+    tooltip.textContent = 'Read more content to generate a quiz';
+
+    // Disable the button if no content is read
+    if (!hasReadContent) {
+        quizMeBtn.disabled = true;
+    }
+
+    // Add hover events to show/hide the tooltip with a delay
+    let tooltipTimeout;
+    tooltipWrapper.addEventListener('mouseenter', () => {
+        if (quizMeBtn.disabled) {
+            tooltipTimeout = setTimeout(() => {
+                tooltip.classList.add('show');
+            }, 1000); // 1-second delay
+        }
+    });
+
+    tooltipWrapper.addEventListener('mouseleave', () => {
+        clearTimeout(tooltipTimeout);
+        tooltip.classList.remove('show');
+    });
+
+    // Assemble the parts
+    tooltipWrapper.appendChild(quizMeBtn);
+    tooltipWrapper.appendChild(tooltip);
+    buttonContainer.appendChild(tooltipWrapper);
+    mainContent.appendChild(buttonContainer);
+}
+            if (hasCards) {
                 const cardsGrid = document.createElement('div');
                 cardsGrid.className = 'cards-grid';
+                
                 const parentNodeId = currentTreeNode.id;
 
                 parsedContent.sections.forEach((section, index) => {
                     if (!section.isExpanded) {
-                        const childNode = currentTreeNode.children.find(child => child.fullTitle === section.title || child.title === section.title);
+                        // Find the child node that matches this section title
+                        const childNode = currentTreeNode.children.find(child => 
+                            child.fullTitle === section.title || child.title === section.title
+                        );
+                        // Check if the node exists and is read
                         const isNodeRead = childNode ? childNode.isRead : false;
+                        // --- GET THE UNIQUE NODE ID ---
                         const childNodeId = childNode ? childNode.id : null;
+
+                        // --- PASS THE ID TO THE createCard FUNCTION ---
                         const card = createCard(section, index, isNodeRead, childNodeId, parentNodeId);
                         cardsGrid.appendChild(card);
                     }
                 });
+                
                 mainContent.appendChild(cardsGrid);
             }
-
-            // --- NEW: VISUAL ASSET DISPATCHER ---
-            if (parsedContent.visualAssets && parsedContent.visualAssets.length > 0) {
-                parsedContent.visualAssets.forEach(asset => {
-                    // Create a container for the asset to keep things tidy
-                    const assetContainer = document.createElement('div');
-                    assetContainer.className = 'lab-container'; // Use the same styling as our other assets
-                    assetContainer.style.marginTop = '40px'; // Add some space above the asset
-                    
-                    const assetId = 'asset-' + Date.now() + Math.random().toString(36).substring(2, 9);
-
-                    switch (asset.type) {
-                        case 'implicit_plotter':
-                            // The new helper function handles everything for the plotter
-                            renderImplicitPlotter(assetContainer, asset.data);
-                            break;
-                            
-                        case 'hybrid_timeline':
-                            assetContainer.innerHTML = `
-                                <h1>Timeline</h1>
-                                <p style="text-align: center; color: #9ca3af; font-size: 14px; margin-top: -15px; margin-bottom: 10px;">Scroll horizontally to see more of the timeline</p>
-                                <div class="timeline-container-wrapper">
-                                    <div class="timeline-wrapper" id="${assetId}">
-                                         <div class="timeline-line"></div>
-                                    </div>
-                                </div>`;
-                            mainContent.appendChild(assetContainer);
-                            // Call the parameterized function
-                            renderHybridTimeline(assetId, asset.data);
-                            break;
-
-                        case 'bar_chart':
-                            assetContainer.innerHTML = `
-                                <h1>Bar Chart</h1>
-                                <div class="chart-container bar-chart-container">
-                                    <canvas id="${assetId}"></canvas>
-                                </div>`;
-                            mainContent.appendChild(assetContainer);
-                            // Call the parameterized function
-                            renderBarChart(assetId, asset.data);
-                            break;
-
-                        case 'pie_chart':
-                            const legendId = 'legend-' + assetId;
-                            assetContainer.innerHTML = `
-                                <h1>Pie Chart</h1>
-                                <div class="chart-container pie-chart-wrapper">
-                                    <div class="pie-chart-container">
-                                        <canvas id="${assetId}"></canvas>
-                                    </div>
-                                    <div class="pie-legend-container" id="${legendId}"></div>
-                                </div>`;
-                            mainContent.appendChild(assetContainer);
-                            // Call the parameterized function
-                            renderPieChart(assetId, legendId, asset.data);
-                            break;
+                
+                // Display expanded content
+                parsedContent.sections.forEach(section => {
+                    if (section.isExpanded && section.fullContent) {
+                        hasExpandedContent = true;
+                        const contentDiv = document.createElement('div');
+                        contentDiv.className = 'content-section';
+                        
+                        // Format the content to handle lists
+                        let formattedContent = section.fullContent;
+                        
+                        // Convert bullet points to HTML list
+                        const lines = formattedContent.split('\n');
+                        let inList = false;
+                        let processedLines = [];
+                        
+                        lines.forEach(line => {
+                            if (line.trim().match(/^[•\-]\s+/)) {
+                                if (!inList) {
+                                    processedLines.push('<ul>');
+                                    inList = true;
+                                }
+                                processedLines.push(`<li>${line.trim().replace(/^[•\-]\s+/, '')}</li>`);
+                            } else {
+                                if (inList && line.trim() !== '') {
+                                    processedLines.push('</ul>');
+                                    inList = false;
+                                }
+                                if (line.trim() !== '') {
+                                    processedLines.push(line);
+                                }
+                            }
+                        });
+                        
+                        if (inList) {
+                            processedLines.push('</ul>');
+                        }
+                        
+                        formattedContent = processedLines.join('\n');
+                        
+                        // Highlight terms in the detailed content before displaying it
+                        const highlightedContent = applyTermHighlighting(formattedContent, parsedContent.definitions);
+                        
+                        contentDiv.innerHTML = `
+                            <h3>${section.title}</h3>
+                            <div>${highlightedContent}</div>
+                        `;
+                        mainContent.appendChild(contentDiv);
                     }
-                    mainContent.appendChild(assetContainer);
                 });
             }
-
-            // Render the "Tell me more" button if applicable
-            if (parsedContent.showTellMeMore) {
+            
+            // Add "Tell me more" button for single expanded content or when showTellMeMore is true
+            if (parsedContent.showTellMeMore || 
+                (hasExpandedContent && parsedContent.sections && parsedContent.sections.filter(s => !s.isExpanded).length === 0) ||
+                (parsedContent.overview && (!parsedContent.sections || parsedContent.sections.length === 0))) {
                 const tellMeMoreBtn = document.createElement('button');
                 tellMeMoreBtn.className = 'tell-me-more-button';
-                tellMeMoreBtn.innerHTML = `Tell me more about this <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14m0 0l-7-7m7 7l7-7"/></svg>`;
+                tellMeMoreBtn.innerHTML = `
+                    Tell me more about this
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14m0 0l-7-7m7 7l7-7"/>
+                    </svg>
+                `;
                 tellMeMoreBtn.onclick = () => elaborateOnCurrent();
                 mainContent.appendChild(tellMeMoreBtn);
             }
+    
+    // --- END OF NEW CODE FOR QUIZ BUTTON ---
         }
 
 
@@ -3359,50 +3096,21 @@ async function elaborateOnCurrent() {
         ? `${contextPrompt}break down the sub-topic "${topic}" into a numbered list of 3-7 unique and compelling follow-up areas. Provide only the titles in a simple numbered list format. Do not add descriptions or bolding.`
         : `You are an expert educator who carries out tasks with precision and speed. Your task is to explain the topic "${topic}"${contextPrompt}.
         
-Your response MUST be a single, valid JSON object with no other text before or after it.
-The JSON object must have three keys: "explanation", "definitions", and an optional "visualAssets".
-
-1.  In the "explanation" value, provide a detailed, explanation of the topic with at least 2 paragraphs.
-2.  In the "definitions" value, provide an array of objects. For each object, identify a technical term from your explanation and provide a simple, one-sentence definition for it in the context of the topic. Only add/define these technical terms if they are truly technical and not straightforward, and their definition is specific to the context. Terms like focus, endurance, mental toughness which are obvious should not be included. 
-3.  In the "visualAssets" value, (this key is optional), analyze your explanation. If a visual aid would significantly enhance understanding, add this key. If not, OMIT this key entirely.
-    * If included, it must be an array of objects. Each object represents one visual asset.
-    * For each asset, provide a "type" and "data".
-
-Here are the available asset types and their required data formats:
-
-* **For a function graph (e.g., for math equations):**
-    * "type": "implicit_plotter"
-    * "data": (String) A single string with one or more equations separated by semicolons (e.g., "y=x^2; y=sin(x)").
-
-* **For a timeline (for historical events, periods, or both):**
-    * "type": "hybrid_timeline"
-    * "data": (Array of Objects) An array of items. Each item must have a "type" key ('period' or 'event').
-        * If type is 'period', include "name", "startStr", and "endStr".
-        * If type is 'event', include "name" and "dateStr".
-        * Example: [{ "type": "period", "name": "Roman Republic", "startStr": "509 BC", "endStr": "27 BC" }, { "type": "event", "name": "Caesar's Assassination", "dateStr": "44 BC" }]
-
-* **For a bar chart:**
-    * "type": "bar_chart"
-    * "data": (String) A multi-line string with each line in "Label: Value" format.
-
-* **For a pie chart:**
-    * "type": "pie_chart"
-    * "data": (String) A multi-line string with each line in "Label: Percentage" format.
-
-Example JSON structure for a history topic:
-{
-  "explanation": "The Roman Republic was a significant era in ancient history...",
-  "definitions": [{"term": "Senate", "definition": "The governing and advisory assembly of the aristocracy."}],
-  "visualAssets": [
-    {
-      "type": "hybrid_timeline",
-      "data": [
-        { "type": "period", "name": "Roman Republic", "startStr": "509 BC", "endStr": "27 BC" },
-        { "type": "event", "name": "Punic Wars", "dateStr": "264 BC" }
-      ]
-    }
-  ]
-}`;
+        Your response MUST be a single, valid JSON object with no other text before or after it.
+        The JSON object must have two keys: "explanation" and "definitions".
+        
+        1.  In the "explanation" value, provide a detailed, explanation of the topic with at least 2 paragraphs.
+        2.  In the "definitions" value, provide an array of objects. For each object, identify a technical term from your explanation and provide a simple, one-sentence definition for it in the context of the topic. Only add/define these technical terms if they are truly technical and not straightforward, and their definition is specific to the context. Terms like focus, endurance, mental toughness which are obvious should not be included. 
+        
+        Example JSON structure:
+        {
+          "explanation": "A detailed two-paragraph explanation goes here...",
+          "definitions": [
+            { "term": "Technical Term 1", "definition": "A simple one-sentence definition." },
+            { "term": "Technical Term 2", "definition": "Another simple definition." }
+          ]
+        }
+        `;
     showLoading(true);
 
     try {
@@ -3617,644 +3325,6 @@ async function checkConnection() {
 
         // Wait until the document is fully loaded to run this script
         document.addEventListener('DOMContentLoaded', function () {
-            // --- COLOR PALETTE FOR MULTI-LINE PLOTS ---
-    const PLOT_COLORS = ['#6366f1', '#f59e0b', '#14b8a6', '#ef4444', '#8b5cf6', '#3b82f6'];
-
-// --- GRAPH PLOTTER SCRIPT (MODIFIED FOR MULTIPLE LINES) ---
-const canvas = document.getElementById('functionGraph');
-const ctx = canvas.getContext('2d');
-const equationInput = document.getElementById('equationInput');
-const errorMessage = document.getElementById('error-message');
-const graphContainer = document.getElementById('graphContainer');
-let scale = 40, origin = { x: 0, y: 0 }, view = { minX: -10, maxX: 10, minY: -10, maxY: 10 };
-let isGraphDragging = false, lastMousePos = { x: 0, y: 0 };
-// This will now store an array of objects, e.g., [{ paths: [...], color: '...' }]
-let plotObjects = [];
-let plotTimeout;
-
-const resizeObserver = new ResizeObserver(entries => {
-    const { width, height } = entries[0].contentRect;
-    canvas.width = width; canvas.height = height;
-    origin.x = width / 2; origin.y = height / 2;
-    updateView();
-    calculateAndDrawEquations();
-});
-resizeObserver.observe(graphContainer);
-
-const toScreenX = (x) => origin.x + x * scale;
-const toScreenY = (y) => origin.y - y * scale;
-const toGraphX = (x) => (x - origin.x) / scale;
-const toGraphY = (y) => (y - origin.y) / -scale;
-
-function updateView() {
-    view.minX = toGraphX(0); view.maxX = toGraphX(canvas.width);
-    view.minY = toGraphY(canvas.height); view.maxY = toGraphY(0);
-}
-
-function drawGrid() {
-    ctx.beginPath(); ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 1;
-    const step = Math.pow(10, Math.floor(Math.log10(70 / scale)));
-    for (let x = Math.floor(view.minX / step) * step; x < view.maxX; x += step) {
-        const screenX = Math.round(toScreenX(x));
-        ctx.moveTo(screenX, 0); ctx.lineTo(screenX, canvas.height);
-    }
-    for (let y = Math.floor(view.minY / step) * step; y < view.maxY; y += step) {
-        const screenY = Math.round(toScreenY(y));
-        ctx.moveTo(0, screenY); ctx.lineTo(canvas.width, screenY);
-    }
-    ctx.stroke();
-}
-
-function drawAxes() {
-    ctx.beginPath(); ctx.strokeStyle = '#374151'; ctx.lineWidth = 1.5;
-    ctx.moveTo(0, origin.y); ctx.lineTo(canvas.width, origin.y);
-    ctx.moveTo(origin.x, 0); ctx.lineTo(origin.x, canvas.height);
-    ctx.stroke();
-}
-
-function drawLabels() {
-     ctx.font = "12px sans-serif"; ctx.fillStyle = "#6b7280";
-     ctx.textAlign = "center"; ctx.textBaseline = "top";
-     const step = Math.pow(10, Math.floor(Math.log10(70/scale)));
-     for (let x = Math.floor(view.minX / step) * step; x < view.maxX; x += step) {
-         if (Math.abs(x) < 1e-9) continue;
-         ctx.fillText(x.toFixed(2).replace(/\.?0+$/, ''), toScreenX(x), origin.y + 5);
-     }
-     ctx.textAlign = "right"; ctx.textBaseline = "middle";
-     for (let y = Math.floor(view.minY/step) * step; y < view.maxY; y += step) {
-         if (Math.abs(y) < 1e-9) continue;
-         ctx.fillText(y.toFixed(2).replace(/\.?0+$/, ''), origin.x - 5, toScreenY(y));
-     }
-}
-
-function drawPlot(objects) {
-    if (!objects) return;
-    ctx.lineWidth = 2.5;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-
-    objects.forEach(obj => {
-        if (!obj || !obj.paths || obj.paths.length === 0) return;
-        
-        ctx.beginPath();
-        ctx.strokeStyle = obj.color; // Use the color from the object
-        
-        obj.paths.forEach(path => {
-            if (path.length < 2) return;
-            ctx.moveTo(toScreenX(path[0].x), toScreenY(path[0].y));
-            for (let i = 1; i < path.length; i++) { ctx.lineTo(toScreenX(path[i].x), toScreenY(path[i].y)); }
-        });
-        ctx.stroke();
-    });
-}
-
-function calculatePaths(expression) {
-    if (!expression) return [];
-    try {
-        let parts = expression.split('=');
-        if (parts.length !== 2) throw new Error("Equation must have one '=' sign.");
-        const equationNode = math.parse(`(${parts[0]}) - (${parts[1]})`);
-        const compiledEquation = equationNode.compile();
-        const derivativeX = math.derivative(equationNode, 'x').compile();
-        const derivativeY = math.derivative(equationNode, 'y').compile();
-        const resolution = 75, xStep = (view.maxX - view.minX) / resolution, yStep = (view.maxY - view.minY) / resolution;
-        const grid = [], visited = new Set();
-        for (let i = 0; i <= resolution; i++) {
-            grid[i] = [];
-            for (let j = 0; j <= resolution; j++) { grid[i][j] = compiledEquation.evaluate({ x: view.minX + j * xStep, y: view.minY + i * yStep });}
-        }
-        const allPaths = [];
-        for (let i = 0; i < resolution; i++) {
-            for (let j = 0; j < resolution; j++) {
-                const key = `${i},${j}`; if(visited.has(key)) continue;
-                const a = grid[i][j], b = grid[i+1][j];
-                if (Math.sign(a) !== Math.sign(b)) {
-                    visited.add(key);
-                    const startY = view.minY + (i + a / (a - b)) * yStep, startX = view.minX + j * xStep;
-                    let path = tracePath({ x: startX, y: startY }, compiledEquation, derivativeX, derivativeY, visited, xStep, yStep);
-                    if (path.length > 1) allPaths.push(path);
-                }
-            }
-        }
-        return allPaths;
-    } catch (error) {
-        // Set error message but don't clear it on success, as other equations might fail.
-        errorMessage.textContent = `Error in "${expression.trim()}": Invalid equation.`;
-        console.error("Plotting Error:", error);
-        return [];
-    }
-}
-
-function tracePath(startPoint, func, derivX, derivY, visited, dx, dy) {
-    const path = [startPoint]; let currentPoint = startPoint;
-    const stepSize = Math.min(dx, dy) / 2, maxSteps = 500;
-    for(let k = 0; k < maxSteps; k++) {
-        const gradX = derivX.evaluate(currentPoint), gradY = derivY.evaluate(currentPoint);
-        const mag = Math.sqrt(gradX * gradX + gradY * gradY); if (mag < 1e-9) break;
-        const dirX = -gradY / mag, dirY = gradX / mag;
-        let nextPoint = { x: currentPoint.x + dirX * stepSize, y: currentPoint.y + dirY * stepSize };
-        const fVal = func.evaluate(nextPoint), newGradX = derivX.evaluate(nextPoint), newGradY = derivY.evaluate(nextPoint);
-        const gradMagSq = newGradX * newGradX + newGradY * newGradY;
-        if (gradMagSq > 1e-9) {
-            const correction = fVal / gradMagSq;
-            nextPoint.x -= correction * newGradX; nextPoint.y -= correction * newGradY;
-        }
-        if (nextPoint.x < view.minX || nextPoint.x > view.maxX || nextPoint.y < view.minY || nextPoint.y > view.maxY) break;
-        path.push(nextPoint); currentPoint = nextPoint;
-        const gridI = Math.floor((currentPoint.y - view.minY) / dy), gridJ = Math.floor((currentPoint.x - view.minX) / dx);
-        visited.add(`${gridI},${gridJ}`);
-    }
-    return path;
-}
-
-function draw() { requestAnimationFrame(() => { ctx.clearRect(0, 0, canvas.width, canvas.height); drawGrid(); drawAxes(); drawLabels(); drawPlot(plotObjects); }); }
-
-function zoomOnPoint(zoomFactor, centerX, centerY) {
-    const graphX = toGraphX(centerX);
-    const graphY = toGraphY(centerY);
-    scale *= zoomFactor;
-    origin.x = centerX - graphX * scale;
-    origin.y = centerY + graphY * scale;
-    updateView();
-    draw(); // Draw existing paths immediately for responsiveness
-    clearTimeout(plotTimeout);
-    // Schedule a full recalculation
-    plotTimeout = setTimeout(calculateAndDrawEquations, 150);
-}
-
-function calculateAndDrawEquations() {
-    errorMessage.textContent = ''; // Clear previous errors before recalculating
-    const equationStrings = equationInput.value.split(';').filter(s => s.trim() !== '');
-    
-    plotObjects = []; // Clear all previous plot data
-    
-    equationStrings.forEach((eq, index) => {
-        const paths = calculatePaths(eq); // This will set the error message if it fails
-        
-        // Only add to plotObjects if paths were successfully generated
-        if (paths.length > 0) {
-            plotObjects.push({
-                paths: paths,
-                color: PLOT_COLORS[index % PLOT_COLORS.length] // Cycle through the color palette
-            });
-        }
-    });
-    
-    draw();
-}
-
-canvas.addEventListener('mousedown', (e) => { isGraphDragging = true; lastMousePos = { x: e.offsetX, y: e.offsetY }; });
-canvas.addEventListener('mousemove', (e) => { if (!isGraphDragging) return; const dx = e.offsetX - lastMousePos.x, dy = e.offsetY - lastMousePos.y; origin.x += dx; origin.y += dy; lastMousePos = { x: e.offsetX, y: e.offsetY }; updateView(); draw(); });
-canvas.addEventListener('mouseup', () => { if (!isGraphDragging) return; isDragging = false; calculateAndDrawEquations(); });
-canvas.addEventListener('mouseleave', () => { if(isGraphDragging) { isDragging = false; calculateAndDrawEquations(); } });
-canvas.addEventListener('wheel', (e) => { e.preventDefault(); const zoomFactor = e.deltaY < 0 ? 1.2 : 1 / 1.2; zoomOnPoint(zoomFactor, e.offsetX, e.offsetY); });
-
-document.getElementById('zoomInBtn').addEventListener('click', () => { zoomOnPoint(1.3, canvas.width / 2, canvas.height / 2); });
-document.getElementById('zoomOutBtn').addEventListener('click', () => { zoomOnPoint(1 / 1.3, canvas.width / 2, canvas.height / 2); });
-
-equationInput.addEventListener('input', () => {
-    clearTimeout(plotTimeout);
-    plotTimeout = setTimeout(calculateAndDrawEquations, 300);
-});
-
-// --- ADVANCED DATE PARSING & SCALING (No Changes) ---
-const isLeapYear = (year) => (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
-const getDayOfYear = (date) => {
-    const start = new Date(date.getFullYear(), 0, 0);
-    const diff = date.getTime() - start.getTime();
-    const oneDay = 1000 * 60 * 60 * 24;
-    return Math.floor(diff / oneDay);
-};
-
-const parseDateToFractionalYear = (dateStr) => {
-    let cleanedStr = dateStr.replace(/c\.|ca\./, '').trim();
-    const bcMatch = cleanedStr.match(/(\d+)\s*BC/i);
-    if (bcMatch) return -parseInt(bcMatch[1], 10);
-    
-    cleanedStr = cleanedStr.replace(/AD/i, '').trim();
-
-    const date = new Date(cleanedStr);
-    if (!isNaN(date.getTime())) {
-        const year = date.getFullYear();
-        const daysInYear = isLeapYear(year) ? 366 : 365;
-        const dayOfYear = getDayOfYear(date);
-        return year + (dayOfYear / daysInYear);
-    }
-    
-    const yearMatch = cleanedStr.match(/^-?\d+/);
-    if (yearMatch) return parseInt(yearMatch[0], 10);
-
-    return null;
-};
-
-            function renderPeriodTimeline() {
-                const timelineWrapper = document.getElementById('period-timeline-wrapper');
-                const timelineLine = timelineWrapper.querySelector('.timeline-line');
-                timelineWrapper.innerHTML = '';
-                timelineWrapper.appendChild(timelineLine);
-
-                const dynastyData = [ { name: 'Xia', startStr: 'c. 2070 BC', endStr: 'c. 1600 BC' }, { name: 'Shang', startStr: 'c. 1600 BC', endStr: '1046 BC' }, { name: 'Zhou', startStr: '1046 BC', endStr: '256 BC' }, { name: 'Qin', startStr: '221 BC', endStr: '206 BC' }, { name: 'Han', startStr: '206 BC', endStr: '220 AD' }, { name: 'Three Kingdoms', startStr: '220 AD', endStr: '280 AD' }, { name: 'Jin', startStr: '266 AD', endStr: '420 AD' }, { name: 'Sui', startStr: '581 AD', endStr: '618 AD' }, { name: 'Tang', startStr: '618 AD', endStr: '907 AD' }, { name: 'Song', startStr: '960 AD', endStr: '1279 AD' }, { name: 'Yuan', startStr: '1271 AD', endStr: '1368 AD' }, { name: 'Ming', startStr: '1368 AD', endStr: '1644 AD' }, { name: 'Qing', startStr: '1644 AD', endStr: '1912 AD' }];
-                
-                const dynasties = dynastyData.map(d => ({
-                    ...d,
-                    startYear: parseDateToFractionalYear(d.startStr),
-                    endYear: parseDateToFractionalYear(d.endStr),
-                })).filter(d => d.startYear !== null && d.endYear !== null)
-                   .map((d, i, arr) => ({
-                    ...d,
-                    duration: d.endYear - d.startYear,
-                    gap: i > 0 ? d.startYear - arr[i-1].endYear : 0
-                }));
-
-                if (dynasties.length === 0) return;
-
-                const compressionExponent = 0.5;
-                const totalCompressedSpan = dynasties.reduce((sum, d) => {
-                    return sum + Math.pow(Math.max(0, d.gap), compressionExponent) + Math.pow(Math.max(0, d.duration), compressionExponent);
-                }, 0);
-
-                const targetPixelWidth = 2000;
-                const pixelsPerUnit = totalCompressedSpan > 0 ? targetPixelWidth / totalCompressedSpan : 0;
-                const scaleValue = (value) => Math.pow(Math.max(0, value), compressionExponent) * pixelsPerUnit;
-
-                let currentPos = 40;
-                let lastTopEnd = -Infinity, lastBottomEnd = -Infinity;
-                const verticalLevels = [25, 60, 95];
-                let topLevel = 0, bottomLevel = 0;
-
-                dynasties.forEach((dynasty) => {
-                    const scaledGap = scaleValue(dynasty.gap);
-                    const minCardWidth = 130;
-
-                    const braceWidth = scaleValue(dynasty.duration);
-                    const cardWidth = Math.max(braceWidth, minCardWidth);
-                    
-                    const braceStartPos = currentPos + scaledGap;
-                    const cardStartPos = braceStartPos + (braceWidth - cardWidth) / 2;
-                    
-                    const endPos = braceStartPos + braceWidth;
-                    const isTop = dynasties.indexOf(dynasty) % 2 === 0;
-
-                    const eventElement = document.createElement('div');
-                    eventElement.className = `timeline-event ${isTop ? 'top' : 'bottom'}`;
-                    eventElement.innerHTML = `<div class="timeline-event-title">${dynasty.name}</div><div class="timeline-event-date">${dynasty.startStr} - ${dynasty.endStr}</div>`;
-                    eventElement.style.left = `${cardStartPos}px`;
-                    eventElement.style.width = `${cardWidth}px`;
-                    
-                    if (isTop) {
-                        if (braceStartPos < lastTopEnd + 10) topLevel = (topLevel + 1) % verticalLevels.length;
-                        eventElement.style.marginBottom = `${verticalLevels[topLevel]}px`;
-                        lastTopEnd = endPos;
-                    } else {
-                        if (braceStartPos < lastBottomEnd + 10) bottomLevel = (bottomLevel + 1) % verticalLevels.length;
-                        eventElement.style.marginTop = `${verticalLevels[bottomLevel]}px`;
-                        lastBottomEnd = endPos;
-                    }
-                    timelineWrapper.appendChild(eventElement);
-
-                    const brace = document.createElement('div');
-                    brace.className = `period-brace ${isTop ? 'top' : 'bottom'}`;
-                    brace.style.left = `${braceStartPos}px`;
-                    brace.style.width = `${braceWidth}px`;
-                    timelineWrapper.appendChild(brace);
-                    
-                    currentPos = endPos;
-                });
-                
-                const totalWidth = currentPos + 40;
-                timelineWrapper.style.width = `${totalWidth}px`;
-                timelineLine.style.width = `${totalWidth}px`;
-            }
-
-            function renderHybridTimeline(wrapperId, hybridData) {
-                    const timelineWrapper = document.getElementById(wrapperId);
-                    if (!timelineWrapper) return; // Exit if the element doesn't exist
-                    
-                    const timelineLine = document.createElement('div');
-                    timelineLine.className = 'timeline-line';
-                    timelineWrapper.innerHTML = ''; // Clear previous content
-                    timelineWrapper.appendChild(timelineLine);
-
-                    // The rest of the function is the same, but it now uses the 'hybridData' parameter
-                    const processedData = hybridData.map(d => {
-                        if (d.type === 'period') {
-                            const startYear = parseDateToFractionalYear(d.startStr);
-                            const endYear = parseDateToFractionalYear(d.endStr);
-                            return { ...d, startYear, endYear, duration: endYear - startYear };
-                        } else { // type === 'event'
-                            const year = parseDateToFractionalYear(d.dateStr);
-                            return { ...d, year };
-                        }
-                    }).filter(d => {
-                        return d.type === 'period' ? (d.startYear !== null && d.endYear !== null) : d.year !== null;
-                    }).sort((a, b) => {
-                        const yearA = a.type === 'period' ? a.startYear : a.year;
-                        const yearB = b.type === 'period' ? b.startYear : b.year;
-                        return yearA - yearB;
-                    });
-
-                    if (processedData.length === 0) return;
-
-                    const compressionExponent = 0.5;
-                    const scaleValue = (value) => Math.pow(Math.max(0, value), compressionExponent) * 4;
-
-                    const periodVerticalLevel = 25;
-                    const eventVerticalLevels = [85, 110, 150];
-                    
-                    let lastTopEnd = -Infinity, lastBottomEnd = -Infinity;
-                    let eventTopLevel = 0, eventBottomLevel = 0;
-
-                    let lastItemStartPos = 40;
-                    let lastItemStartYear = processedData.length > 0 ? (processedData[0].type === 'period' ? processedData[0].startYear : processedData[0].year) : 0;
-                    
-                    let activePeriod = null;
-
-                    processedData.forEach((item, index) => {
-                        const isTop = index % 2 === 0;
-                        let itemStartPos = 0;
-                        const currentItemStartYear = item.type === 'period' ? item.startYear : item.year;
-
-                        if (activePeriod && currentItemStartYear < activePeriod.endYear && currentItemStartYear > activePeriod.startYear) {
-                            const timeFromPeriodStart = currentItemStartYear - activePeriod.startYear;
-                            const periodDuration = activePeriod.endYear - activePeriod.startYear;
-                            const percentageThrough = periodDuration > 0 ? timeFromPeriodStart / periodDuration : 0;
-                            itemStartPos = activePeriod.startPos + (percentageThrough * activePeriod.braceWidth);
-                        } else {
-                            const timeFromLastItem = currentItemStartYear - lastItemStartYear;
-                            itemStartPos = lastItemStartPos + scaleValue(timeFromLastItem);
-                            activePeriod = null;
-                        }
-
-                        if (item.type === 'period') {
-                            const minCardWidth = 130;
-                            const braceWidth = scaleValue(item.duration);
-                            const cardWidth = Math.max(braceWidth, minCardWidth);
-                            const cardStartPos = itemStartPos + (braceWidth - cardWidth) / 2;
-                            const itemEndPos = itemStartPos + braceWidth;
-
-                            const eventElement = document.createElement('div');
-                            eventElement.className = `timeline-event ${isTop ? 'top' : 'bottom'}`;
-                            eventElement.innerHTML = `<div class="timeline-event-title">${item.name}</div><div class="timeline-event-date">${item.startStr} - ${item.endStr}</div>`;
-                            eventElement.style.left = `${cardStartPos}px`;
-                            eventElement.style.width = `${cardWidth}px`;
-
-                            if (isTop) {
-                                eventElement.style.marginBottom = `${periodVerticalLevel}px`;
-                                lastTopEnd = itemEndPos;
-                            } else {
-                                eventElement.style.marginTop = `${periodVerticalLevel}px`;
-                                lastBottomEnd = itemEndPos;
-                            }
-                            timelineWrapper.appendChild(eventElement);
-                            
-                            const brace = document.createElement('div');
-                            brace.className = `period-brace ${isTop ? 'top' : 'bottom'}`;
-                            brace.style.left = `${itemStartPos}px`;
-                            brace.style.width = `${braceWidth}px`;
-                            timelineWrapper.appendChild(brace);
-
-                            activePeriod = { startYear: item.startYear, endYear: item.endYear, startPos: itemStartPos, braceWidth: braceWidth };
-
-                        } else { // type === 'event'
-                            const cardWidth = 140;
-
-                            const eventElement = document.createElement('div');
-                            eventElement.className = `hybrid-event ${isTop ? 'top' : 'bottom'}`;
-                            eventElement.style.left = `${itemStartPos}px`;
-                            eventElement.style.transform = 'translateX(-50%)';
-                            eventElement.innerHTML = `<div class="hybrid-event-title">${item.name}</div><div class="hybrid-event-date">${item.dateStr}</div>`;
-                            
-                            const connector = document.createElement('div');
-                            connector.className = `hybrid-event-connector ${isTop ? 'top' : 'bottom'}`;
-
-                            let currentEventLevel;
-                            if (isTop) {
-                                if (itemStartPos - cardWidth / 2 < lastTopEnd + 10) eventTopLevel = (eventTopLevel + 1) % eventVerticalLevels.length;
-                                currentEventLevel = eventVerticalLevels[eventTopLevel];
-                                eventElement.style.marginBottom = `${currentEventLevel}px`;
-                                lastTopEnd = itemStartPos + cardWidth / 2;
-                            } else {
-                                if (itemStartPos - cardWidth / 2 < lastBottomEnd + 10) eventBottomLevel = (eventBottomLevel + 1) % eventVerticalLevels.length;
-                                currentEventLevel = eventVerticalLevels[eventBottomLevel];
-                                eventElement.style.marginTop = `${currentEventLevel}px`;
-                                lastBottomEnd = itemStartPos + cardWidth / 2;
-                            }
-                            
-                            connector.style.setProperty('--connector-height', `${currentEventLevel}px`);
-                            eventElement.appendChild(connector);
-                            timelineWrapper.appendChild(eventElement);
-                        }
-
-                        lastItemStartPos = itemStartPos;
-                        lastItemStartYear = currentItemStartYear;
-                    });
-
-                    const totalWidth = lastItemStartPos + 200;
-                    timelineWrapper.style.width = `${totalWidth}px`;
-                    timelineLine.style.width = `${totalWidth}px`;
-                }
-            
-            function renderEventTimeline() {
-                const timelineWrapper = document.getElementById('event-timeline-wrapper');
-                const timelineLine = timelineWrapper.querySelector('.timeline-line');
-                timelineWrapper.innerHTML = ''; 
-                timelineWrapper.appendChild(timelineLine);
-                
-                const inventionData = [ { name: 'The Wheel', dateStr: 'c. 3500 BC' }, { name: 'Written Language', dateStr: 'c. 3200 BC' }, { name: 'Iron Smelting', dateStr: 'c. 1200 BC' }, { name: 'Compass', dateStr: 'c. 200 BC' }, { name: 'Paper', dateStr: 'c. 105 AD' }, { name: 'Printing Press', dateStr: '1440 AD' }, { name: 'Telescope', dateStr: '1608 AD' }, { name: 'Steam Engine', dateStr: '1712 AD' }, { name: 'Telephone', dateStr: '1876 AD' }, { name: 'Light Bulb', dateStr: '1879 AD' }, { name: 'Computer', dateStr: '1943 AD' }, { name: 'Internet (ARPANET)', dateStr: '1969 AD' }];
-                
-                const inventions = inventionData.map(d => ({
-                    ...d,
-                    year: parseDateToFractionalYear(d.dateStr)
-                })).filter(d => d.year !== null)
-                   .map((d, i, arr) => ({
-                    ...d,
-                    gap: i > 0 ? d.year - arr[i-1].year : 0
-                }));
-
-                if (inventions.length < 2) return;
-                
-                const compressionExponent = 0.75;
-                const totalCompressedSpan = inventions.reduce((sum, d) => {
-                    return sum + Math.pow(Math.max(0, d.gap), compressionExponent);
-                }, 0);
-                
-                const targetPixelWidth = 2000;
-                const pixelsPerUnit = totalCompressedSpan > 0 ? targetPixelWidth / totalCompressedSpan : 0;
-                const scaleValue = (value) => Math.pow(Math.max(0, value), compressionExponent) * pixelsPerUnit;
-                
-                let currentPos = 80;
-                let lastTopEnd = -Infinity, lastBottomEnd = -Infinity;
-                const verticalLevels = [25, 65, 105];
-                let topLevel = 0, bottomLevel = 0;
-
-                inventions.forEach((invention, index) => {
-                    const scaledGap = scaleValue(invention.gap);
-                    const eventPosition = currentPos + scaledGap;
-                    const isTop = index % 2 === 0;
-                    const cardWidth = 140;
-
-                    const eventElement = document.createElement('div');
-                    eventElement.className = `timeline-event event-style ${isTop ? 'top' : 'bottom'}`;
-                    eventElement.innerHTML = `<div class="timeline-event-title">${invention.name}</div><div class="timeline-event-date">${invention.dateStr}</div>`;
-                    eventElement.style.left = `${eventPosition}px`;
-                    eventElement.style.transform = 'translateX(-50%)';
-
-                    let currentLevel;
-                    if (isTop) {
-                        if (eventPosition - cardWidth / 2 < lastTopEnd + 10) topLevel = (topLevel + 1) % verticalLevels.length;
-                        currentLevel = verticalLevels[topLevel];
-                        eventElement.style.marginBottom = `${currentLevel}px`;
-                        lastTopEnd = eventPosition + cardWidth / 2;
-                    } else {
-                        if (eventPosition - cardWidth / 2 < lastBottomEnd + 10) bottomLevel = (bottomLevel + 1) % verticalLevels.length;
-                        currentLevel = verticalLevels[bottomLevel];
-                        eventElement.style.marginTop = `${currentLevel}px`;
-                        lastBottomEnd = eventPosition + cardWidth / 2;
-                    }
-
-                    eventElement.style.setProperty('--connector-height', `${currentLevel}px`);
-                    timelineWrapper.appendChild(eventElement);
-                    
-                    currentPos = eventPosition;
-                });
-                
-                const totalWidth = currentPos + 80;
-                timelineWrapper.style.width = `${totalWidth}px`;
-                timelineLine.style.width = `${totalWidth}px`;
-            }
-
-            let barChartInstance;
-                function renderBarChart(canvasId, dataString) {
-                    const ctx = document.getElementById(canvasId).getContext('2d');
-                    
-                    const lines = dataString.trim().split('\n');
-                    const labels = [];
-                    const data = [];
-                    let maxValue = 0;
-    
-                    lines.forEach(line => {
-                        const parts = line.split(':');
-                        if (parts.length === 2) {
-                            const label = parts[0].trim();
-                            const value = parseFloat(parts[1].trim());
-                            if (label && !isNaN(value)) {
-                                labels.push(label);
-                                data.push(value);
-                                if (value > maxValue) {
-                                    maxValue = value;
-                                }
-                            }
-                        }
-                    });
-                    
-                    const suggestedMax = maxValue * 1.1;
-    
-                    if (barChartInstance) { barChartInstance.destroy(); }
-    
-                    barChartInstance = new Chart(ctx, {
-                        type: 'bar',
-                        data: {
-                            labels: labels,
-                            datasets: [{
-                                label: 'Value',
-                                data: data,
-                                backgroundColor: 'rgba(99, 102, 241, 0.6)',
-                                borderColor: 'rgba(99, 102, 241, 1)',
-                                borderWidth: 1,
-                                borderRadius: 4
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: { display: false },
-                                tooltip: { callbacks: { label: (context) => ` ${context.raw}` } }
-                            },
-                            scales: {
-                                y: { beginAtZero: true, suggestedMax: suggestedMax, grid: { color: '#e5e7eb' } },
-                                x: { grid: { display: false } }
-                            }
-                        }
-                    });
-                }
-
-                let pieChartInstance;
-                function renderPieChart(canvasId, legendId, dataString) {
-                    const legendContainer = document.getElementById(legendId);
-                    const ctx = document.getElementById(canvasId).getContext('2d');
-                    
-                    const lines = dataString.trim().split('\n');
-                    const labels = [];
-                    let data = [];
-                    
-                    lines.forEach(line => {
-                        const parts = line.split(':');
-                        if (parts.length === 2) {
-                            const label = parts[0].trim();
-                            const value = parseFloat(parts[1].trim());
-                            if (label && !isNaN(value)) {
-                                labels.push(label);
-                                data.push(value);
-                            }
-                        }
-                    });
-    
-                    const total = data.reduce((sum, val) => sum + val, 0);
-                    if (total > 0) { data = data.map(val => (val / total) * 100); }
-                    
-                    const backgroundColors = [ '#8b5cf6', '#6366f1', '#3b82f6', '#14b8a6', '#f59e0b', '#ef4444', '#ec4899'];
-    
-                    if (pieChartInstance) { pieChartInstance.destroy(); }
-    
-                    pieChartInstance = new Chart(ctx, {
-                        type: 'pie',
-                        data: {
-                            labels: labels,
-                            datasets: [{ data: data, backgroundColor: backgroundColors, borderColor: '#ffffff', borderWidth: 2 }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: { display: false },
-                                tooltip: { callbacks: { label: (context) => ` ${context.label}: ${context.raw.toFixed(1)}%` } }
-                            }
-                        }
-                    });
-    
-                    legendContainer.innerHTML = '';
-                    labels.forEach((label, index) => {
-                        const item = document.createElement('div');
-                        item.className = 'legend-item';
-                        const colorBox = document.createElement('div');
-                        colorBox.className = 'legend-color-box';
-                        colorBox.style.backgroundColor = backgroundColors[index % backgroundColors.length];
-                        const text = document.createElement('span');
-                        text.textContent = label;
-                        item.appendChild(colorBox);
-                        item.appendChild(text);
-                        legendContainer.appendChild(item);
-                    });
-                }
-
-            document.getElementById('barChartData').addEventListener('input', renderBarChart);
-            document.getElementById('pieChartData').addEventListener('input', renderPieChart);
-            
-            
-
-            // --- Z-INDEX MANAGEMENT FOR OVERLAPPING CARDS ---
-            let highestZIndex = 10;
-            function bringCardToFront(event) {
-                const card = event.target.closest('.timeline-event');
-                if (card) {
-                    highestZIndex++;
-                    card.style.zIndex = highestZIndex;
-                }
-            }
-            document.getElementById('event-timeline-wrapper').addEventListener('click', bringCardToFront);
-            document.getElementById('period-timeline-wrapper').addEventListener('click', bringCardToFront);
-        
             const handle = document.getElementById('dragHandle');
             const sidebar = document.getElementById('treeSidebar');
             
@@ -4442,128 +3512,6 @@ googleSignInBtn.addEventListener('click', () => {
             authError.textContent = error.message; 
         });
 });
-function renderImplicitPlotter(container, dataString) {
-                // Create the plotter's HTML structure
-                container.innerHTML = `
-                    <h1>Implicit Function Plotter</h1>
-                    <div id="graphContainer">
-                        <canvas id="functionGraph"></canvas>
-                        <div class="zoom-controls">
-                            <button id="zoomInBtn" class="zoom-btn" title="Zoom in">+</button>
-                            <button id="zoomOutBtn" class="zoom-btn" title="Zoom out">-</button>
-                        </div>
-                    </div>
-                    <div class="equation-input-wrapper">
-                        <label for="equationInput">Enter one or more implicit equations, separated by a semicolon (;)</label>
-                        <input type="text" id="equationInput" class="equation-input" placeholder="x^2+y^2=16; y=sin(x)">
-                        <p id="error-message"></p>
-                    </div>
-                `;
-
-                // --- Re-initialize the plotter logic for this specific instance ---
-                const canvas = container.querySelector('#functionGraph');
-                const ctx = canvas.getContext('2d');
-                const equationInput = container.querySelector('#equationInput');
-                const errorMessage = container.querySelector('#error-message');
-                const graphContainer = container.querySelector('#graphContainer');
-                
-                // Set the initial equation from the AI
-                equationInput.value = dataString;
-
-                let scale = 40, origin = { x: 0, y: 0 }, view = { minX: -10, maxX: 10, minY: -10, maxY: 10 };
-                let isGraphDragging = false, lastMousePos = { x: 0, y: 0 };
-                let plotObjects = [];
-                let plotTimeout;
-
-                const resizeObserver = new ResizeObserver(entries => {
-                    if (!entries || !entries.length) return;
-                    const { width, height } = entries[0].contentRect;
-                    canvas.width = width; canvas.height = height;
-                    if(width === 0 || height === 0) return;
-                    origin.x = width / 2; origin.y = height / 2;
-                    updateView();
-                    calculateAndDrawEquations();
-                });
-                resizeObserver.observe(graphContainer);
-                
-                const toScreenX = (x) => origin.x + x * scale;
-                const toScreenY = (y) => origin.y - y * scale;
-                const toGraphX = (x) => (x - origin.x) / scale;
-                const toGraphY = (y) => (y - origin.y) / -scale;
-                
-                function updateView() {
-                    view.minX = toGraphX(0); view.maxX = toGraphX(canvas.width);
-                    view.minY = toGraphY(canvas.height); view.maxY = toGraphY(0);
-                }
-
-                function drawGrid() {
-                    if (!ctx) return;
-                    ctx.beginPath(); ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 1;
-                    const step = Math.pow(10, Math.floor(Math.log10(70 / scale)));
-                    for (let x = Math.floor(view.minX / step) * step; x < view.maxX; x += step) {
-                        const screenX = Math.round(toScreenX(x));
-                        ctx.moveTo(screenX, 0); ctx.lineTo(screenX, canvas.height);
-                    }
-                    for (let y = Math.floor(view.minY / step) * step; y < view.maxY; y += step) {
-                        const screenY = Math.round(toScreenY(y));
-                        ctx.moveTo(0, screenY); ctx.lineTo(canvas.width, screenY);
-                    }
-                    ctx.stroke();
-                }
-
-                function drawAxes() { /* ... same as before ... */ }
-                function drawLabels() { /* ... same as before ... */ }
-                function drawPlot(objects) { /* ... same as before ... */ }
-                function calculatePaths(expression) { /* ... same as before ... */ }
-                function tracePath(startPoint, func, derivX, derivY, visited, dx, dy) { /* ... same as before ... */ }
-                
-                function draw() { requestAnimationFrame(() => { if(!ctx) return; ctx.clearRect(0, 0, canvas.width, canvas.height); drawGrid(); drawAxes(); drawLabels(); drawPlot(plotObjects); }); }
-                
-                function zoomOnPoint(zoomFactor, centerX, centerY) {
-                    const graphX = toGraphX(centerX);
-                    const graphY = toGraphY(centerY);
-                    scale *= zoomFactor;
-                    origin.x = centerX - graphX * scale;
-                    origin.y = centerY + graphY * scale;
-                    updateView();
-                    draw();
-                    clearTimeout(plotTimeout);
-                    plotTimeout = setTimeout(calculateAndDrawEquations, 150);
-                }
-
-                function calculateAndDrawEquations() {
-                    errorMessage.textContent = '';
-                    const equationStrings = equationInput.value.split(';').filter(s => s.trim() !== '');
-                    plotObjects = [];
-                    equationStrings.forEach((eq, index) => {
-                        const paths = calculatePaths(eq);
-                        if (paths.length > 0) {
-                            plotObjects.push({
-                                paths: paths,
-                                color: PLOT_COLORS[index % PLOT_COLORS.length]
-                            });
-                        }
-                    });
-                    draw();
-                }
-
-                canvas.addEventListener('mousedown', (e) => { isGraphDragging = true; lastMousePos = { x: e.offsetX, y: e.offsetY }; });
-                canvas.addEventListener('mousemove', (e) => { if (!isGraphDragging) return; const dx = e.offsetX - lastMousePos.x, dy = e.offsetY - lastMousePos.y; origin.x += dx; origin.y += dy; lastMousePos = { x: e.offsetX, y: e.offsetY }; updateView(); draw(); });
-                canvas.addEventListener('mouseup', () => { if (!isGraphDragging) return; isGraphDragging = false; calculateAndDrawEquations(); });
-                canvas.addEventListener('mouseleave', () => { if(isGraphDragging) { isGraphDragging = false; calculateAndDrawEquations(); } });
-                canvas.addEventListener('wheel', (e) => { e.preventDefault(); const zoomFactor = e.deltaY < 0 ? 1.2 : 1 / 1.2; zoomOnPoint(zoomFactor, e.offsetX, e.offsetY); });
-                
-                container.querySelector('#zoomInBtn').addEventListener('click', () => { zoomOnPoint(1.3, canvas.width / 2, canvas.height / 2); });
-                container.querySelector('#zoomOutBtn').addEventListener('click', () => { zoomOnPoint(1 / 1.3, canvas.width / 2, canvas.height / 2); });
-                
-                equationInput.addEventListener('input', () => {
-                    clearTimeout(plotTimeout);
-                    plotTimeout = setTimeout(calculateAndDrawEquations, 300);
-                });
-
-                // Initial calculation
-                calculateAndDrawEquations();
-            }
     </script>
     <!-- New Topic Modal -->
 <div class="modal-overlay" id="newTopicModal">
