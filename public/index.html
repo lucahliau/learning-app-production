@@ -1807,6 +1807,7 @@ function renderHybridTimeline(container, hybridData) {
             </div>
         </div>`;
 
+    const timelineContainerWrapper = container.querySelector('.timeline-container-wrapper');
     const timelineWrapper = container.querySelector('.timeline-wrapper');
     const timelineLine = container.querySelector('.timeline-line');
     if (!timelineWrapper || !timelineLine) return;
@@ -1826,32 +1827,38 @@ function renderHybridTimeline(container, hybridData) {
 
         if (processedData.length === 0) return;
 
-        // --- Simplified Natural Scaling Logic ---
         const compressionExponent = 0.5;
         const scaleValue = (value) => Math.pow(Math.max(0, value), compressionExponent) * 4;
-        
-        let lastItemEndPos = 40; // Start with left padding
-        let lastItemYear = processedData[0].type === 'period' ? processedData[0].startYear : processedData[0].year;
+        const PADDING = 40;
 
+        // --- 1. Calculate the "Natural" Layout ---
+        let lastNaturalPos = PADDING;
+        let lastNaturalYear = processedData[0].type === 'period' ? processedData[0].startYear : processedData[0].year;
+        
         processedData.forEach(item => {
             const currentYear = item.type === 'period' ? item.startYear : item.year;
-            const timeGap = currentYear - lastItemYear;
-            item.startPos = lastItemEndPos + scaleValue(timeGap);
+            const timeGap = currentYear - lastNaturalYear;
             
-            if(item.type === 'period') {
-                item.braceWidth = scaleValue(item.duration);
-                lastItemEndPos = item.startPos + item.braceWidth;
-            } else {
-                lastItemEndPos = item.startPos;
-            }
-            lastItemYear = currentYear;
+            item.naturalStartPos = lastNaturalPos + scaleValue(timeGap);
+            item.naturalBraceWidth = item.type === 'period' ? scaleValue(item.duration) : 0;
+            
+            lastNaturalPos = item.naturalStartPos + item.naturalBraceWidth;
+            lastNaturalYear = currentYear;
         });
 
-        const totalWidth = lastItemEndPos + 40; // Add right padding
-        timelineWrapper.style.width = `${totalWidth}px`;
-        timelineLine.style.width = `${totalWidth}px`;
+        const totalNaturalWidth = lastNaturalPos + PADDING;
+
+        // --- 2. Determine Final Width and Scaling Factor ---
+        const containerWidth = timelineContainerWrapper.clientWidth;
+        const targetMinWidth = containerWidth * 0.9;
+
+        const finalWidth = Math.max(totalNaturalWidth, targetMinWidth);
+        const positionScaleFactor = finalWidth / totalNaturalWidth;
         
-        // --- Rendering Logic (Unchanged) ---
+        timelineWrapper.style.width = `${finalWidth}px`;
+        timelineLine.style.width = `${finalWidth}px`;
+        
+        // --- 3. Render Elements with Final Scaled Positions ---
         let lastTopEnd = -Infinity, lastBottomEnd = -Infinity;
         let eventTopLevel = 0, eventBottomLevel = 0;
         const periodVerticalLevel = 25;
@@ -1859,10 +1866,12 @@ function renderHybridTimeline(container, hybridData) {
 
         processedData.forEach((item, index) => {
             const isTop = index % 2 === 0;
+            const finalStartPos = item.naturalStartPos * positionScaleFactor;
 
             if (item.type === 'period') {
-                const cardWidth = Math.max(item.braceWidth, 130);
-                const cardStartPos = item.startPos + (item.braceWidth - cardWidth) / 2;
+                const finalBraceWidth = item.naturalBraceWidth * positionScaleFactor;
+                const cardWidth = Math.max(finalBraceWidth, 130);
+                const cardStartPos = finalStartPos + (finalBraceWidth - cardWidth) / 2;
 
                 const eventElement = document.createElement('div');
                 eventElement.className = `timeline-event ${isTop ? 'top' : 'bottom'}`;
@@ -1875,31 +1884,31 @@ function renderHybridTimeline(container, hybridData) {
 
                 const brace = document.createElement('div');
                 brace.className = `period-brace ${isTop ? 'top' : 'bottom'}`;
-                brace.style.left = `${item.startPos}px`;
-                brace.style.width = `${item.braceWidth}px`;
+                brace.style.left = `${finalStartPos}px`;
+                brace.style.width = `${finalBraceWidth}px`;
                 timelineWrapper.appendChild(brace);
-            } else {
+            } else { // type === 'event'
                 const cardWidth = 140;
                 const eventElement = document.createElement('div');
                 eventElement.className = `hybrid-event ${isTop ? 'top' : 'bottom'}`;
-                eventElement.style.left = `${item.startPos}px`;
+                eventElement.style.left = `${finalStartPos}px`;
                 eventElement.style.transform = 'translateX(-50%)';
                 eventElement.innerHTML = `<div class="hybrid-event-title">${item.name}</div><div class="hybrid-event-date">${item.dateStr}</div>`;
-
+                
                 const connector = document.createElement('div');
                 connector.className = `hybrid-event-connector ${isTop ? 'top' : 'bottom'}`;
 
                 let currentEventLevel;
                 if (isTop) {
-                    if (item.startPos - cardWidth / 2 < lastTopEnd + 10) eventTopLevel = (eventTopLevel + 1) % eventVerticalLevels.length;
+                    if (finalStartPos - cardWidth / 2 < lastTopEnd + 10) eventTopLevel = (eventTopLevel + 1) % eventVerticalLevels.length;
                     currentEventLevel = eventVerticalLevels[eventTopLevel];
                     eventElement.style.marginBottom = `${currentEventLevel}px`;
-                    lastTopEnd = item.startPos + cardWidth / 2;
+                    lastTopEnd = finalStartPos + cardWidth / 2;
                 } else {
-                    if (item.startPos - cardWidth / 2 < lastBottomEnd + 10) bottomLevel = (eventBottomLevel + 1) % eventVerticalLevels.length;
+                    if (finalStartPos - cardWidth / 2 < lastBottomEnd + 10) bottomLevel = (eventBottomLevel + 1) % eventVerticalLevels.length;
                     currentEventLevel = eventVerticalLevels[bottomLevel];
                     eventElement.style.marginTop = `${currentEventLevel}px`;
-                    lastBottomEnd = item.startPos + cardWidth / 2;
+                    lastBottomEnd = finalStartPos + cardWidth / 2;
                 }
                 
                 connector.style.setProperty('--connector-height', `${currentEventLevel}px`);
