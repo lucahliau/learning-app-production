@@ -3213,27 +3213,24 @@ function updateBreadcrumb() {
                             renderImplicitPlotter(assetContainer, asset.data);
                             break;
                             
-                        case 'hybrid_timeline':
-                            assetContainer.innerHTML = `
-                                <h1>Timeline</h1>
-                                <p style="text-align: center; color: #9ca3af; font-size: 14px; margin-top: -15px; margin-bottom: 10px;">Scroll horizontally to see more of the timeline</p>
-                                <div class="timeline-container-wrapper">
-                                    <div class="timeline-wrapper" id="${assetId}">
-                                         <div class="timeline-line"></div>
-                                    </div>
-                                </div>`;
-                            mainContent.appendChild(assetContainer);
-                            // Call the parameterized function
-                            renderHybridTimeline(assetId, asset.data);
-                            break;
-
+                            case 'hybrid_timeline':
+    assetContainer.innerHTML = `
+        <h1>Timeline</h1>
+        <p style="text-align: center; color: #9ca3af; font-size: 14px; margin-top: -15px; margin-bottom: 10px;">Scroll horizontally to see more of the timeline</p>
+        <div class="timeline-container-wrapper">
+            <div class="timeline-wrapper" id="${assetId}">
+                 <div class="timeline-line"></div>
+            </div>
+        </div>`;
+    // Call the parameterized function
+    renderHybridTimeline(assetId, asset.data);
+    break;
                         case 'bar_chart':
                             assetContainer.innerHTML = `
                                 <h1>Bar Chart</h1>
                                 <div class="chart-container bar-chart-container">
                                     <canvas id="${assetId}"></canvas>
                                 </div>`;
-                            mainContent.appendChild(assetContainer);
                             // Call the parameterized function
                             renderBarChart(assetId, asset.data);
                             break;
@@ -3248,7 +3245,6 @@ function updateBreadcrumb() {
                                     </div>
                                     <div class="pie-legend-container" id="${legendId}"></div>
                                 </div>`;
-                            mainContent.appendChild(assetContainer);
                             // Call the parameterized function
                             renderPieChart(assetId, legendId, asset.data);
                             break;
