@@ -2630,8 +2630,8 @@ function loadLearningTopic(topicId) {
  * @param {string} category - The category assigned to this topic.
  * @param {string} sophistication - The sophistication level for the topic.
  */
- function startLearningTopic(topicTitle, syllabusSections, topicId, category, sophistication, visualAssets = null) {
-        currentTopicId = topicId;
+function startLearningTopic(topicTitle, syllabusSections, topicId, category, sophistication) {
+    currentTopicId = topicId;
     navigationHistory = [];
     currentHistoryIndex = -1;
 
@@ -2643,11 +2643,10 @@ function loadLearningTopic(topicId) {
     currentTreeNode = treeStructure;
 
     const topicContent = {
-    overview: `An introduction to the key areas of ${toTitleCase(topicTitle)}. Select a card to begin.`,
-    sections: syllabusSections,
-    definitions: [],
-    visualAssets: visualAssets || [] // Add this line
-};
+        overview: `An introduction to the key areas of ${toTitleCase(topicTitle)}. Select a card to begin.`,
+        sections: syllabusSections,
+        definitions: []
+    };
     treeStructure.content = topicContent;
 
     syllabusSections.forEach(section => {
@@ -2762,34 +2761,14 @@ function closeNewTopicModal() {
     // This new prompt asks for a JSON object with two keys: "category" and "syllabus".
     const prompt = `You are an expert, rigorous and intellectual curriculum designer who follows tasks they have been set with precision and speed. Your task is to design a unique syllabus for "${topic}" for a "${sophistication}" audience.
 
+Your task is to perform two steps:
+1.  Categorize this topic into ONE of the following predefined categories: ${categories.join(', ')}.
+2.  Design a syllabus as a numbered list of 4-8 unique and compelling module titles for the topic. These modules should be specific to the topic and not generic at all. Provide only the titles. Avoid generic titles like "Introduction" or "Key Concepts.", 'historical context'
+
 Your response MUST be a single, valid JSON object with NO other text before or after it.
-The JSON object must have two required keys ("category", "syllabus") and one optional key ("visualAssets").
+The JSON object must have two keys: "category" and "syllabus". The "syllabus" value should be your numbered list as a single string.
 
-1.  **"category"**: Categorize this topic into ONE of the following predefined categories: ${categories.join(', ')}.
-2.  **"syllabus"**: Design a syllabus as a numbered list of 4-8 unique and compelling module titles for the topic. This value must be a single string. The modules should be specific to the topic and not generic at all. Provide only the titles. Avoid generic titles like "Introduction" or "Key Concepts.", 'historical context'.
-3.  **"visualAssets" (Optional)**: If the topic is inherently historical or best understood chronologically (e.g., a history topic), include this key. If not, OMIT this key entirely.
-    * If included, it MUST be an array containing a single object for a timeline.
-    * The object's "type" MUST be "hybrid_timeline".
-    * The object's "data" MUST be an array of event and/or period objects covering the topic's key milestones.
-        * An event requires "name" and "dateStr".
-        * A period requires "name", "startStr", and "endStr".
-
-Example for a history topic:
-{
-  "category": "History",
-  "syllabus": "1. The Achaemenid Empire\\n2. Parthian and Sasanian Eras\\n3. The Islamic Golden Age in Persia",
-  "visualAssets": [
-    {
-      "type": "hybrid_timeline",
-      "data": [
-        { "type": "period", "name": "Achaemenid Empire", "startStr": "550 BC", "endStr": "330 BC" },
-        { "type": "event", "name": "Islamic conquest", "dateStr": "633 AD" }
-      ]
-    }
-  ]
-}
-
-Example for a non-history topic (note the absence of visualAssets):
+Example format:
 {
   "category": "Science",
   "syllabus": "1. Core Principles of Relativity\\n2. Spacetime and Gravity\\n3. Black Holes and Singularities"
@@ -2821,7 +2800,8 @@ Example for a non-history topic (note the absence of visualAssets):
         }
         
         const parsedResponse = JSON.parse(jsonMatch[0]);
-        const { category, syllabus, visualAssets } = parsedResponse; // visualAssets might be undefined, which is fine        
+        const { category, syllabus } = parsedResponse;
+        
         if (!category || !syllabus) {
             throw new Error("AI response was missing 'category' or 'syllabus'.");
         }
@@ -2835,7 +2815,7 @@ Example for a non-history topic (note the absence of visualAssets):
         const newTopicId = `topic-${Date.now()}`;
         closeNewTopicModal();
         // Pass the new category to the startLearningTopic function
-        startLearningTopic(topic, syllabusSections, newTopicId, category, sophistication, visualAssets);
+        startLearningTopic(topic, syllabusSections, newTopicId, category, sophistication);
 
     } catch (error) {
         console.error("Error fetching syllabus:", error);
