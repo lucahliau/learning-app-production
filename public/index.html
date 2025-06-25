@@ -1796,9 +1796,9 @@ const parseDateToFractionalYear = (dateStr) => {
 
     return null;
 };
-function renderHybridTimeline(container, hybridData) {
-                console.log("FINAL CHECK: renderHybridTimeline was called successfully.");
+// REPLACE your old renderHybridTimeline function with this one
 
+function renderHybridTimeline(container, hybridData) {
     // 1. Create the timeline's HTML frame inside the container
     container.innerHTML = `
         <h1>Timeline</h1>
@@ -1814,7 +1814,6 @@ function renderHybridTimeline(container, hybridData) {
     const timelineLine = container.querySelector('.timeline-line');
     if (!timelineWrapper || !timelineLine) return; // Exit if setup failed
 
-    // 3. The rest of the function proceeds as before, but it's now guaranteed to work
     const processedData = hybridData.map(d => {
         if (d.type === 'period') {
             const startYear = parseDateToFractionalYear(d.startStr);
@@ -1839,12 +1838,48 @@ function renderHybridTimeline(container, hybridData) {
     const periodVerticalLevel = 25;
     const eventVerticalLevels = [85, 110, 150];
     
+    // --- NEW LOGIC START ---
+
+    // A. First, do a "dry run" to calculate the natural width without creating elements
+    let lastItemStartPos_dry = 40;
+    let lastItemStartYear_dry = processedData.length > 0 ? (processedData[0].type === 'period' ? processedData[0].startYear : processedData[0].year) : 0;
+    let activePeriod_dry = null;
+
+    processedData.forEach(item => {
+        const currentItemStartYear = item.type === 'period' ? item.startYear : item.year;
+        if (activePeriod_dry && currentItemStartYear < activePeriod_dry.endYear && currentItemStartYear > activePeriod_dry.startYear) {
+            const timeFromPeriodStart = currentItemStartYear - activePeriod_dry.startYear;
+            const periodDuration = activePeriod_dry.endYear - activePeriod_dry.startYear;
+            const percentageThrough = periodDuration > 0 ? timeFromPeriodStart / periodDuration : 0;
+            lastItemStartPos_dry = activePeriod_dry.startPos + (percentageThrough * activePeriod_dry.braceWidth);
+        } else {
+            const timeFromLastItem = currentItemStartYear - lastItemStartYear_dry;
+            lastItemStartPos_dry += scaleValue(timeFromLastItem);
+            activePeriod_dry = null;
+        }
+        if (item.type === 'period') {
+            const braceWidth = scaleValue(item.duration);
+            activePeriod_dry = { startYear: item.startYear, endYear: item.endYear, startPos: lastItemStartPos_dry, braceWidth: braceWidth };
+        }
+        lastItemStartYear_dry = currentItemStartYear;
+    });
+    const totalNaturalWidth = lastItemStartPos_dry + 200; // Add padding
+
+    // B. Calculate the stretch factor
+    const containerWidth = timelineWrapper.clientWidth;
+    const targetWidth = containerWidth * 0.9;
+    let stretchFactor = 1;
+    if (totalNaturalWidth < targetWidth) {
+        stretchFactor = targetWidth / totalNaturalWidth;
+    }
+
+    // --- NEW LOGIC END ---
+
     let lastTopEnd = -Infinity, lastBottomEnd = -Infinity;
     let eventTopLevel = 0, eventBottomLevel = 0;
-
-    let lastItemStartPos = 40;
-    let lastItemStartYear = processedData.length > 0 ? (processedData[0].type === 'period' ? processedData[0].startYear : processedData[0].year) : 0;
     
+    let lastItemStartPos = 40 * stretchFactor; // Apply stretch factor to initial padding
+    let lastItemStartYear = processedData.length > 0 ? (processedData[0].type === 'period' ? processedData[0].startYear : processedData[0].year) : 0;
     let activePeriod = null;
 
     processedData.forEach((item, index) => {
@@ -1859,13 +1894,15 @@ function renderHybridTimeline(container, hybridData) {
             itemStartPos = activePeriod.startPos + (percentageThrough * activePeriod.braceWidth);
         } else {
             const timeFromLastItem = currentItemStartYear - lastItemStartYear;
-            itemStartPos = lastItemStartPos + scaleValue(timeFromLastItem);
+            // Apply stretch factor to the calculated gap
+            itemStartPos = lastItemStartPos + (scaleValue(timeFromLastItem) * stretchFactor);
             activePeriod = null;
         }
 
         if (item.type === 'period') {
             const minCardWidth = 130;
-            const braceWidth = scaleValue(item.duration);
+            // Apply stretch factor to the width of the period brace
+            const braceWidth = scaleValue(item.duration) * stretchFactor;
             const cardWidth = Math.max(braceWidth, minCardWidth);
             const cardStartPos = itemStartPos + (braceWidth - cardWidth) / 2;
             const itemEndPos = itemStartPos + braceWidth;
@@ -1926,7 +1963,7 @@ function renderHybridTimeline(container, hybridData) {
         lastItemStartYear = currentItemStartYear;
     });
 
-    const totalWidth = lastItemStartPos + 200;
+    const totalWidth = lastItemStartPos + (200 * stretchFactor); // Apply stretch factor to final padding
     timelineWrapper.style.width = `${totalWidth}px`;
     timelineLine.style.width = `${totalWidth}px`;
 }
