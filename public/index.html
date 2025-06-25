@@ -1800,6 +1800,8 @@ const parseDateToFractionalYear = (dateStr) => {
 
 // REPLACE your old renderHybridTimeline function with this one
 
+// REPLACE your old renderHybridTimeline function with this final version
+
 function renderHybridTimeline(container, hybridData) {
     // 1. Create the timeline's HTML frame inside the container
     container.innerHTML = `
@@ -1812,162 +1814,161 @@ function renderHybridTimeline(container, hybridData) {
         </div>`;
 
     // 2. Find the elements we just created
-    const timelineContainerWrapper = container.querySelector('.timeline-container-wrapper'); // Get reference to the visible container
+    const timelineContainerWrapper = container.querySelector('.timeline-container-wrapper');
     const timelineWrapper = container.querySelector('.timeline-wrapper');
     const timelineLine = container.querySelector('.timeline-line');
-    if (!timelineWrapper || !timelineLine) return; // Exit if setup failed
+    if (!timelineWrapper || !timelineLine) return;
 
-    const processedData = hybridData.map(d => {
-        if (d.type === 'period') {
-            const startYear = parseDateToFractionalYear(d.startStr);
-            const endYear = parseDateToFractionalYear(d.endStr);
-            return { ...d, startYear, endYear, duration: endYear - startYear };
-        } else { // type === 'event'
-            const year = parseDateToFractionalYear(d.dateStr);
-            return { ...d, year };
-        }
-    }).filter(d => {
-        return d.type === 'period' ? (d.startYear !== null && d.endYear !== null) : d.year !== null;
-    }).sort((a, b) => {
-        const yearA = a.type === 'period' ? a.startYear : a.year;
-        const yearB = b.type === 'period' ? b.startYear : b.year;
-        return yearA - yearB;
-    });
+    // --- WRAP THE LOGIC IN requestAnimationFrame ---
+    requestAnimationFrame(() => {
 
-    if (processedData.length === 0) return;
-
-    const compressionExponent = 0.5;
-    const scaleValue = (value) => Math.pow(Math.max(0, value), compressionExponent) * 4;
-    const periodVerticalLevel = 25;
-    const eventVerticalLevels = [85, 110, 150];
-    
-    // --- LOGIC START ---
-
-    // A. Dry run to calculate the natural width
-    let lastItemStartPos_dry = 40;
-    let lastItemStartYear_dry = processedData.length > 0 ? (processedData[0].type === 'period' ? processedData[0].startYear : processedData[0].year) : 0;
-    let activePeriod_dry = null;
-
-    processedData.forEach(item => {
-        const currentItemStartYear = item.type === 'period' ? item.startYear : item.year;
-        if (activePeriod_dry && currentItemStartYear < activePeriod_dry.endYear && currentItemStartYear > activePeriod_dry.startYear) {
-            const timeFromPeriodStart = currentItemStartYear - activePeriod_dry.startYear;
-            const periodDuration = activePeriod_dry.endYear - activePeriod_dry.startYear;
-            const percentageThrough = periodDuration > 0 ? timeFromPeriodStart / periodDuration : 0;
-            lastItemStartPos_dry = activePeriod_dry.startPos + (percentageThrough * activePeriod_dry.braceWidth);
-        } else {
-            const timeFromLastItem = currentItemStartYear - lastItemStartYear_dry;
-            lastItemStartPos_dry += scaleValue(timeFromLastItem);
-            activePeriod_dry = null;
-        }
-        if (item.type === 'period') {
-            const braceWidth = scaleValue(item.duration);
-            activePeriod_dry = { startYear: item.startYear, endYear: item.endYear, startPos: lastItemStartPos_dry, braceWidth: braceWidth };
-        }
-        lastItemStartYear_dry = currentItemStartYear;
-    });
-    const totalNaturalWidth = lastItemStartPos_dry + 200;
-
-    // B. Calculate stretch factor using the CORRECT container
-    // --- THIS IS THE FIX ---
-    const containerWidth = timelineContainerWrapper.clientWidth; 
-    const targetWidth = containerWidth * 0.9;
-    let stretchFactor = 1;
-    if (totalNaturalWidth < targetWidth) {
-        stretchFactor = targetWidth / totalNaturalWidth;
-    }
-
-    // --- LOGIC END ---
-
-    let lastTopEnd = -Infinity, lastBottomEnd = -Infinity;
-    let eventTopLevel = 0, eventBottomLevel = 0;
-    
-    let lastItemStartPos = 40 * stretchFactor;
-    let lastItemStartYear = processedData.length > 0 ? (processedData[0].type === 'period' ? processedData[0].startYear : processedData[0].year) : 0;
-    let activePeriod = null;
-
-    processedData.forEach((item, index) => {
-        const isTop = index % 2 === 0;
-        let itemStartPos;
-        const currentItemStartYear = item.type === 'period' ? item.startYear : item.year;
-
-        if (activePeriod && currentItemStartYear < activePeriod.endYear && currentItemStartYear > activePeriod.startYear) {
-            const timeFromPeriodStart = currentItemStartYear - activePeriod.startYear;
-            const periodDuration = activePeriod.endYear - activePeriod.startYear;
-            const percentageThrough = periodDuration > 0 ? timeFromPeriodStart / periodDuration : 0;
-            itemStartPos = activePeriod.startPos + (percentageThrough * activePeriod.braceWidth);
-        } else {
-            const timeFromLastItem = currentItemStartYear - lastItemStartYear;
-            itemStartPos = lastItemStartPos + (scaleValue(timeFromLastItem) * stretchFactor);
-            activePeriod = null;
-        }
-
-        if (item.type === 'period') {
-            const minCardWidth = 130;
-            const braceWidth = scaleValue(item.duration) * stretchFactor;
-            const cardWidth = Math.max(braceWidth, minCardWidth);
-            const cardStartPos = itemStartPos + (braceWidth - cardWidth) / 2;
-            const itemEndPos = itemStartPos + braceWidth;
-
-            const eventElement = document.createElement('div');
-            eventElement.className = `timeline-event ${isTop ? 'top' : 'bottom'}`;
-            eventElement.innerHTML = `<div class="timeline-event-title">${item.name}</div><div class="timeline-event-date">${item.startStr} - ${item.endStr}</div>`;
-            eventElement.style.left = `${cardStartPos}px`;
-            eventElement.style.width = `${cardWidth}px`;
-
-            if (isTop) {
-                eventElement.style.marginBottom = `${periodVerticalLevel}px`;
-                lastTopEnd = itemEndPos;
-            } else {
-                eventElement.style.marginTop = `${periodVerticalLevel}px`;
-                lastBottomEnd = itemEndPos;
+        const processedData = hybridData.map(d => {
+            if (d.type === 'period') {
+                const startYear = parseDateToFractionalYear(d.startStr);
+                const endYear = parseDateToFractionalYear(d.endStr);
+                return { ...d, startYear, endYear, duration: endYear - startYear };
+            } else { // type === 'event'
+                const year = parseDateToFractionalYear(d.dateStr);
+                return { ...d, year };
             }
-            timelineWrapper.appendChild(eventElement);
-            
-            const brace = document.createElement('div');
-            brace.className = `period-brace ${isTop ? 'top' : 'bottom'}`;
-            brace.style.left = `${itemStartPos}px`;
-            brace.style.width = `${braceWidth}px`;
-            timelineWrapper.appendChild(brace);
+        }).filter(d => {
+            return d.type === 'period' ? (d.startYear !== null && d.endYear !== null) : d.year !== null;
+        }).sort((a, b) => {
+            const yearA = a.type === 'period' ? a.startYear : a.year;
+            const yearB = b.type === 'period' ? b.startYear : b.year;
+            return yearA - yearB;
+        });
 
-            activePeriod = { startYear: item.startYear, endYear: item.endYear, startPos: itemStartPos, braceWidth: braceWidth };
+        if (processedData.length === 0) return;
 
-        } else { // type === 'event'
-            const cardWidth = 140;
-            const eventElement = document.createElement('div');
-            eventElement.className = `hybrid-event ${isTop ? 'top' : 'bottom'}`;
-            eventElement.style.left = `${itemStartPos}px`;
-            eventElement.style.transform = 'translateX(-50%)';
-            eventElement.innerHTML = `<div class="hybrid-event-title">${item.name}</div><div class="hybrid-event-date">${item.dateStr}</div>`;
-            
-            const connector = document.createElement('div');
-            connector.className = `hybrid-event-connector ${isTop ? 'top' : 'bottom'}`;
+        const compressionExponent = 0.5;
+        const scaleValue = (value) => Math.pow(Math.max(0, value), compressionExponent) * 4;
+        const periodVerticalLevel = 25;
+        const eventVerticalLevels = [85, 110, 150];
 
-            let currentEventLevel;
-            if (isTop) {
-                if (itemStartPos - cardWidth / 2 < lastTopEnd + 10) eventTopLevel = (eventTopLevel + 1) % eventVerticalLevels.length;
-                currentEventLevel = eventVerticalLevels[eventTopLevel];
-                eventElement.style.marginBottom = `${currentEventLevel}px`;
-                lastTopEnd = itemStartPos + cardWidth / 2;
+        // A. Dry run to calculate the natural width
+        let lastItemStartPos_dry = 40;
+        let lastItemStartYear_dry = processedData.length > 0 ? (processedData[0].type === 'period' ? processedData[0].startYear : processedData[0].year) : 0;
+        let activePeriod_dry = null;
+
+        processedData.forEach(item => {
+            const currentItemStartYear = item.type === 'period' ? item.startYear : item.year;
+            if (activePeriod_dry && currentItemStartYear < activePeriod_dry.endYear && currentItemStartYear > activePeriod_dry.startYear) {
+                const timeFromPeriodStart = currentItemStartYear - activePeriod_dry.startYear;
+                const periodDuration = activePeriod_dry.endYear - activePeriod_dry.startYear;
+                const percentageThrough = periodDuration > 0 ? timeFromPeriodStart / periodDuration : 0;
+                lastItemStartPos_dry = activePeriod_dry.startPos + (percentageThrough * activePeriod_dry.braceWidth);
             } else {
-                if (itemStartPos - cardWidth / 2 < lastBottomEnd + 10) bottomLevel = (eventBottomLevel + 1) % eventVerticalLevels.length;
-                currentEventLevel = eventVerticalLevels[eventBottomLevel];
-                eventElement.style.marginTop = `${currentEventLevel}px`;
-                lastBottomEnd = itemStartPos + cardWidth / 2;
+                const timeFromLastItem = currentItemStartYear - lastItemStartYear_dry;
+                lastItemStartPos_dry += scaleValue(timeFromLastItem);
+                activePeriod_dry = null;
             }
-            
-            connector.style.setProperty('--connector-height', `${currentEventLevel}px`);
-            eventElement.appendChild(connector);
-            timelineWrapper.appendChild(eventElement);
+            if (item.type === 'period') {
+                const braceWidth = scaleValue(item.duration);
+                activePeriod_dry = { startYear: item.startYear, endYear: item.endYear, startPos: lastItemStartPos_dry, braceWidth: braceWidth };
+            }
+            lastItemStartYear_dry = currentItemStartYear;
+        });
+        const totalNaturalWidth = lastItemStartPos_dry + 200;
+
+        // B. Calculate stretch factor (this will now get the correct width)
+        const containerWidth = timelineContainerWrapper.clientWidth;
+        const targetWidth = containerWidth * 0.9;
+        let stretchFactor = 1;
+        if (totalNaturalWidth < targetWidth) {
+            stretchFactor = targetWidth / totalNaturalWidth;
         }
 
-        lastItemStartPos = itemStartPos;
-        lastItemStartYear = currentItemStartYear;
-    });
+        let lastTopEnd = -Infinity, lastBottomEnd = -Infinity;
+        let eventTopLevel = 0, eventBottomLevel = 0;
+        let lastItemStartPos = 40 * stretchFactor;
+        let lastItemStartYear = processedData.length > 0 ? (processedData[0].type === 'period' ? processedData[0].startYear : processedData[0].year) : 0;
+        let activePeriod = null;
 
-    const totalWidth = lastItemStartPos + (200 * stretchFactor);
-    timelineWrapper.style.width = `${totalWidth}px`;
-    timelineLine.style.width = `${totalWidth}px`;
+        processedData.forEach((item, index) => {
+            const isTop = index % 2 === 0;
+            let itemStartPos;
+            const currentItemStartYear = item.type === 'period' ? item.startYear : item.year;
+
+            if (activePeriod && currentItemStartYear < activePeriod.endYear && currentItemStartYear > activePeriod.startYear) {
+                const timeFromPeriodStart = currentItemStartYear - activePeriod.startYear;
+                const periodDuration = activePeriod.endYear - activePeriod.startYear;
+                const percentageThrough = periodDuration > 0 ? timeFromPeriodStart / periodDuration : 0;
+                itemStartPos = activePeriod.startPos + (percentageThrough * activePeriod.braceWidth);
+            } else {
+                const timeFromLastItem = currentItemStartYear - lastItemStartYear;
+                itemStartPos = lastItemStartPos + (scaleValue(timeFromLastItem) * stretchFactor);
+                activePeriod = null;
+            }
+
+            if (item.type === 'period') {
+                const minCardWidth = 130;
+                const braceWidth = scaleValue(item.duration) * stretchFactor;
+                const cardWidth = Math.max(braceWidth, minCardWidth);
+                const cardStartPos = itemStartPos + (braceWidth - cardWidth) / 2;
+                const itemEndPos = itemStartPos + braceWidth;
+
+                const eventElement = document.createElement('div');
+                eventElement.className = `timeline-event ${isTop ? 'top' : 'bottom'}`;
+                eventElement.innerHTML = `<div class="timeline-event-title">${item.name}</div><div class="timeline-event-date">${item.startStr} - ${item.endStr}</div>`;
+                eventElement.style.left = `${cardStartPos}px`;
+                eventElement.style.width = `${cardWidth}px`;
+
+                if (isTop) {
+                    eventElement.style.marginBottom = `${periodVerticalLevel}px`;
+                    lastTopEnd = itemEndPos;
+                } else {
+                    eventElement.style.marginTop = `${periodVerticalLevel}px`;
+                    lastBottomEnd = itemEndPos;
+                }
+                timelineWrapper.appendChild(eventElement);
+                
+                const brace = document.createElement('div');
+                brace.className = `period-brace ${isTop ? 'top' : 'bottom'}`;
+                brace.style.left = `${itemStartPos}px`;
+                brace.style.width = `${braceWidth}px`;
+                timelineWrapper.appendChild(brace);
+
+                activePeriod = { startYear: item.startYear, endYear: item.endYear, startPos: itemStartPos, braceWidth: braceWidth };
+
+            } else { // type === 'event'
+                const cardWidth = 140;
+                const eventElement = document.createElement('div');
+                eventElement.className = `hybrid-event ${isTop ? 'top' : 'bottom'}`;
+                eventElement.style.left = `${itemStartPos}px`;
+                eventElement.style.transform = 'translateX(-50%)';
+                eventElement.innerHTML = `<div class="hybrid-event-title">${item.name}</div><div class="hybrid-event-date">${item.dateStr}</div>`;
+                
+                const connector = document.createElement('div');
+                connector.className = `hybrid-event-connector ${isTop ? 'top' : 'bottom'}`;
+
+                let currentEventLevel;
+                if (isTop) {
+                    if (itemStartPos - cardWidth / 2 < lastTopEnd + 10) eventTopLevel = (eventTopLevel + 1) % eventVerticalLevels.length;
+                    currentEventLevel = eventVerticalLevels[eventTopLevel];
+                    eventElement.style.marginBottom = `${currentEventLevel}px`;
+                    lastTopEnd = itemStartPos + cardWidth / 2;
+                } else {
+                    if (itemStartPos - cardWidth / 2 < lastBottomEnd + 10) bottomLevel = (eventBottomLevel + 1) % eventVerticalLevels.length;
+                    currentEventLevel = eventVerticalLevels[eventBottomLevel];
+                    eventElement.style.marginTop = `${currentEventLevel}px`;
+                    lastBottomEnd = itemStartPos + cardWidth / 2;
+                }
+                
+                connector.style.setProperty('--connector-height', `${currentEventLevel}px`);
+                eventElement.appendChild(connector);
+                timelineWrapper.appendChild(eventElement);
+            }
+
+            lastItemStartPos = itemStartPos;
+            lastItemStartYear = currentItemStartYear;
+        });
+
+        const totalWidth = lastItemStartPos + (200 * stretchFactor);
+        timelineWrapper.style.width = `${totalWidth}px`;
+        timelineLine.style.width = `${totalWidth}px`;
+        
+    }); // --- The closing bracket for requestAnimationFrame
 }
 
 
