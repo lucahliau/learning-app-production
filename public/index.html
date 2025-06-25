@@ -1599,7 +1599,19 @@
 
     .hybrid-event-connector.bottom {
         bottom: 100%;
+        
     }
+    /* Add this to make the hover effect smooth */
+.timeline-event, .hybrid-event {
+    transition: all 0.2s ease-in-out;
+}
+
+/* This rule brings the hovered item to the front and "lifts" it */
+.timeline-event:hover, .hybrid-event:hover {
+    z-index: 10;
+    transform: scale(1.05) translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
             </style>
 
 <script>
