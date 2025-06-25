@@ -3224,7 +3224,9 @@ function updateBreadcrumb() {
                                 </div>`;
                             mainContent.appendChild(assetContainer);
                             // Call the parameterized function
-                            renderHybridTimeline(assetId, asset.data);
+                            setTimeout(() => {
+    renderHybridTimeline(assetId, asset.data);
+}, 0);
                             break;
 
                         case 'bar_chart':
