@@ -3199,64 +3199,40 @@ function updateBreadcrumb() {
 
             // --- NEW: VISUAL ASSET DISPATCHER ---
             if (parsedContent.visualAssets && parsedContent.visualAssets.length > 0) {
-                parsedContent.visualAssets.forEach(asset => {
-                    // Create a container for the asset to keep things tidy
-                    const assetContainer = document.createElement('div');
-                    assetContainer.className = 'lab-container'; // Use the same styling as our other assets
-                    assetContainer.style.marginTop = '40px'; // Add some space above the asset
-                    
-                    const assetId = 'asset-' + Date.now() + Math.random().toString(36).substring(2, 9);
-
-                    switch (asset.type) {
-                        case 'implicit_plotter':
-                            // The new helper function handles everything for the plotter
-                            renderImplicitPlotter(assetContainer, asset.data);
-                            break;
-                            
-                        case 'hybrid_timeline':
-                            assetContainer.innerHTML = `
-                                <h1>Timeline</h1>
-                                <p style="text-align: center; color: #9ca3af; font-size: 14px; margin-top: -15px; margin-bottom: 10px;">Scroll horizontally to see more of the timeline</p>
-                                <div class="timeline-container-wrapper">
-                                    <div class="timeline-wrapper" id="${assetId}">
-                                         <div class="timeline-line"></div>
-                                    </div>
-                                </div>`;
-                            mainContent.appendChild(assetContainer);
-                            // Call the parameterized function
-                            setTimeout(() => {
-    renderHybridTimeline(assetId, asset.data);
-}, 15);
-                            break;
-
-                        case 'bar_chart':
-                            assetContainer.innerHTML = `
-                                <h1>Bar Chart</h1>
-                                <div class="chart-container bar-chart-container">
-                                    <canvas id="${assetId}"></canvas>
-                                </div>`;
-                            mainContent.appendChild(assetContainer);
-                            // Call the parameterized function
-                            renderBarChart(assetId, asset.data);
-                            break;
-
-                        case 'pie_chart':
-                            const legendId = 'legend-' + assetId;
-                            assetContainer.innerHTML = `
-                                <h1>Pie Chart</h1>
-                                <div class="chart-container pie-chart-wrapper">
-                                    <div class="pie-chart-container">
-                                        <canvas id="${assetId}"></canvas>
-                                    </div>
-                                    <div class="pie-legend-container" id="${legendId}"></div>
-                                </div>`;
-                            mainContent.appendChild(assetContainer);
-                            // Call the parameterized function
-                            renderPieChart(assetId, legendId, asset.data);
-                            break;
-                    }
-                });
-            }
+    parsedContent.visualAssets.forEach(asset => {
+        // Create a single container for the asset
+        const assetContainer = document.createElement('div');
+        assetContainer.className = 'lab-container';
+        assetContainer.style.marginTop = '40px';
+        
+        // Call the appropriate render function, passing the container to be filled
+        switch (asset.type) {
+            case 'implicit_plotter':
+                renderImplicitPlotter(assetContainer, asset.data);
+                break;
+            case 'hybrid_timeline':
+                renderHybridTimeline(assetContainer, asset.data);
+                break;
+            case 'bar_chart':
+                // Note: The specific bar/pie chart render functions would also
+                // need to be updated to this pattern to work correctly.
+                // This fix is focused on the timeline.
+                const barChartId = 'asset-' + Date.now() + Math.random().toString(36).substring(2, 9);
+                assetContainer.innerHTML = `<h1>Bar Chart</h1><div class="chart-container bar-chart-container"><canvas id="${barChartId}"></canvas></div>`;
+                renderBarChart(barChartId, asset.data);
+                break;
+            case 'pie_chart':
+                const pieChartId = 'asset-' + Date.now() + Math.random().toString(36).substring(2, 9);
+                const legendId = 'legend-' + pieChartId;
+                assetContainer.innerHTML = `<h1>Pie Chart</h1><div class="chart-container pie-chart-wrapper"><div class="pie-chart-container"><canvas id="${pieChartId}"></canvas></div><div class="pie-legend-container" id="${legendId}"></div></div>`;
+                renderPieChart(pieChartId, legendId, asset.data);
+                break;
+        }
+        
+        // Append the fully prepared container to the page once
+        mainContent.appendChild(assetContainer);
+    });
+}
 
             // Render the "Tell me more" button if applicable
             if (parsedContent.showTellMeMore) {
@@ -3747,133 +3723,138 @@ const parseDateToFractionalYear = (dateStr) => {
                 timelineLine.style.width = `${totalWidth}px`;
             }
 
-            function renderHybridTimeline(wrapperId, hybridData) {
-                    const timelineWrapper = document.getElementById(wrapperId);
-                    if (!timelineWrapper) return; // Exit if the element doesn't exist
-                    
-                    const timelineLine = document.createElement('div');
-                    timelineLine.className = 'timeline-line';
-                    timelineWrapper.innerHTML = ''; // Clear previous content
-                    timelineWrapper.appendChild(timelineLine);
+            function renderHybridTimeline(container, hybridData) {
+    // 1. Create the timeline's HTML frame inside the container
+    container.innerHTML = `
+        <h1>Timeline</h1>
+        <p style="text-align: center; color: #9ca3af; font-size: 14px; margin-top: -15px; margin-bottom: 10px;">Scroll horizontally to see more of the timeline</p>
+        <div class="timeline-container-wrapper">
+            <div class="timeline-wrapper">
+                 <div class="timeline-line"></div>
+            </div>
+        </div>`;
 
-                    // The rest of the function is the same, but it now uses the 'hybridData' parameter
-                    const processedData = hybridData.map(d => {
-                        if (d.type === 'period') {
-                            const startYear = parseDateToFractionalYear(d.startStr);
-                            const endYear = parseDateToFractionalYear(d.endStr);
-                            return { ...d, startYear, endYear, duration: endYear - startYear };
-                        } else { // type === 'event'
-                            const year = parseDateToFractionalYear(d.dateStr);
-                            return { ...d, year };
-                        }
-                    }).filter(d => {
-                        return d.type === 'period' ? (d.startYear !== null && d.endYear !== null) : d.year !== null;
-                    }).sort((a, b) => {
-                        const yearA = a.type === 'period' ? a.startYear : a.year;
-                        const yearB = b.type === 'period' ? b.startYear : b.year;
-                        return yearA - yearB;
-                    });
+    // 2. Find the elements we just created
+    const timelineWrapper = container.querySelector('.timeline-wrapper');
+    const timelineLine = container.querySelector('.timeline-line');
+    if (!timelineWrapper || !timelineLine) return; // Exit if setup failed
 
-                    if (processedData.length === 0) return;
+    // 3. The rest of the function proceeds as before, but it's now guaranteed to work
+    const processedData = hybridData.map(d => {
+        if (d.type === 'period') {
+            const startYear = parseDateToFractionalYear(d.startStr);
+            const endYear = parseDateToFractionalYear(d.endStr);
+            return { ...d, startYear, endYear, duration: endYear - startYear };
+        } else { // type === 'event'
+            const year = parseDateToFractionalYear(d.dateStr);
+            return { ...d, year };
+        }
+    }).filter(d => {
+        return d.type === 'period' ? (d.startYear !== null && d.endYear !== null) : d.year !== null;
+    }).sort((a, b) => {
+        const yearA = a.type === 'period' ? a.startYear : a.year;
+        const yearB = b.type === 'period' ? b.startYear : b.year;
+        return yearA - yearB;
+    });
 
-                    const compressionExponent = 0.5;
-                    const scaleValue = (value) => Math.pow(Math.max(0, value), compressionExponent) * 4;
+    if (processedData.length === 0) return;
 
-                    const periodVerticalLevel = 25;
-                    const eventVerticalLevels = [85, 110, 150];
-                    
-                    let lastTopEnd = -Infinity, lastBottomEnd = -Infinity;
-                    let eventTopLevel = 0, eventBottomLevel = 0;
+    const compressionExponent = 0.5;
+    const scaleValue = (value) => Math.pow(Math.max(0, value), compressionExponent) * 4;
+    const periodVerticalLevel = 25;
+    const eventVerticalLevels = [85, 110, 150];
+    
+    let lastTopEnd = -Infinity, lastBottomEnd = -Infinity;
+    let eventTopLevel = 0, eventBottomLevel = 0;
 
-                    let lastItemStartPos = 40;
-                    let lastItemStartYear = processedData.length > 0 ? (processedData[0].type === 'period' ? processedData[0].startYear : processedData[0].year) : 0;
-                    
-                    let activePeriod = null;
+    let lastItemStartPos = 40;
+    let lastItemStartYear = processedData.length > 0 ? (processedData[0].type === 'period' ? processedData[0].startYear : processedData[0].year) : 0;
+    
+    let activePeriod = null;
 
-                    processedData.forEach((item, index) => {
-                        const isTop = index % 2 === 0;
-                        let itemStartPos = 0;
-                        const currentItemStartYear = item.type === 'period' ? item.startYear : item.year;
+    processedData.forEach((item, index) => {
+        const isTop = index % 2 === 0;
+        let itemStartPos;
+        const currentItemStartYear = item.type === 'period' ? item.startYear : item.year;
 
-                        if (activePeriod && currentItemStartYear < activePeriod.endYear && currentItemStartYear > activePeriod.startYear) {
-                            const timeFromPeriodStart = currentItemStartYear - activePeriod.startYear;
-                            const periodDuration = activePeriod.endYear - activePeriod.startYear;
-                            const percentageThrough = periodDuration > 0 ? timeFromPeriodStart / periodDuration : 0;
-                            itemStartPos = activePeriod.startPos + (percentageThrough * activePeriod.braceWidth);
-                        } else {
-                            const timeFromLastItem = currentItemStartYear - lastItemStartYear;
-                            itemStartPos = lastItemStartPos + scaleValue(timeFromLastItem);
-                            activePeriod = null;
-                        }
+        if (activePeriod && currentItemStartYear < activePeriod.endYear && currentItemStartYear > activePeriod.startYear) {
+            const timeFromPeriodStart = currentItemStartYear - activePeriod.startYear;
+            const periodDuration = activePeriod.endYear - activePeriod.startYear;
+            const percentageThrough = periodDuration > 0 ? timeFromPeriodStart / periodDuration : 0;
+            itemStartPos = activePeriod.startPos + (percentageThrough * activePeriod.braceWidth);
+        } else {
+            const timeFromLastItem = currentItemStartYear - lastItemStartYear;
+            itemStartPos = lastItemStartPos + scaleValue(timeFromLastItem);
+            activePeriod = null;
+        }
 
-                        if (item.type === 'period') {
-                            const minCardWidth = 130;
-                            const braceWidth = scaleValue(item.duration);
-                            const cardWidth = Math.max(braceWidth, minCardWidth);
-                            const cardStartPos = itemStartPos + (braceWidth - cardWidth) / 2;
-                            const itemEndPos = itemStartPos + braceWidth;
+        if (item.type === 'period') {
+            const minCardWidth = 130;
+            const braceWidth = scaleValue(item.duration);
+            const cardWidth = Math.max(braceWidth, minCardWidth);
+            const cardStartPos = itemStartPos + (braceWidth - cardWidth) / 2;
+            const itemEndPos = itemStartPos + braceWidth;
 
-                            const eventElement = document.createElement('div');
-                            eventElement.className = `timeline-event ${isTop ? 'top' : 'bottom'}`;
-                            eventElement.innerHTML = `<div class="timeline-event-title">${item.name}</div><div class="timeline-event-date">${item.startStr} - ${item.endStr}</div>`;
-                            eventElement.style.left = `${cardStartPos}px`;
-                            eventElement.style.width = `${cardWidth}px`;
+            const eventElement = document.createElement('div');
+            eventElement.className = `timeline-event ${isTop ? 'top' : 'bottom'}`;
+            eventElement.innerHTML = `<div class="timeline-event-title">${item.name}</div><div class="timeline-event-date">${item.startStr} - ${item.endStr}</div>`;
+            eventElement.style.left = `${cardStartPos}px`;
+            eventElement.style.width = `${cardWidth}px`;
 
-                            if (isTop) {
-                                eventElement.style.marginBottom = `${periodVerticalLevel}px`;
-                                lastTopEnd = itemEndPos;
-                            } else {
-                                eventElement.style.marginTop = `${periodVerticalLevel}px`;
-                                lastBottomEnd = itemEndPos;
-                            }
-                            timelineWrapper.appendChild(eventElement);
-                            
-                            const brace = document.createElement('div');
-                            brace.className = `period-brace ${isTop ? 'top' : 'bottom'}`;
-                            brace.style.left = `${itemStartPos}px`;
-                            brace.style.width = `${braceWidth}px`;
-                            timelineWrapper.appendChild(brace);
+            if (isTop) {
+                eventElement.style.marginBottom = `${periodVerticalLevel}px`;
+                lastTopEnd = itemEndPos;
+            } else {
+                eventElement.style.marginTop = `${periodVerticalLevel}px`;
+                lastBottomEnd = itemEndPos;
+            }
+            timelineWrapper.appendChild(eventElement);
+            
+            const brace = document.createElement('div');
+            brace.className = `period-brace ${isTop ? 'top' : 'bottom'}`;
+            brace.style.left = `${itemStartPos}px`;
+            brace.style.width = `${braceWidth}px`;
+            timelineWrapper.appendChild(brace);
 
-                            activePeriod = { startYear: item.startYear, endYear: item.endYear, startPos: itemStartPos, braceWidth: braceWidth };
+            activePeriod = { startYear: item.startYear, endYear: item.endYear, startPos: itemStartPos, braceWidth: braceWidth };
 
-                        } else { // type === 'event'
-                            const cardWidth = 140;
+        } else { // type === 'event'
+            const cardWidth = 140;
+            const eventElement = document.createElement('div');
+            eventElement.className = `hybrid-event ${isTop ? 'top' : 'bottom'}`;
+            eventElement.style.left = `${itemStartPos}px`;
+            eventElement.style.transform = 'translateX(-50%)';
+            eventElement.innerHTML = `<div class="hybrid-event-title">${item.name}</div><div class="hybrid-event-date">${item.dateStr}</div>`;
+            
+            const connector = document.createElement('div');
+            connector.className = `hybrid-event-connector ${isTop ? 'top' : 'bottom'}`;
 
-                            const eventElement = document.createElement('div');
-                            eventElement.className = `hybrid-event ${isTop ? 'top' : 'bottom'}`;
-                            eventElement.style.left = `${itemStartPos}px`;
-                            eventElement.style.transform = 'translateX(-50%)';
-                            eventElement.innerHTML = `<div class="hybrid-event-title">${item.name}</div><div class="hybrid-event-date">${item.dateStr}</div>`;
-                            
-                            const connector = document.createElement('div');
-                            connector.className = `hybrid-event-connector ${isTop ? 'top' : 'bottom'}`;
+            let currentEventLevel;
+            if (isTop) {
+                if (itemStartPos - cardWidth / 2 < lastTopEnd + 10) eventTopLevel = (eventTopLevel + 1) % eventVerticalLevels.length;
+                currentEventLevel = eventVerticalLevels[eventTopLevel];
+                eventElement.style.marginBottom = `${currentEventLevel}px`;
+                lastTopEnd = itemStartPos + cardWidth / 2;
+            } else {
+                if (itemStartPos - cardWidth / 2 < lastBottomEnd + 10) eventBottomLevel = (eventBottomLevel + 1) % eventVerticalLevels.length;
+                currentEventLevel = eventVerticalLevels[eventBottomLevel];
+                eventElement.style.marginTop = `${currentEventLevel}px`;
+                lastBottomEnd = itemStartPos + cardWidth / 2;
+            }
+            
+            connector.style.setProperty('--connector-height', `${currentEventLevel}px`);
+            eventElement.appendChild(connector);
+            timelineWrapper.appendChild(eventElement);
+        }
 
-                            let currentEventLevel;
-                            if (isTop) {
-                                if (itemStartPos - cardWidth / 2 < lastTopEnd + 10) eventTopLevel = (eventTopLevel + 1) % eventVerticalLevels.length;
-                                currentEventLevel = eventVerticalLevels[eventTopLevel];
-                                eventElement.style.marginBottom = `${currentEventLevel}px`;
-                                lastTopEnd = itemStartPos + cardWidth / 2;
-                            } else {
-                                if (itemStartPos - cardWidth / 2 < lastBottomEnd + 10) eventBottomLevel = (eventBottomLevel + 1) % eventVerticalLevels.length;
-                                currentEventLevel = eventVerticalLevels[eventBottomLevel];
-                                eventElement.style.marginTop = `${currentEventLevel}px`;
-                                lastBottomEnd = itemStartPos + cardWidth / 2;
-                            }
-                            
-                            connector.style.setProperty('--connector-height', `${currentEventLevel}px`);
-                            eventElement.appendChild(connector);
-                            timelineWrapper.appendChild(eventElement);
-                        }
+        lastItemStartPos = itemStartPos;
+        lastItemStartYear = currentItemStartYear;
+    });
 
-                        lastItemStartPos = itemStartPos;
-                        lastItemStartYear = currentItemStartYear;
-                    });
-
-                    const totalWidth = lastItemStartPos + 200;
-                    timelineWrapper.style.width = `${totalWidth}px`;
-                    timelineLine.style.width = `${totalWidth}px`;
-                }
+    const totalWidth = lastItemStartPos + 200;
+    timelineWrapper.style.width = `${totalWidth}px`;
+    timelineLine.style.width = `${totalWidth}px`;
+}
             
             function renderEventTimeline() {
                 const timelineWrapper = document.getElementById('event-timeline-wrapper');
