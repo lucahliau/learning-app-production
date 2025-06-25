@@ -3442,9 +3442,14 @@ Example JSON structure for a history topic:
                 const explanation = structuredResponse.explanation || "No explanation provided.";
                 const definitions = structuredResponse.definitions || [];
 
-                // Use our existing parseResponse function to format the text and package the data
-                parsed = parseResponse(explanation, definitions);
-                parsed.showTellMeMore = true;
+                 // ADD THIS LINE to grab the visual assets from the response
+    const visualAssets = structuredResponse.visualAssets || [];
+
+// Use our existing parseResponse function to format the text and package the data
+parsed = parseResponse(explanation, definitions);
+// ADD THIS LINE to attach the visual assets to the final parsed object
+parsed.visualAssets = visualAssets;
+parsed.showTellMeMore = true;
 
             } catch (e) {
                 console.error("Failed to parse structured response from AI:", e);
