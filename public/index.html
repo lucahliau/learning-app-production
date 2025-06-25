@@ -1417,8 +1417,7 @@
             overflow-x: auto;
             -ms-overflow-style: none;
             scrollbar-width: none;
-            display: flex; /* ADD THIS LINE */
-            justify-content: center; /* ADD THIS LINE */
+           
         }
 
         .timeline-container-wrapper::-webkit-scrollbar {
@@ -1430,6 +1429,7 @@
             /* CHANGE THIS LINE */
             padding: 20px 80px; /* Was 'padding: 20px;' */
             min-height: 250px;
+            margin: 0 auto; /* Centers the timeline horizontally */
         }
 
         .timeline-line {
@@ -1796,8 +1796,6 @@ const parseDateToFractionalYear = (dateStr) => {
 
     return null;
 };
-// REPLACE your old renderHybridTimeline function with this final version
-
 function renderHybridTimeline(container, hybridData) {
     // 1. Create the timeline's HTML frame
     container.innerHTML = `
@@ -1809,13 +1807,12 @@ function renderHybridTimeline(container, hybridData) {
             </div>
         </div>`;
 
-    const timelineContainerWrapper = container.querySelector('.timeline-container-wrapper');
     const timelineWrapper = container.querySelector('.timeline-wrapper');
     const timelineLine = container.querySelector('.timeline-line');
     if (!timelineWrapper || !timelineLine) return;
 
     requestAnimationFrame(() => {
-        const initialData = hybridData.map(d => {
+        const processedData = hybridData.map(d => {
             if (d.type === 'period') {
                 const startYear = parseDateToFractionalYear(d.startStr);
                 const endYear = parseDateToFractionalYear(d.endStr);
@@ -1827,57 +1824,34 @@ function renderHybridTimeline(container, hybridData) {
         }).filter(d => d.type === 'period' ? (d.startYear !== null && d.endYear !== null) : d.year !== null)
           .sort((a, b) => (a.type === 'period' ? a.startYear : a.year) - (b.type === 'period' ? b.startYear : b.year));
 
-        if (initialData.length === 0) return;
+        if (processedData.length === 0) return;
 
+        // --- Simplified Natural Scaling Logic ---
         const compressionExponent = 0.5;
         const scaleValue = (value) => Math.pow(Math.max(0, value), compressionExponent) * 4;
-        const PADDING = 40;
+        
+        let lastItemEndPos = 40; // Start with left padding
+        let lastItemYear = processedData[0].type === 'period' ? processedData[0].startYear : processedData[0].year;
 
-        // --- PASS 1: Calculate Natural Positions ---
-        let lastNaturalPos = PADDING;
-        let lastNaturalYear = initialData[0].type === 'period' ? initialData[0].startYear : initialData[0].year;
-        let activePeriodNatural = null;
-
-        const processedData = initialData.map(item => {
+        processedData.forEach(item => {
             const currentYear = item.type === 'period' ? item.startYear : item.year;
-            let naturalStartPos;
-
-            if (activePeriodNatural && currentYear < activePeriodNatural.endYear && currentYear > activePeriodNatural.startYear) {
-                const percentThrough = (currentYear - activePeriodNatural.startYear) / activePeriodNatural.duration;
-                naturalStartPos = activePeriodNatural.naturalStartPos + (percentThrough * activePeriodNatural.naturalBraceWidth);
-            } else {
-                const timeGap = currentYear - lastNaturalYear;
-                naturalStartPos = lastNaturalPos + scaleValue(timeGap);
-                activePeriodNatural = null;
-            }
-
-            item.naturalStartPos = naturalStartPos;
-            if (item.type === 'period') {
-                item.naturalBraceWidth = scaleValue(item.duration);
-                activePeriodNatural = item;
-            }
+            const timeGap = currentYear - lastItemYear;
+            item.startPos = lastItemEndPos + scaleValue(timeGap);
             
-            lastNaturalPos = naturalStartPos;
-            lastNaturalYear = currentYear;
-            return item;
+            if(item.type === 'period') {
+                item.braceWidth = scaleValue(item.duration);
+                lastItemEndPos = item.startPos + item.braceWidth;
+            } else {
+                lastItemEndPos = item.startPos;
+            }
+            lastItemYear = currentYear;
         });
 
-        const lastItem = processedData[processedData.length - 1];
-        const totalNaturalWidth = (lastItem.type === 'period' ? lastItem.naturalStartPos + lastItem.naturalBraceWidth : lastItem.naturalStartPos) + PADDING;
-
-        // --- Calculate Stretch Factor ---
-        const containerWidth = timelineContainerWrapper.clientWidth;
-        const targetWidth = containerWidth * 0.9;
-        let stretchFactor = 1;
-        if (totalNaturalWidth < targetWidth) {
-            stretchFactor = targetWidth / totalNaturalWidth;
-        }
-
-        const totalFinalWidth = totalNaturalWidth * stretchFactor;
-        timelineWrapper.style.width = `${totalFinalWidth}px`;
-        timelineLine.style.width = `${totalFinalWidth}px`;
+        const totalWidth = lastItemEndPos + 40; // Add right padding
+        timelineWrapper.style.width = `${totalWidth}px`;
+        timelineLine.style.width = `${totalWidth}px`;
         
-        // --- PASS 2: Render Elements with Stretched Positions ---
+        // --- Rendering Logic (Unchanged) ---
         let lastTopEnd = -Infinity, lastBottomEnd = -Infinity;
         let eventTopLevel = 0, eventBottomLevel = 0;
         const periodVerticalLevel = 25;
@@ -1885,12 +1859,10 @@ function renderHybridTimeline(container, hybridData) {
 
         processedData.forEach((item, index) => {
             const isTop = index % 2 === 0;
-            const finalStartPos = item.naturalStartPos * stretchFactor;
 
             if (item.type === 'period') {
-                const finalBraceWidth = item.naturalBraceWidth * stretchFactor;
-                const cardWidth = Math.max(finalBraceWidth, 130);
-                const cardStartPos = finalStartPos + (finalBraceWidth - cardWidth) / 2;
+                const cardWidth = Math.max(item.braceWidth, 130);
+                const cardStartPos = item.startPos + (item.braceWidth - cardWidth) / 2;
 
                 const eventElement = document.createElement('div');
                 eventElement.className = `timeline-event ${isTop ? 'top' : 'bottom'}`;
@@ -1903,15 +1875,14 @@ function renderHybridTimeline(container, hybridData) {
 
                 const brace = document.createElement('div');
                 brace.className = `period-brace ${isTop ? 'top' : 'bottom'}`;
-                brace.style.left = `${finalStartPos}px`;
-                brace.style.width = `${finalBraceWidth}px`;
+                brace.style.left = `${item.startPos}px`;
+                brace.style.width = `${item.braceWidth}px`;
                 timelineWrapper.appendChild(brace);
-
-            } else { // type === 'event'
+            } else {
                 const cardWidth = 140;
                 const eventElement = document.createElement('div');
                 eventElement.className = `hybrid-event ${isTop ? 'top' : 'bottom'}`;
-                eventElement.style.left = `${finalStartPos}px`;
+                eventElement.style.left = `${item.startPos}px`;
                 eventElement.style.transform = 'translateX(-50%)';
                 eventElement.innerHTML = `<div class="hybrid-event-title">${item.name}</div><div class="hybrid-event-date">${item.dateStr}</div>`;
 
@@ -1920,15 +1891,15 @@ function renderHybridTimeline(container, hybridData) {
 
                 let currentEventLevel;
                 if (isTop) {
-                    if (finalStartPos - cardWidth / 2 < lastTopEnd + 10) eventTopLevel = (eventTopLevel + 1) % eventVerticalLevels.length;
+                    if (item.startPos - cardWidth / 2 < lastTopEnd + 10) eventTopLevel = (eventTopLevel + 1) % eventVerticalLevels.length;
                     currentEventLevel = eventVerticalLevels[eventTopLevel];
                     eventElement.style.marginBottom = `${currentEventLevel}px`;
-                    lastTopEnd = finalStartPos + cardWidth / 2;
+                    lastTopEnd = item.startPos + cardWidth / 2;
                 } else {
-                    if (finalStartPos - cardWidth / 2 < lastBottomEnd + 10) bottomLevel = (eventBottomLevel + 1) % eventVerticalLevels.length;
+                    if (item.startPos - cardWidth / 2 < lastBottomEnd + 10) bottomLevel = (eventBottomLevel + 1) % eventVerticalLevels.length;
                     currentEventLevel = eventVerticalLevels[bottomLevel];
                     eventElement.style.marginTop = `${currentEventLevel}px`;
-                    lastBottomEnd = finalStartPos + cardWidth / 2;
+                    lastBottomEnd = item.startPos + cardWidth / 2;
                 }
                 
                 connector.style.setProperty('--connector-height', `${currentEventLevel}px`);
