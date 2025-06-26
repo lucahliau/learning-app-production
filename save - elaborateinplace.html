@@ -1843,6 +1843,89 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script>
+
+        /**
+ * Creates a text description of visual assets for the AI context.
+ * @param {Array} visualAssets - The visualAssets array from a content object.
+ * @returns {string} A plain text description of the visuals.
+ */
+function formatVisualAssetsForContext(visualAssets) {
+    if (!visualAssets || visualAssets.length === 0) return '';
+
+    let description = 'The user was also shown the following visual aid(s):\n';
+    visualAssets.forEach(asset => {
+        if (asset.type === 'hybrid_timeline') {
+            const eventNames = asset.data.map(d => d.name).join(', ');
+            description += `- A timeline titled "${asset.data.title || 'Timeline'}" featuring: ${eventNames}.\n`;
+        } else if (asset.type === 'implicit_plotter') {
+            description += `- A graph displaying the equation(s): ${asset.data}.\n`;
+        } else if (asset.type === 'bar_chart') {
+            description += `- A bar chart with the data:\n${asset.data}\n`;
+        } else if (asset.type === 'pie_chart') {
+            description += `- A pie chart with the data:\n${asset.data}\n`;
+        }
+    });
+    return description;
+}
+
+/**
+ * Traverses the tree from the user's current location up to the root,
+ * compiling all content along the way.
+ * @param {object} startNode - The node where the user asked the question (the parent of the new question node).
+ * @returns {string} A string containing all the content from the node's direct lineage.
+ */
+function getLineageContent(startNode) {
+    let lineage = [];
+    let currentNode = startNode;
+    while (currentNode) {
+        if (currentNode.content) {
+            let contentString = `--- Content for: "${currentNode.fullTitle}" ---\n`;
+            
+            // Add overview/explanation text
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = currentNode.content.overview;
+            contentString += (tempDiv.textContent || tempDiv.innerText || "") + "\n\n";
+
+            // Add definitions
+            if (currentNode.content.definitions && currentNode.content.definitions.length > 0) {
+                contentString += 'Key Terms Defined:\n';
+                currentNode.content.definitions.forEach(def => {
+                    contentString += `- ${def.term}: ${def.definition}\n`;
+                });
+                contentString += '\n';
+            }
+            
+            // Add visual asset descriptions
+            contentString += formatVisualAssetsForContext(currentNode.content.visualAssets);
+            
+            lineage.unshift(contentString); // Add to the beginning to maintain top-to-bottom order
+        }
+        currentNode = currentNode.parent;
+    }
+    return lineage.join('\n');
+}
+
+/**
+ * Creates a string representation of the entire topic tree structure.
+ * @param {object} node - The starting node (usually the root).
+ * @param {string} currentPositionNodeId - The ID of the node the user is currently on.
+ * @param {string} [indent=''] - The current indentation level for recursion.
+ * @returns {string} A string formatted as an indented list representing the tree.
+ */
+function buildTreeStructureString(node, currentPositionNodeId, indent = '') {
+    let treeString = '';
+    const isCurrentPosition = (node.id === currentPositionNodeId);
+    const marker = isCurrentPosition ? ' <-- (You are here)' : '';
+    
+    treeString += `${indent}- ${node.fullTitle}${marker}\n`;
+
+    if (node.children && node.children.length > 0) {
+        node.children.forEach(child => {
+            treeString += buildTreeStructureString(child, currentPositionNodeId, indent + '  ');
+        });
+    }
+    return treeString;
+}
         /**
  * Finds and renders all LaTeX math expressions within a given DOM element
  * using the KaTeX library.
@@ -2075,7 +2158,13 @@ function renderHybridTimeline(container, hybridData) {
  * This is used to pre-load content for cards before the user clicks on them.
  * @param {object} node - The tree node to fetch content for.
  */
- async function prefetchNodeContent(node) {
+ // =================== START: REPLACE THIS FUNCTION ===================
+/**
+ * Fetches node content in the background with a robust retry mechanism,
+ * preserving the specific prefetch prompt and logic.
+ * @param {object} node - The tree node to fetch content for.
+ */
+async function prefetchNodeContent(node) {
     // Silently exit if content already exists or is being fetched.
     if (node.content || node.isPrefetching) return;
 
@@ -2083,16 +2172,20 @@ function renderHybridTimeline(container, hybridData) {
     node.isPrefetching = true;
     console.log(`%cPrefetching: "${node.fullTitle}"`, 'color: #8b5cf6;');
 
-    const topic = node.fullTitle;
-    let contextPrompt = '';
-    if (node.parent && node.parent.id !== 'root') {
-        contextPrompt = `In the context of "${node.parent.fullTitle}", `;
-    }
+    // --- NEW: Retry logic has been added ---
+    const maxRetries = 3;
+    let success = false;
 
-    // --- THIS IS THE NEW, FULL PROMPT, COPIED FROM elaborateOnTopic ---
-    // REPLACE the prefetchPrompt in the prefetchNodeContent function
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            // --- Your existing logic is preserved inside this try block ---
+            const topic = node.fullTitle;
+            let contextPrompt = '';
+            if (node.parent && node.parent.id !== 'root') {
+                contextPrompt = `In the context of "${node.parent.fullTitle}", `;
+            }
 
-    const prefetchPrompt = `You are an expert educator who carries out tasks with precision and speed. Your task is to explain the topic "${topic}"${contextPrompt}.
+            const prefetchPrompt = `You are an expert educator who carries out tasks with precision and speed. Your task is to explain the topic "${topic}"${contextPrompt}.
         
 Your response MUST be a single, valid JSON object with no other text before or after it.
 The JSON object must have three keys: "explanation", "definitions", and an optional "visualAssets".
@@ -2124,59 +2217,63 @@ Here are the available asset types and their required data formats:
     * "type": "pie_chart"
     * "data": (String) A multi-line string with each line in "Label: Percentage" format.`;
 
-    try {
-        // Use a temporary, isolated conversation for this background task
-        const prefetchConversation = [
-            { role: "system", content: "You are an educational assistant." },
-            { role: "user", content: prefetchPrompt }
-        ];
+            const prefetchConversation = [
+                { role: "system", content: "You are an educational assistant." },
+                { role: "user", content: prefetchPrompt }
+            ];
 
-        const response = await fetch(BACKEND_URL + '/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messages: prefetchConversation })
-        });
+            const response = await fetch(BACKEND_URL + '/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages: prefetchConversation })
+            });
 
-        if (!response.ok) throw new Error(`Prefetch API failed for "${topic}"`);
+            if (!response.ok) throw new Error(`Prefetch API failed for "${topic}"`);
 
-        const data = await response.json();
-        let botResponseText = data.choices[0].message.content;
-        botResponseText = botResponseText.replace(/^```json\s*|```$/g, '');
+            const data = await response.json();
+            let botResponseText = data.choices[0].message.content;
+            botResponseText = botResponseText.replace(/^```json\s*|```$/g, '');
 
-        const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error(`Prefetch found no JSON for "${topic}"`);
+            const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) throw new Error(`Prefetch found no JSON for "${topic}"`);
 
-        const fixedJson = repairJsonKeys(jsonMatch[0]);
-        const structuredResponse = JSON.parse(fixedJson);
-                const explanation = structuredResponse.explanation || "No explanation provided.";
-        const definitions = structuredResponse.definitions || [];
-        const visualAssets = structuredResponse.visualAssets || []; // Handle visual assets
+            const fixedJson = repairJsonKeys(jsonMatch[0]);
+            const structuredResponse = JSON.parse(fixedJson);
+            const explanation = structuredResponse.explanation || "No explanation provided.";
+            const definitions = structuredResponse.definitions || [];
+            const visualAssets = structuredResponse.visualAssets || [];
 
-        const parsed = parseResponse(explanation, definitions);
-        parsed.visualAssets = visualAssets; // Add assets to the parsed content
-        parsed.showTellMeMore = true;
+            const parsed = parseResponse(explanation, definitions);
+            parsed.visualAssets = visualAssets;
+            parsed.showTellMeMore = true;
 
-        // --- Attach the content to the node ---
-        node.content = parsed;
-        console.log(`%c✅ Prefetch successful: "${node.fullTitle}"`, 'color: #22c55e;');
+            node.content = parsed;
+            
+            // If we've reached this point without an error, the attempt was successful.
+            success = true;
+            break; // Exit the retry loop.
 
-        // Save the newly added content to Firestore
-        await saveTopicsToFirestore();
-
-    } catch (error) {
-        // --- LINE C: (REPLACE THE EXISTING console.error) ---
-            // When an error happens, log the problematic text for easy debugging
-            console.error("Prefetch error:", error);
-            const rawResponse = error.response ? await error.response.text() : "No raw response available.";
-            console.log("--- FAILED TO PARSE THIS AI RESPONSE ---");
-            console.log(rawResponse);
-            console.log("---------------------------------------");
-        // We don't show a UI error here as it's a background process
-    } finally {
-        // Mark prefetching as complete regardless of outcome
-        node.isPrefetching = false;
+        } catch (error) {
+            console.error(`Prefetch attempt ${i + 1} of ${maxRetries} failed for "${node.fullTitle}":`, error);
+            // If this isn't the last attempt, wait a moment before trying again.
+            if (i < maxRetries - 1) {
+                await new Promise(res => setTimeout(res, 500));
+            }
+        }
     }
+
+    // --- NEW: Final status logging and saving ---
+    if (success) {
+        console.log(`%c✅ Prefetch successful for "${node.fullTitle}"`, 'color: #22c55e;');
+        await saveTopicsToFirestore(); // Save the newly fetched content
+    } else {
+        console.error(`Prefetch ultimately failed for "${node.fullTitle}" after ${maxRetries} attempts.`);
+    }
+
+    // Mark prefetching as complete regardless of outcome
+    node.isPrefetching = false;
 }
+// ==================== END: REPLACE THIS FUNCTION ====================
         /**
  * Creates the HTML for the category and sophistication tags.
  * @param {object} topicNode The topic's main node containing category and sophistication.
@@ -3320,10 +3417,8 @@ Example for a non-history topic (note the absence of visualAssets):
 let conversationHistory = [
             {
                 role: "system",
-                content: `You are an educational assistant specializing in finance and economics. 
-                Your response MUST be plain text with markdown formatting for bolding and lists.
-                You MUST NOT use JSON, code blocks, or backticks in your response.
-                Do not add any conversational fluff or introductory sentences.`
+                content: `You are an educational assistant. 
+                In your response do not add any conversational fluff or introductory sentences.`
             }
         ];
         // Parse response with markdown support
@@ -3334,6 +3429,7 @@ let conversationHistory = [
 
 function parseResponse(mainContentText, definitionsArray) {
     console.log("LOG #1 - Combining answer with definitions:", { mainContentText, definitionsArray });
+    const cleanedText = cleanUnnecessaryLatex(mainContentText);
 
     const result = {
         overview: '',
@@ -3500,45 +3596,59 @@ function renderTreeNode(node, level = 0) {
     return html;
 }
         // Navigate to tree node
-        async function navigateToNode(nodeId) {
+        // =================== START: REPLACE THIS FUNCTION ===================
+/**
+ * Navigates to a specific node, fetching its content with retries if it doesn't exist.
+ * This is the new, robust navigation handler.
+ * @param {string} nodeId - The ID of the node to navigate to.
+ */
+async function navigateToNode(nodeId) {
     const node = findNodeById(treeStructure, nodeId);
-    if (node) {
-        if (node.children.length === 0) {
-            node.isRead = true;
-            updateParentReadStatus(node.parent);
+    if (!node) {
+        console.error("Navigation failed: Node not found with ID:", nodeId);
+        return;
+    }
+
+    // If the node is a leaf and has no content, fetch it with retries.
+    if (node.children.length === 0 && !node.content && node.id !== 'root') {
+        showSkeletonLoader();
+        const maxRetries = 3;
+        let success = false;
+        
+        for (let i = 0; i < maxRetries; i++) {
+            success = await elaborateOnTopic(node, false);
+            if (success) break; // Exit loop on success
+            if (i < maxRetries - 1) {
+                console.log(`Fetch failed for "${node.fullTitle}", retrying...`);
+                await new Promise(res => setTimeout(res, 500)); // Wait 0.5s before retrying
+            }
         }
 
-        // Add to navigation history
-        navigationHistory = navigationHistory.slice(0, currentHistoryIndex + 1);
-        navigationHistory.push({
-            node: node,
-            content: JSON.parse(JSON.stringify(node.content)),
-            context: {
-                topic: node.fullTitle || node.title,
-                subtopic: null,
-                fullContent: node.content
-            }
-        });
-        currentHistoryIndex = navigationHistory.length - 1;
-        
-        currentTreeNode = node;
-        treeStructure.lastVisitedNodeId = node.id; 
-
-        // --- THIS IS THE CORRECTED STATE SAVING LOGIC ---
-        treeStructure.lastActiveNodeId = nodeId; // Save last viewed node to the topic's data
-        sessionStorage.setItem('lastActiveTopicId', currentTopicId); // Save the active topic to the session
-        // --- END OF CORRECTION ---
-
-        currentContext = navigationHistory[currentHistoryIndex].context;
-        
-        updateNavigation();
-        displayContent(node);
-        updateTreeVisualization();
-        
-        // Save the changes (like isRead and lastActiveNodeId) to Firestore
-        await saveTopicsToFirestore(); 
+        if (!success) {
+            document.getElementById('mainContent').innerHTML = ''; // Clear skeleton loader
+            showError(`Failed to load "${node.fullTitle}" after several attempts.`);
+        }
     }
+
+    // This block now runs for ALL navigations, ensuring the UI state is always consistent.
+    currentTreeNode = node;
+    treeStructure.lastVisitedNodeId = node.id;
+
+    navigationHistory = navigationHistory.slice(0, currentHistoryIndex + 1);
+    navigationHistory.push({
+        node: node,
+        content: node.content ? JSON.parse(JSON.stringify(node.content)) : null,
+        context: { topic: node.fullTitle || node.title, subtopic: null, fullContent: node.content }
+    });
+    currentHistoryIndex = navigationHistory.length - 1;
+
+    updateNavigation();
+    displayContent(node); // Display content (or lack thereof)
+    updateTreeVisualization(); // Update the tree to show the active node
+    saveTopicsToFirestore();
 }
+// ==================== END: REPLACE THIS FUNCTION ====================
+
 
         // Find node by ID
         function findNodeById(node, id) {
@@ -3648,7 +3758,20 @@ function updateBreadcrumb() {
             } else if (node.content || preservedContent) {
                 renderContent(preservedContent || node.content, node.fullTitle || node.title);
                 updatePlaceholder(true);
-            }
+            }else {
+        // This is the NEW path for a node whose content failed to load.
+        // Instead of a silent failure, we show a clear message.
+        mainContent.innerHTML = `
+            <div class="topic-overview">
+                <h2>${toTitleCase(node.fullTitle || node.title)}</h2>
+                <p style="color: #dc2626; font-weight: 500;">
+                    We were unable to load the content for this section after multiple attempts. 
+                    Please try another section or navigate back and click the card again.
+                </p>
+            </div>
+        `;
+        updatePlaceholder(false);
+    }
         }
 
         // Render content
@@ -3743,14 +3866,34 @@ function updateBreadcrumb() {
                     mainContent.appendChild(cardsGrid);
                 }
 
-                // Render the "Tell me more" button if applicable
-                if (parsedContent.showTellMeMore) {
-                    const tellMeMoreBtn = document.createElement('button');
-                    tellMeMoreBtn.className = 'tell-me-more-button';
-                    tellMeMoreBtn.innerHTML = `Tell me more about this <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14m0 0l-7-7m7 7l7-7"/></svg>`;
-                    tellMeMoreBtn.onclick = () => elaborateOnCurrent();
-                    mainContent.appendChild(tellMeMoreBtn);
-                }
+                // Render action buttons if applicable
+// Render action buttons if applicable
+if (parsedContent.showTellMeMore) {
+    // Create a wrapper to hold the buttons and space them out
+    const buttonWrapper = document.createElement('div');
+    buttonWrapper.style.display = 'flex';
+    buttonWrapper.style.gap = '15px'; // Adjust spacing between buttons here
+    buttonWrapper.style.marginTop = '20px';
+
+    // 1. Create the "Tell me more" button with its NEW functionality
+    const tellMeMoreBtn = document.createElement('button');
+    tellMeMoreBtn.className = 'tell-me-more-button';
+    tellMeMoreBtn.innerHTML = `Tell me more about this <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14m0 0l-7-7m7 7l7-7"/></svg>`;
+    tellMeMoreBtn.onclick = () => elaborateInPlace(); // <-- UPDATED
+
+    // 2. Create the "Go deeper on this" button with its ORIGINAL functionality
+    const goDeeperBtn = document.createElement('button');
+    goDeeperBtn.className = 'tell-me-more-button'; // Use the same style
+    goDeeperBtn.innerHTML = `Go deeper on this <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="6" rx="1"></rect><path d="M12 8v4"></path><path d="M4 12h16"></path><rect x="2" y="16" width="4" height="4" rx="1"></rect><rect x="10" y="16" width="4" height="4" rx="1"></rect><rect x="18" y="16" width="4" height="4" rx="1"></rect><path d="M4 12v4"></path><path d="M12 12v4"></path><path d="M20 12v4"></path></svg>`;
+    goDeeperBtn.onclick = () => elaborateOnCurrent(); // <-- REMAINS THE SAME
+
+    // Add both buttons to the wrapper
+    buttonWrapper.appendChild(tellMeMoreBtn);
+    buttonWrapper.appendChild(goDeeperBtn);
+
+    // Add the wrapper to the main content area
+    mainContent.appendChild(buttonWrapper);
+}
             } finally {
                 // This will now run even if an error occurs while rendering a chart or timeline.
                 triggerMathRendering(mainContent);
@@ -3849,10 +3992,17 @@ async function elaborateOnCurrent() {
         // Ask for elaboration
         // Elaborate on a specific topic, creating new sub-nodes in the tree
         // REPIACE the entire function
-        async function elaborateOnTopic(targetNode, generateNewCards = false) {
-    showSkeletonLoader(); // <-- ADD THIS LINE
+        /**
+ * Fetches content for a target node, assembling different prompts based on whether
+ * it's a new user question or a standard content request.
+ * @param {object} targetNode - The node to get content for.
+ * @param {boolean} [generateNewCards=false] - If true, treat it as a new question and generate sub-topic cards.
+ * @returns {Promise<boolean>} - True on success, false on failure.
+ */
+async function elaborateOnTopic(targetNode, generateNewCards = false) {
+    showSkeletonLoader();
     const topicRootNode = treeStructure;
-        const topicCategory = topicRootNode.category;
+    const topicCategory = topicRootNode.category;
     const isStemTopic = topicCategory === 'Science' || topicCategory === 'Mathematics';
 
     if (isStemTopic && !generateNewCards) {
@@ -3897,48 +4047,108 @@ Example for a topic on Parabolas:
 }`;
         // This part runs the new prompt and then exits the function early.
         try {
-            conversationHistory.push({ role: "user", content: stemPrompt });
-            pruneConversationHistory();
-            const response = await fetch(BACKEND_URL + '/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages: conversationHistory })
-});            if (!response.ok) throw new Error('Failed to get STEM response');
-            const data = await response.json();
-            const botResponse = data.choices[0].message.content;
-            conversationHistory.push({ role: "assistant", content: botResponse });
+        conversationHistory.push({ role: "user", content: stemPrompt });
+        pruneConversationHistory();
 
-            const jsonMatch = botResponse.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) throw new Error("No valid JSON object found in the AI response.");
-            const fixedJson = repairJsonKeys(jsonMatch[0]);
-            const structuredResponse = JSON.parse(fixedJson);
-            const parsed = parseResponse(structuredResponse.explanation, structuredResponse.definitions);
-            parsed.visualAssets = structuredResponse.visualAssets || [];
-            parsed.showTellMeMore = true; // You can decide if you want this for STEM topics.
+        const response = await fetch(BACKEND_URL + '/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: conversationHistory })
+        });
 
-            targetNode.content = parsed;
-            navigateToNode(targetNode.id);
-            await saveTopicsToFirestore();
-        } catch (error) {
-            console.error("Error in STEM elaboration:", error);
-            showError('Failed to get information for this topic.');
-        } finally {
-            showLoading(false);
+        if (!response.ok) throw new Error('API request failed');
+
+        const data = await response.json();
+        const botResponse = data.choices[0].message.content;
+        conversationHistory.push({ role: "assistant", content: botResponse });
+
+        let parsed;
+        if (generateNewCards) {
+            parsed = { overview: `Here are some deeper areas to explore.`, sections: parseSyllabusResponse(botResponse), definitions: [] };
+            targetNode.children = [];
+            parsed.sections.forEach(section => {
+                createTreeNode(section.title, null, targetNode, false);
+            });
+            targetNode.children.forEach(childNode => {
+                prefetchNodeContent(childNode);
+            });
+        } else {
+            try {
+                const jsonMatch = botResponse.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) throw new Error("No valid JSON object found in AI response.");
+                const fixedJson = repairJsonKeys(jsonMatch[0]);
+                const structuredResponse = JSON.parse(fixedJson);
+                const explanation = structuredResponse.explanation || "No explanation provided.";
+                const definitions = structuredResponse.definitions || [];
+                const visualAssets = structuredResponse.visualAssets || [];
+                parsed = parseResponse(explanation, definitions);
+                parsed.visualAssets = visualAssets;
+                parsed.showTellMeMore = true;
+            } catch (e) {
+                console.error("Failed to parse AI response:", e);
+                // If parsing fails, we consider the entire operation a failure.
+                throw e; 
+            }
         }
-        return; // IMPORTANT: This stops the old prompt from running.
+        targetNode.content = parsed;
+        navigateToNode(targetNode.id);
+        return true; // Return true on success
+    } catch (error) {
+        console.error("Error in elaborateOnTopic:", error);
+        return false; // Return false on failure
     }
-    // The topic is now derived from the node we passed in.
+    }
+    
     const topic = targetNode.fullTitle; 
 
     let contextPrompt = '';
-    // Use the node's parent to establish context, which is more reliable.
     if (targetNode.parent && targetNode.parent.id !== 'root') {
         contextPrompt = `In the context of "${targetNode.parent.fullTitle}", `;
     }
 
-    const elaborationPrompt = generateNewCards 
-        ? `${contextPrompt}break down the sub-topic "${topic}" into a numbered list of 3-7 unique and compelling follow-up areas. Provide only the titles in a simple numbered list format. Do not add descriptions or bolding.`
-        : `You are an expert educator who carries out tasks with precision and speed. Your task is to explain the topic "${topic}"${contextPrompt}.
+    // --- START OF EDITED BLOCK ---
+    let elaborationPrompt;
+
+    if (generateNewCards) {
+        // This is the new logic for when a user asks a question.
+        const userQuestion = topic;
+        const currentPositionNode = targetNode.parent; // The node the user was on
+        const rootNode = treeStructure;
+
+        // a. Get sophistication level
+        const sophistication = rootNode.sophistication || 'Detailed';
+        // b. Get topic title
+        const topicTitle = rootNode.fullTitle;
+        // c. Get the entire learning journey structure
+        const journeyStructure = buildTreeStructureString(rootNode, currentPositionNode.id);
+        // d. Get all content from the direct lineage
+        const lineageContent = getLineageContent(currentPositionNode);
+
+        elaborationPrompt = `You are an expert curriculum designer providing a hyper-personalized learning experience.
+
+CONTEXT:
+The user is learning about the topic "${topicTitle}" at a "${sophistication}" level.
+
+Here is the user's complete learning journey so far. The marker "<-- (You are here)" indicates their current position in the structure:
+--- JOURNEY MAP ---
+${journeyStructure}
+--- END JOURNEY MAP ---
+
+Here is the full content for the topics leading directly to the user's current position (from the top down):
+--- PRIOR CONTENT ---
+${lineageContent}
+--- END PRIOR CONTENT ---
+
+TASK:
+From their current position, the user has asked a new, specific question: "${userQuestion}"
+
+Your task is to act as an expert guide and break down this question into a numbered list of 3-7 unique and compelling follow-up areas for them to explore. These new areas should be logical next steps that build upon what the user has already learned, as shown in the context.
+
+Provide only the titles in a simple numbered list format. Do not add descriptions or bolding.`;
+
+    } else {
+        // This part for fetching regular content remains the same.
+        elaborationPrompt = `You are an expert educator who carries out tasks with precision and speed. Your task is to explain the topic "${topic}"${contextPrompt}.
         
 Your response MUST be a single, valid JSON object with no other text before or after it.
 The JSON object must have three keys: "explanation", "definitions", and an optional "visualAssets".
@@ -3984,6 +4194,9 @@ Example JSON structure for a history topic:
     }
   ]
 }`;
+    }
+    // --- END OF EDITED BLOCK ---
+
     showLoading(true);
 
     try {
@@ -4002,8 +4215,6 @@ Example JSON structure for a history topic:
         const botResponse = data.choices[0].message.content;
         conversationHistory.push({ role: "assistant", content: botResponse });
 
-        // There is NO MORE GUESSWORK. We are working directly on the targetNode.
-        
         let parsed;
         if (generateNewCards) {
             parsed = { overview: `Here are some deeper areas to explore.`, sections: parseSyllabusResponse(botResponse), definitions: [] };
@@ -4011,54 +4222,45 @@ Example JSON structure for a history topic:
             parsed.sections.forEach(section => {
                 createTreeNode(section.title, null, targetNode, false);
             });
-            // --- START PRE-FETCHING FOR NEW QUESTION CARDS ---
             targetNode.children.forEach(childNode => {
                 prefetchNodeContent(childNode);
             });
-            // -----------------------------------------------
 
         } else {
-            // --- REPLACE the old 'else' block content with this ---
             try {
-                // The AI response should be a JSON string.
                 const botResponseText = data.choices[0].message.content;
                 const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
                 if (!jsonMatch) throw new Error("No valid JSON object found in the AI response.");
                 
-                // Parse the JSON to get the explanation and definitions
                 const fixedJson = repairJsonKeys(jsonMatch[0]);
                 const structuredResponse = JSON.parse(fixedJson);
-                                const explanation = structuredResponse.explanation || "No explanation provided.";
+                const explanation = structuredResponse.explanation || "No explanation provided.";
                 const definitions = structuredResponse.definitions || [];
+                const visualAssets = structuredResponse.visualAssets || [];
 
-                 // ADD THIS LINE to grab the visual assets from the response
-    const visualAssets = structuredResponse.visualAssets || [];
-
-// Use our existing parseResponse function to format the text and package the data
-parsed = parseResponse(explanation, definitions);
-// ADD THIS LINE to attach the visual assets to the final parsed object
-parsed.visualAssets = visualAssets;
-parsed.showTellMeMore = true;
+                parsed = parseResponse(explanation, definitions);
+                parsed.visualAssets = visualAssets;
+                parsed.showTellMeMore = true;
 
             } catch (e) {
                 console.error("Failed to parse structured response from AI:", e);
-                // Fallback to plain text display if JSON fails
                 parsed = parseResponse(data.choices[0].message.content, []);
             }
-            // --- END OF REPLACEMENT ---
         }
 
         targetNode.content = parsed;
         navigateToNode(targetNode.id);
-        saveTopicsToFirestore(); // Save the newly added content and children to Firestore
+        saveTopicsToFirestore();
 
 
     } catch (error) {
         console.error("Error in elaborateOnTopic:", error);
         showError('Failed to get more information. Please try again.');
+        return false;
     } finally {
         showLoading(false);
     }
+    return true;
 }
 
         // Send message
@@ -4964,16 +5166,33 @@ function handleTimelineCardClick(clickedItem, allItems) {
  * @param {object} clickedItem - The data object for the clicked timeline item.
  * @param {Array} allItems - The array of all items on the timeline for context.
  */
-async function elaborateOnTimelineEvent(clickedItem, allItems) {
+// =================== START: REPLACE THIS FUNCTION ===================
+/**
+ * Calls the API to get details about a specific timeline event, now including definitions.
+ * @param {object} clickedItem - The data object for the clicked timeline item.
+ * @param {Array} allItems - The array of all items on the timeline for context.
+ */
+ async function elaborateOnTimelineEvent(clickedItem, allItems) {
     const overallTopic = currentTreeNode.fullTitle;
     const eventName = clickedItem.name;
     const otherEvents = allItems.filter(item => item.name !== eventName).map(item => item.name).join(', ');
 
-    const prompt = `In the context of learning about "${overallTopic}", provide a detailed 2-3 paragraph explanation of the specific event or period: "${eventName}". 
-    
-    For context, other related events on the timeline include: ${otherEvents}.
-    
-    Your response MUST be a single, valid JSON object with ONLY an "explanation" key. Ensure any LaTeX uses escaped backslashes (e.g., "\\\\sqrt{x}").`;
+    // --- PROMPT CHANGE: We now ask for "explanation" AND "definitions" ---
+    const prompt = `In the context of learning about "${overallTopic}", your task is to explain the specific event or period: "${eventName}". For context, other related events on the timeline include: ${otherEvents}.
+
+Your response MUST be a single, valid JSON object with no other text before or after it.
+The JSON object must have two keys: "explanation" and "definitions".
+
+1.  In the "explanation" value, provide a detailed, 2-3 paragraph explanation of "${eventName}". For any mathematical equations or variables, enclose them in LaTeX delimiters and escape backslashes (e.g., "\\\\sqrt{x}").
+2.  In the "definitions" value, provide an array of objects. For each object, identify a technical term from your explanation and provide a simple, one-sentence definition for it. Only define terms that are truly technical and not common knowledge.
+
+Example JSON structure:
+{
+  "explanation": "The Battle of Hastings in 1066 was a pivotal moment in English history...",
+  "definitions": [
+    {"term": "Housecarls", "definition": "Elite household troops who served as the personal bodyguard of Anglo-Saxon kings."}
+  ]
+}`;
 
     try {
         const tempConversation = [
@@ -4995,8 +5214,14 @@ async function elaborateOnTimelineEvent(clickedItem, allItems) {
         if (!jsonMatch) throw new Error("No valid JSON object found in the AI response.");
 
         const structuredResponse = JSON.parse(jsonMatch[0]);
-        const parsed = parseResponse(structuredResponse.explanation, []);
-        parsed.showTellMeMore = true; // Add the "Tell me more" button
+
+        // --- LOGIC CHANGE: We now extract both keys from the response ---
+        const explanation = structuredResponse.explanation || "No explanation provided.";
+        const definitions = structuredResponse.definitions || [];
+
+        // The parseResponse function is now given the definitions to process.
+        const parsed = parseResponse(explanation, definitions);
+        parsed.showTellMeMore = true; 
 
         // Create a new node for this elaboration
         const newNode = createTreeNode(eventName, parsed, currentTreeNode);
@@ -5009,6 +5234,163 @@ async function elaborateOnTimelineEvent(clickedItem, allItems) {
     } catch (error) {
         console.error("Error elaborating on timeline event:", error);
         showError("Failed to get details for this timeline event.");
+    }
+}
+// ==================== END: REPLACE THIS FUNCTION ====================
+// ======================= START: ADD THIS NEW FUNCTION =======================
+/**
+ * Finds and converts unnecessarily-wrapped LaTeX for simple text and percentages
+ * back into plain text, leaving real equations untouched.
+ * @param {string} text The text content from the AI.
+ * @returns {string} The cleaned text.
+ */
+ function cleanUnnecessaryLatex(text) {
+    if (!text) return '';
+
+    // This regex finds all content wrapped in $...$ delimiters.
+    return text.replace(/\$(.*?)\$/g, (originalMatch, content) => {
+        const trimmedContent = content.trim();
+
+        // Pattern 1: Check for the \text{...} wrapper.
+        const textMatch = trimmedContent.match(/^\\text\{(.*)\}$/);
+        if (textMatch) {
+            const innerText = textMatch[1];
+            // If the content inside is just simple text (letters, numbers, spaces, basic punctuation)
+            // then we "unwrap" it from LaTeX.
+            if (/^[\w\s%.,-]+$/.test(innerText)) {
+                // Convert LaTeX's escaped percent \\% back to a normal %
+                return innerText.replace(/\\%/g, '%');
+            }
+        }
+
+        // Pattern 2: Check for a simple percentage like "10\%" without the \text wrapper.
+        if (/^-?[\d,.]+\\%$/.test(trimmedContent)) {
+            return trimmedContent.replace(/\\%/g, '%');
+        }
+
+        // If it's not a simple pattern, it's probably a real equation.
+        // Return the original match (e.g., "$E=mc^2$") to leave it alone.
+        return originalMatch;
+    });
+}
+// ======================== END: ADD THIS NEW FUNCTION ========================
+/**
+ * Elaborates on the current node's content in place, adding 2-3 new
+ * paragraphs without creating a new node.
+ */
+ /**
+ * Elaborates on the current node's content in place, adding new paragraphs
+ * and identifying/highlighting new technical terms.
+ */
+async function elaborateInPlace() {
+    const currentNode = currentTreeNode;
+    if (!currentNode || !currentNode.content || !currentNode.content.overview) {
+        showError("There is no content here to elaborate on.");
+        return;
+    }
+
+    showLoading(true);
+
+    try {
+        // Gather the same detailed context (this part is unchanged)
+        const rootNode = treeStructure;
+        const sophistication = rootNode.sophistication || 'Detailed';
+        const topicTitle = rootNode.fullTitle;
+        const journeyStructure = buildTreeStructureString(rootNode, currentNode.id);
+        const lineageContent = getLineageContent(currentNode);
+        
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = currentNode.content.overview;
+        const existingParagraphs = tempDiv.textContent || tempDiv.innerText || "";
+
+        // --- PROMPT CHANGE ---
+        // The prompt now asks for a JSON object with new text AND new definitions.
+        const elaborationPrompt = `You are an expert curriculum designer providing a hyper-personalized learning experience.
+
+CONTEXT:
+The user is learning about the topic "${topicTitle}" at a "${sophistication}" level. They are currently at the node titled "${currentNode.fullTitle}".
+
+Here is the user's complete learning journey so far:
+--- JOURNEY MAP ---
+${journeyStructure}
+--- END JOURNEY MAP ---
+
+Here is the full content for the topics leading directly to the user's current position:
+--- PRIOR CONTENT ---
+${lineageContent}
+--- END PRIOR CONTENT ---
+
+Here are the existing paragraphs for the current node that the user wants you to elaborate on:
+--- EXISTING PARAGRAPHS ---
+${existingParagraphs}
+--- END EXISTING PARAGRAPHS ---
+
+TASK:
+The user has clicked "Tell me more". Your task is to generate 2-3 new paragraphs of text that follow on naturally from the existing paragraphs, going into more depth.
+
+Your response MUST be a single, valid JSON object with no other text before or after it. The JSON object must have two keys: "newText" and "newDefinitions".
+
+1.  In the "newText" value, provide the 2-3 new paragraphs.
+2.  In the "newDefinitions" value, provide an array of objects for any technical terms found ONLY in your new text. Each object should have a "term" and a "definition". Only define terms that are truly technical and not common knowledge.
+
+Example Response:
+{
+  "newText": "This leads to the concept of monetary velocity, which is how fast money changes hands... Another related idea is the liquidity trap, where monetary policy becomes ineffective because...",
+  "newDefinitions": [
+    {"term": "monetary velocity", "definition": "The rate at which money is exchanged in an economy."},
+    {"term": "liquidity trap", "definition": "A situation in which interest rates are low and savings rates are high, making monetary policy ineffective."}
+  ]
+}`;
+
+        conversationHistory.push({ role: "user", content: elaborationPrompt });
+        pruneConversationHistory();
+
+        const response = await fetch(BACKEND_URL + '/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: conversationHistory })
+        });
+
+        if (!response.ok) throw new Error('API request failed');
+
+        const result = await response.json();
+        
+        // --- FUNCTION LOGIC CHANGE ---
+        // We now parse the JSON response instead of treating it as plain text.
+        const botResponseText = result.choices[0].message.content;
+        const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error("AI did not return valid JSON.");
+
+        const structuredResponse = JSON.parse(jsonMatch[0]);
+        const newText = structuredResponse.newText || "";
+        const newDefinitions = structuredResponse.newDefinitions || [];
+
+        // Add the newly found definitions to the node's existing list
+        if (newDefinitions.length > 0) {
+            currentNode.content.definitions.push(...newDefinitions);
+        }
+
+        // Format the new text with paragraph tags
+        const formattedNewText = newText
+            .split(/\n\s*\n/).map(p => p.trim()).filter(p => p)
+            .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
+
+        // Highlight the terms within the new text block
+        const highlightedNewText = applyTermHighlighting(formattedNewText, newDefinitions);
+
+        // Append the new, highlighted content with a separator
+        const separator = '<hr style="border: none; border-top: 1px solid #e5e7eb; margin: 25px 0;">';
+        currentNode.content.overview += separator + highlightedNewText;
+        
+        // Rerender the content and save to the database
+        displayContent(currentNode);
+        await saveTopicsToFirestore();
+
+    } catch (error) {
+        console.error("Error during in-place elaboration:", error);
+        showError("Sorry, I was unable to generate more content for this section.");
+    } finally {
+        showLoading(false);
     }
 }
     </script>

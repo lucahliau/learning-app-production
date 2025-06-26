@@ -5278,7 +5278,11 @@ Example JSON structure:
  * Elaborates on the current node's content in place, adding 2-3 new
  * paragraphs without creating a new node.
  */
- async function elaborateInPlace() {
+ /**
+ * Elaborates on the current node's content in place, adding new paragraphs
+ * and identifying/highlighting new technical terms.
+ */
+async function elaborateInPlace() {
     const currentNode = currentTreeNode;
     if (!currentNode || !currentNode.content || !currentNode.content.overview) {
         showError("There is no content here to elaborate on.");
@@ -5288,25 +5292,25 @@ Example JSON structure:
     showLoading(true);
 
     try {
-        // Gather the same detailed context as the "Go Deeper" button
+        // Gather the same detailed context (this part is unchanged)
         const rootNode = treeStructure;
         const sophistication = rootNode.sophistication || 'Detailed';
         const topicTitle = rootNode.fullTitle;
         const journeyStructure = buildTreeStructureString(rootNode, currentNode.id);
         const lineageContent = getLineageContent(currentNode);
         
-        // Extract the existing text for the prompt
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = currentNode.content.overview;
         const existingParagraphs = tempDiv.textContent || tempDiv.innerText || "";
 
-        // Construct the new, specific prompt for in-place elaboration
+        // --- PROMPT CHANGE ---
+        // The prompt now asks for a JSON object with new text AND new definitions.
         const elaborationPrompt = `You are an expert curriculum designer providing a hyper-personalized learning experience.
 
 CONTEXT:
 The user is learning about the topic "${topicTitle}" at a "${sophistication}" level. They are currently at the node titled "${currentNode.fullTitle}".
 
-Here is the user's complete learning journey so far. The marker "<-- (You are here)" indicates their current position:
+Here is the user's complete learning journey so far:
 --- JOURNEY MAP ---
 ${journeyStructure}
 --- END JOURNEY MAP ---
@@ -5316,15 +5320,27 @@ Here is the full content for the topics leading directly to the user's current p
 ${lineageContent}
 --- END PRIOR CONTENT ---
 
-TASK:
-The user has clicked "Tell me more" and wants you to elaborate on the content of their current node. Here are the existing paragraphs for this node:
+Here are the existing paragraphs for the current node that the user wants you to elaborate on:
 --- EXISTING PARAGRAPHS ---
 ${existingParagraphs}
 --- END EXISTING PARAGRAPHS ---
 
-Your task is to generate 2-3 new paragraphs of text that follow on naturally from the existing paragraphs, going into more depth.
+TASK:
+The user has clicked "Tell me more". Your task is to generate 2-3 new paragraphs of text that follow on naturally from the existing paragraphs, going into more depth.
 
-CRITICAL: Provide ONLY the new text. Do not repeat the existing content. Do not add any conversational fluff, titles, or introductory sentences.`;
+Your response MUST be a single, valid JSON object with no other text before or after it. The JSON object must have two keys: "newText" and "newDefinitions".
+
+1.  In the "newText" value, provide the 2-3 new paragraphs.
+2.  In the "newDefinitions" value, provide an array of objects for any technical terms found ONLY in your new text. Each object should have a "term" and a "definition". Only define terms that are truly technical and not common knowledge.
+
+Example Response:
+{
+  "newText": "This leads to the concept of monetary velocity, which is how fast money changes hands... Another related idea is the liquidity trap, where monetary policy becomes ineffective because...",
+  "newDefinitions": [
+    {"term": "monetary velocity", "definition": "The rate at which money is exchanged in an economy."},
+    {"term": "liquidity trap", "definition": "A situation in which interest rates are low and savings rates are high, making monetary policy ineffective."}
+  ]
+}`;
 
         conversationHistory.push({ role: "user", content: elaborationPrompt });
         pruneConversationHistory();
@@ -5338,20 +5354,34 @@ CRITICAL: Provide ONLY the new text. Do not repeat the existing content. Do not 
         if (!response.ok) throw new Error('API request failed');
 
         const result = await response.json();
-        const newText = result.choices[0].message.content;
+        
+        // --- FUNCTION LOGIC CHANGE ---
+        // We now parse the JSON response instead of treating it as plain text.
+        const botResponseText = result.choices[0].message.content;
+        const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error("AI did not return valid JSON.");
+
+        const structuredResponse = JSON.parse(jsonMatch[0]);
+        const newText = structuredResponse.newText || "";
+        const newDefinitions = structuredResponse.newDefinitions || [];
+
+        // Add the newly found definitions to the node's existing list
+        if (newDefinitions.length > 0) {
+            currentNode.content.definitions.push(...newDefinitions);
+        }
 
         // Format the new text with paragraph tags
         const formattedNewText = newText
-            .split(/\n\s*\n/)
-            .map(p => p.trim())
-            .filter(p => p)
-            .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
-            .join('');
-            
-        // Append the new content with a separator
-        const separator = '<hr style="border: none; border-top: 1px solid #e5e7eb; margin: 25px 0;">';
-        currentNode.content.overview += separator + formattedNewText;
+            .split(/\n\s*\n/).map(p => p.trim()).filter(p => p)
+            .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
 
+        // Highlight the terms within the new text block
+        const highlightedNewText = applyTermHighlighting(formattedNewText, newDefinitions);
+
+        // Append the new, highlighted content with a separator
+        const separator = '<hr style="border: none; border-top: 1px solid #e5e7eb; margin: 25px 0;">';
+        currentNode.content.overview += separator + highlightedNewText;
+        
         // Rerender the content and save to the database
         displayContent(currentNode);
         await saveTopicsToFirestore();
