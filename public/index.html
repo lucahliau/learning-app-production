@@ -3049,11 +3049,30 @@ document.getElementById('sortControls').addEventListener('click', (e) => {
 
 // This is the updated `loadLearningTopic` function
 // REPLACE the existing loadLearningTopic function
-function loadLearningTopic(topicId) {
+// =================== START: REPLACE THIS FUNCTION ===================
+/**
+ * Loads a specific topic's data into the learning view, resuming at the
+ * last visited node if one exists.
+ * @param {string} topicId - The ID of the topic to load.
+ */
+ function loadLearningTopic(topicId) {
     if (setupLearningViewForTopic(topicId)) {
-        navigateToNode('root');
+        const topicData = learningTopics[topicId];
+        const lastNodeId = topicData.lastVisitedNodeId;
+
+        // Check if a last visited node ID has been saved for this topic
+        // and also make sure that node still actually exists in our data.
+        if (lastNodeId && findNodeById(topicData, lastNodeId)) {
+            console.log(`Resuming topic '${topicId}' at last visited node: ${lastNodeId}`);
+            navigateToNode(lastNodeId);
+        } else {
+            // If there's no saved spot, or if it's invalid, just start from the root.
+            console.log(`Starting topic '${topicId}' from the beginning.`);
+            navigateToNode('root');
+        }
     }
 }
+// ==================== END: REPLACE THIS FUNCTION ====================
 
 // ==================== END: REPLACE THIS CODE BLOCK ====================
        /**
@@ -3503,7 +3522,8 @@ function renderTreeNode(node, level = 0) {
         currentHistoryIndex = navigationHistory.length - 1;
         
         currentTreeNode = node;
-        
+        treeStructure.lastVisitedNodeId = node.id; 
+
         // --- THIS IS THE CORRECTED STATE SAVING LOGIC ---
         treeStructure.lastActiveNodeId = nodeId; // Save last viewed node to the topic's data
         sessionStorage.setItem('lastActiveTopicId', currentTopicId); // Save the active topic to the session
