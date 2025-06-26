@@ -5293,7 +5293,11 @@ Example JSON structure:
  * Elaborates on the current node's content in place, adding new paragraphs
  * and identifying/highlighting new technical terms.
  */
- async function elaborateInPlace() {
+ /**
+ * Elaborates on the current node's content in place, adding new paragraphs
+ * and identifying/highlighting new technical terms.
+ */
+async function elaborateInPlace() {
     const currentNode = currentTreeNode;
     if (!currentNode || !currentNode.content || !currentNode.content.overview) {
         showError("There is no content here to elaborate on.");
@@ -5303,7 +5307,6 @@ Example JSON structure:
     showLoading(true);
 
     try {
-        // Gather the same detailed context (this part is unchanged)
         const rootNode = treeStructure;
         const sophistication = rootNode.sophistication || 'Detailed';
         const topicTitle = rootNode.fullTitle;
@@ -5314,7 +5317,6 @@ Example JSON structure:
         tempDiv.innerHTML = currentNode.content.overview;
         const existingParagraphs = tempDiv.textContent || tempDiv.innerText || "";
 
-        // The prompt now asks for a JSON object with new text AND new definitions.
         const elaborationPrompt = `You are an expert curriculum designer providing a hyper-personalized learning experience.
 
 CONTEXT:
@@ -5380,38 +5382,44 @@ Example Response:
 
         const result = await response.json();
         
-        const botResponseText = result.choices[0].message.content;
+        // --- START OF FIX ---
+        // Strip markdown fences (e.g., ```json) from the response before parsing.
+        const botResponseText = result.choices[0].message.content.replace(/^```json\s*|```$/g, '');
+        // --- END OF FIX ---
+        
         const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error("AI did not return valid JSON.");
 
-        // --- START OF FIX ---
-        // Sanitize the JSON string to escape control characters and fix unquoted keys.
         const sanitizedJsonString = jsonMatch[0].replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t");
         const fixedJson = repairJsonKeys(sanitizedJsonString);
         const structuredResponse = JSON.parse(fixedJson);
-        // --- END OF FIX ---
         
         const newText = structuredResponse.newText || "";
         const newDefinitions = structuredResponse.newDefinitions || [];
+        const visualAssets = structuredResponse.visualAssets || []; // Get visual assets
 
         // Add the newly found definitions to the node's existing list
         if (newDefinitions.length > 0) {
             currentNode.content.definitions.push(...newDefinitions);
         }
 
-        // Format the new text with paragraph tags
+        // Add the new visual assets to the node's existing list
+        if (visualAssets.length > 0) {
+            if (!currentNode.content.visualAssets) {
+                currentNode.content.visualAssets = [];
+            }
+            currentNode.content.visualAssets.push(...visualAssets);
+        }
+
         const formattedNewText = newText
             .split(/\n\s*\n/).map(p => p.trim()).filter(p => p)
             .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
 
-        // Highlight the terms within the new text block
         const highlightedNewText = applyTermHighlighting(formattedNewText, newDefinitions);
 
-        // Append the new, highlighted content with a separator
         const separator = '<hr style="border: none; border-top: 1px solid #e5e7eb; margin: 25px 0;">';
         currentNode.content.overview += separator + highlightedNewText;
         
-        // Rerender the content and save to the database
         displayContent(currentNode);
         await saveTopicsToFirestore();
 
