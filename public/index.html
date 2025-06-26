@@ -3334,6 +3334,7 @@ let conversationHistory = [
 
 function parseResponse(mainContentText, definitionsArray) {
     console.log("LOG #1 - Combining answer with definitions:", { mainContentText, definitionsArray });
+    const cleanedText = cleanUnnecessaryLatex(mainContentText);
 
     const result = {
         overview: '',
@@ -4964,16 +4965,33 @@ function handleTimelineCardClick(clickedItem, allItems) {
  * @param {object} clickedItem - The data object for the clicked timeline item.
  * @param {Array} allItems - The array of all items on the timeline for context.
  */
-async function elaborateOnTimelineEvent(clickedItem, allItems) {
+// =================== START: REPLACE THIS FUNCTION ===================
+/**
+ * Calls the API to get details about a specific timeline event, now including definitions.
+ * @param {object} clickedItem - The data object for the clicked timeline item.
+ * @param {Array} allItems - The array of all items on the timeline for context.
+ */
+ async function elaborateOnTimelineEvent(clickedItem, allItems) {
     const overallTopic = currentTreeNode.fullTitle;
     const eventName = clickedItem.name;
     const otherEvents = allItems.filter(item => item.name !== eventName).map(item => item.name).join(', ');
 
-    const prompt = `In the context of learning about "${overallTopic}", provide a detailed 2-3 paragraph explanation of the specific event or period: "${eventName}". 
-    
-    For context, other related events on the timeline include: ${otherEvents}.
-    
-    Your response MUST be a single, valid JSON object with ONLY an "explanation" key. Ensure any LaTeX uses escaped backslashes (e.g., "\\\\sqrt{x}").`;
+    // --- PROMPT CHANGE: We now ask for "explanation" AND "definitions" ---
+    const prompt = `In the context of learning about "${overallTopic}", your task is to explain the specific event or period: "${eventName}". For context, other related events on the timeline include: ${otherEvents}.
+
+Your response MUST be a single, valid JSON object with no other text before or after it.
+The JSON object must have two keys: "explanation" and "definitions".
+
+1.  In the "explanation" value, provide a detailed, 2-3 paragraph explanation of "${eventName}". For any mathematical equations or variables, enclose them in LaTeX delimiters and escape backslashes (e.g., "\\\\sqrt{x}").
+2.  In the "definitions" value, provide an array of objects. For each object, identify a technical term from your explanation and provide a simple, one-sentence definition for it. Only define terms that are truly technical and not common knowledge.
+
+Example JSON structure:
+{
+  "explanation": "The Battle of Hastings in 1066 was a pivotal moment in English history...",
+  "definitions": [
+    {"term": "Housecarls", "definition": "Elite household troops who served as the personal bodyguard of Anglo-Saxon kings."}
+  ]
+}`;
 
     try {
         const tempConversation = [
@@ -4995,8 +5013,14 @@ async function elaborateOnTimelineEvent(clickedItem, allItems) {
         if (!jsonMatch) throw new Error("No valid JSON object found in the AI response.");
 
         const structuredResponse = JSON.parse(jsonMatch[0]);
-        const parsed = parseResponse(structuredResponse.explanation, []);
-        parsed.showTellMeMore = true; // Add the "Tell me more" button
+
+        // --- LOGIC CHANGE: We now extract both keys from the response ---
+        const explanation = structuredResponse.explanation || "No explanation provided.";
+        const definitions = structuredResponse.definitions || [];
+
+        // The parseResponse function is now given the definitions to process.
+        const parsed = parseResponse(explanation, definitions);
+        parsed.showTellMeMore = true; 
 
         // Create a new node for this elaboration
         const newNode = createTreeNode(eventName, parsed, currentTreeNode);
@@ -5011,6 +5035,44 @@ async function elaborateOnTimelineEvent(clickedItem, allItems) {
         showError("Failed to get details for this timeline event.");
     }
 }
+// ==================== END: REPLACE THIS FUNCTION ====================
+// ======================= START: ADD THIS NEW FUNCTION =======================
+/**
+ * Finds and converts unnecessarily-wrapped LaTeX for simple text and percentages
+ * back into plain text, leaving real equations untouched.
+ * @param {string} text The text content from the AI.
+ * @returns {string} The cleaned text.
+ */
+ function cleanUnnecessaryLatex(text) {
+    if (!text) return '';
+
+    // This regex finds all content wrapped in $...$ delimiters.
+    return text.replace(/\$(.*?)\$/g, (originalMatch, content) => {
+        const trimmedContent = content.trim();
+
+        // Pattern 1: Check for the \text{...} wrapper.
+        const textMatch = trimmedContent.match(/^\\text\{(.*)\}$/);
+        if (textMatch) {
+            const innerText = textMatch[1];
+            // If the content inside is just simple text (letters, numbers, spaces, basic punctuation)
+            // then we "unwrap" it from LaTeX.
+            if (/^[\w\s%.,-]+$/.test(innerText)) {
+                // Convert LaTeX's escaped percent \\% back to a normal %
+                return innerText.replace(/\\%/g, '%');
+            }
+        }
+
+        // Pattern 2: Check for a simple percentage like "10\%" without the \text wrapper.
+        if (/^-?[\d,.]+\\%$/.test(trimmedContent)) {
+            return trimmedContent.replace(/\\%/g, '%');
+        }
+
+        // If it's not a simple pattern, it's probably a real equation.
+        // Return the original match (e.g., "$E=mc^2$") to leave it alone.
+        return originalMatch;
+    });
+}
+// ======================== END: ADD THIS NEW FUNCTION ========================
     </script>
     <!-- New Topic Modal -->
 <div class="modal-overlay" id="newTopicModal">
