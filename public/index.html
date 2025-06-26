@@ -1453,7 +1453,7 @@
             background-color: #ffffff;
             border: 1px solid #e5e7eb;
             border-radius: 12px;
-            padding: 10px 20px; 
+            padding: 10px 12px; 
             box-shadow: 0 4px 15px rgba(0,0,0,0.05);
             transition: all 0.3s ease;
             z-index: 5; /* Ensure card is above braces */
@@ -1982,7 +1982,31 @@ function renderHybridTimeline(container, hybridData) {
 
             if (item.type === 'period') {
                 const finalBraceWidth = item.naturalBraceWidth * positionScaleFactor;
-                const cardWidth = finalBraceWidth + 20;
+
+                // --- NEW LOGIC TO MEASURE TEXT AND DETERMINE WIDTH ---
+                // 1. Create a temporary, invisible element to measure the title text.
+                const tempSpan = document.createElement('span');
+                tempSpan.style.fontSize = '15px'; // Must match .timeline-event-title
+                tempSpan.style.fontWeight = '600'; // Must match
+                tempSpan.style.visibility = 'hidden';
+                tempSpan.style.position = 'absolute';
+                tempSpan.style.whiteSpace = 'nowrap'; // Prevent wrapping during measurement
+                tempSpan.textContent = item.name;
+                document.body.appendChild(tempSpan);
+
+                // 2. Calculate the two potential widths.
+                const textWidth = tempSpan.offsetWidth;
+                const horizontalPadding = 40; // 20px on each side
+                const textBasedWidth = textWidth + horizontalPadding;
+                const braceBasedWidth = finalBraceWidth + 20;
+
+                // 3. Remove the temporary element.
+                document.body.removeChild(tempSpan);
+
+                // 4. The final card width is the LARGER of the two calculated widths.
+                const cardWidth = Math.max(textBasedWidth, braceBasedWidth);
+                // --- END OF NEW LOGIC ---
+
                 const cardStartPos = finalStartPos + (finalBraceWidth - cardWidth) / 2;
 
                 const eventElement = document.createElement('div');
