@@ -5289,7 +5289,11 @@ Example JSON structure:
  * Elaborates on the current node's content in place, adding new paragraphs
  * and identifying/highlighting new technical terms.
  */
-async function elaborateInPlace() {
+/**
+ * Elaborates on the current node's content in place, adding new paragraphs
+ * and identifying/highlighting new technical terms.
+ */
+ async function elaborateInPlace() {
     const currentNode = currentTreeNode;
     if (!currentNode || !currentNode.content || !currentNode.content.overview) {
         showError("There is no content here to elaborate on.");
@@ -5310,7 +5314,6 @@ async function elaborateInPlace() {
         tempDiv.innerHTML = currentNode.content.overview;
         const existingParagraphs = tempDiv.textContent || tempDiv.innerText || "";
 
-        // --- PROMPT CHANGE ---
         // The prompt now asks for a JSON object with new text AND new definitions.
         const elaborationPrompt = `You are an expert curriculum designer providing a hyper-personalized learning experience.
 
@@ -5362,13 +5365,17 @@ Example Response:
 
         const result = await response.json();
         
-        // --- FUNCTION LOGIC CHANGE ---
-        // We now parse the JSON response instead of treating it as plain text.
         const botResponseText = result.choices[0].message.content;
         const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error("AI did not return valid JSON.");
 
-        const structuredResponse = JSON.parse(jsonMatch[0]);
+        // --- START OF FIX ---
+        // Sanitize the JSON string to escape control characters and fix unquoted keys.
+        const sanitizedJsonString = jsonMatch[0].replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t");
+        const fixedJson = repairJsonKeys(sanitizedJsonString);
+        const structuredResponse = JSON.parse(fixedJson);
+        // --- END OF FIX ---
+        
         const newText = structuredResponse.newText || "";
         const newDefinitions = structuredResponse.newDefinitions || [];
 
