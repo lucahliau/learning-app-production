@@ -2100,7 +2100,7 @@ Here are the available asset types and their required data formats:
         if (!response.ok) throw new Error(`Prefetch API failed for "${topic}"`);
 
         const data = await response.json();
-        const botResponseText = data.choices[0].message.content;
+        let botResponseText = data.choices[0].message.content;
         botResponseText = botResponseText.replace(/^```json\s*|```$/g, '');
 
         const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
@@ -3693,8 +3693,11 @@ Example for a topic on Parabolas:
         try {
             conversationHistory.push({ role: "user", content: stemPrompt });
             pruneConversationHistory();
-            const response = await fetch(BACKEND_URL + '/chat', { /*...fetch options...*/ body: JSON.stringify({ messages: conversationHistory }) });
-            if (!response.ok) throw new Error('Failed to get STEM response');
+            const response = await fetch(BACKEND_URL + '/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages: conversationHistory })
+});            if (!response.ok) throw new Error('Failed to get STEM response');
             const data = await response.json();
             const botResponse = data.choices[0].message.content;
             conversationHistory.push({ role: "assistant", content: botResponse });
