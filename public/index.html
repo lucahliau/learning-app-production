@@ -3877,7 +3877,13 @@ if (parsedContent.showTellMeMore) {
     // 1. Create the original "Tell me more" button
     const tellMeMoreBtn = document.createElement('button');
     tellMeMoreBtn.className = 'tell-me-more-button';
-    tellMeMoreBtn.innerHTML = `Tell me more about this <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    tellMeMoreBtn.innerHTML = `Tell me more about this <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14m0 0l-7-7m7 7l7-7"/></svg>`;
+    tellMeMoreBtn.onclick = () => elaborateOnCurrent();
+
+    // 2. Create the new "Go deeper on this" button
+    const goDeeperBtn = document.createElement('button');
+    goDeeperBtn.className = 'tell-me-more-button'; // Use the same style
+    goDeeperBtn.innerHTML = `Go deeper on this <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <rect x="9" y="2" width="6" height="6" rx="1"></rect>
     <path d="M12 8v4"></path>
     <path d="M4 12h16"></path>
@@ -3888,12 +3894,6 @@ if (parsedContent.showTellMeMore) {
     <path d="M12 12v4"></path>
     <path d="M20 12v4"></path>
 </svg>`;
-    tellMeMoreBtn.onclick = () => elaborateOnCurrent();
-
-    // 2. Create the new "Go deeper on this" button
-    const goDeeperBtn = document.createElement('button');
-    goDeeperBtn.className = 'tell-me-more-button'; // Use the same style
-    goDeeperBtn.innerHTML = `Go deeper on this <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="6" rx="1"></rect><path d="M12 9v4"></path><path d="M5 17h14"></path><path d="M5 13v4"></path><path d="M12 13v4"></path><path d="M19 13v4"></path></svg>`;
     goDeeperBtn.onclick = () => elaborateOnCurrent(); // Same functionality
 
     // Add both buttons to the wrapper
