@@ -2075,7 +2075,13 @@ function renderHybridTimeline(container, hybridData) {
  * This is used to pre-load content for cards before the user clicks on them.
  * @param {object} node - The tree node to fetch content for.
  */
- async function prefetchNodeContent(node) {
+ // =================== START: REPLACE THIS FUNCTION ===================
+/**
+ * Fetches node content in the background with a robust retry mechanism,
+ * preserving the specific prefetch prompt and logic.
+ * @param {object} node - The tree node to fetch content for.
+ */
+async function prefetchNodeContent(node) {
     // Silently exit if content already exists or is being fetched.
     if (node.content || node.isPrefetching) return;
 
@@ -2083,16 +2089,20 @@ function renderHybridTimeline(container, hybridData) {
     node.isPrefetching = true;
     console.log(`%cPrefetching: "${node.fullTitle}"`, 'color: #8b5cf6;');
 
-    const topic = node.fullTitle;
-    let contextPrompt = '';
-    if (node.parent && node.parent.id !== 'root') {
-        contextPrompt = `In the context of "${node.parent.fullTitle}", `;
-    }
+    // --- NEW: Retry logic has been added ---
+    const maxRetries = 3;
+    let success = false;
 
-    // --- THIS IS THE NEW, FULL PROMPT, COPIED FROM elaborateOnTopic ---
-    // REPLACE the prefetchPrompt in the prefetchNodeContent function
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            // --- Your existing logic is preserved inside this try block ---
+            const topic = node.fullTitle;
+            let contextPrompt = '';
+            if (node.parent && node.parent.id !== 'root') {
+                contextPrompt = `In the context of "${node.parent.fullTitle}", `;
+            }
 
-    const prefetchPrompt = `You are an expert educator who carries out tasks with precision and speed. Your task is to explain the topic "${topic}"${contextPrompt}.
+            const prefetchPrompt = `You are an expert educator who carries out tasks with precision and speed. Your task is to explain the topic "${topic}"${contextPrompt}.
         
 Your response MUST be a single, valid JSON object with no other text before or after it.
 The JSON object must have three keys: "explanation", "definitions", and an optional "visualAssets".
@@ -2124,59 +2134,63 @@ Here are the available asset types and their required data formats:
     * "type": "pie_chart"
     * "data": (String) A multi-line string with each line in "Label: Percentage" format.`;
 
-    try {
-        // Use a temporary, isolated conversation for this background task
-        const prefetchConversation = [
-            { role: "system", content: "You are an educational assistant." },
-            { role: "user", content: prefetchPrompt }
-        ];
+            const prefetchConversation = [
+                { role: "system", content: "You are an educational assistant." },
+                { role: "user", content: prefetchPrompt }
+            ];
 
-        const response = await fetch(BACKEND_URL + '/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messages: prefetchConversation })
-        });
+            const response = await fetch(BACKEND_URL + '/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages: prefetchConversation })
+            });
 
-        if (!response.ok) throw new Error(`Prefetch API failed for "${topic}"`);
+            if (!response.ok) throw new Error(`Prefetch API failed for "${topic}"`);
 
-        const data = await response.json();
-        let botResponseText = data.choices[0].message.content;
-        botResponseText = botResponseText.replace(/^```json\s*|```$/g, '');
+            const data = await response.json();
+            let botResponseText = data.choices[0].message.content;
+            botResponseText = botResponseText.replace(/^```json\s*|```$/g, '');
 
-        const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error(`Prefetch found no JSON for "${topic}"`);
+            const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) throw new Error(`Prefetch found no JSON for "${topic}"`);
 
-        const fixedJson = repairJsonKeys(jsonMatch[0]);
-        const structuredResponse = JSON.parse(fixedJson);
-                const explanation = structuredResponse.explanation || "No explanation provided.";
-        const definitions = structuredResponse.definitions || [];
-        const visualAssets = structuredResponse.visualAssets || []; // Handle visual assets
+            const fixedJson = repairJsonKeys(jsonMatch[0]);
+            const structuredResponse = JSON.parse(fixedJson);
+            const explanation = structuredResponse.explanation || "No explanation provided.";
+            const definitions = structuredResponse.definitions || [];
+            const visualAssets = structuredResponse.visualAssets || [];
 
-        const parsed = parseResponse(explanation, definitions);
-        parsed.visualAssets = visualAssets; // Add assets to the parsed content
-        parsed.showTellMeMore = true;
+            const parsed = parseResponse(explanation, definitions);
+            parsed.visualAssets = visualAssets;
+            parsed.showTellMeMore = true;
 
-        // --- Attach the content to the node ---
-        node.content = parsed;
-        console.log(`%c✅ Prefetch successful: "${node.fullTitle}"`, 'color: #22c55e;');
+            node.content = parsed;
+            
+            // If we've reached this point without an error, the attempt was successful.
+            success = true;
+            break; // Exit the retry loop.
 
-        // Save the newly added content to Firestore
-        await saveTopicsToFirestore();
-
-    } catch (error) {
-        // --- LINE C: (REPLACE THE EXISTING console.error) ---
-            // When an error happens, log the problematic text for easy debugging
-            console.error("Prefetch error:", error);
-            const rawResponse = error.response ? await error.response.text() : "No raw response available.";
-            console.log("--- FAILED TO PARSE THIS AI RESPONSE ---");
-            console.log(rawResponse);
-            console.log("---------------------------------------");
-        // We don't show a UI error here as it's a background process
-    } finally {
-        // Mark prefetching as complete regardless of outcome
-        node.isPrefetching = false;
+        } catch (error) {
+            console.error(`Prefetch attempt ${i + 1} of ${maxRetries} failed for "${node.fullTitle}":`, error);
+            // If this isn't the last attempt, wait a moment before trying again.
+            if (i < maxRetries - 1) {
+                await new Promise(res => setTimeout(res, 500));
+            }
+        }
     }
+
+    // --- NEW: Final status logging and saving ---
+    if (success) {
+        console.log(`%c✅ Prefetch successful for "${node.fullTitle}"`, 'color: #22c55e;');
+        await saveTopicsToFirestore(); // Save the newly fetched content
+    } else {
+        console.error(`Prefetch ultimately failed for "${node.fullTitle}" after ${maxRetries} attempts.`);
+    }
+
+    // Mark prefetching as complete regardless of outcome
+    node.isPrefetching = false;
 }
+// ==================== END: REPLACE THIS FUNCTION ====================
         /**
  * Creates the HTML for the category and sophistication tags.
  * @param {object} topicNode The topic's main node containing category and sophistication.
@@ -3501,45 +3515,59 @@ function renderTreeNode(node, level = 0) {
     return html;
 }
         // Navigate to tree node
-        async function navigateToNode(nodeId) {
+        // =================== START: REPLACE THIS FUNCTION ===================
+/**
+ * Navigates to a specific node, fetching its content with retries if it doesn't exist.
+ * This is the new, robust navigation handler.
+ * @param {string} nodeId - The ID of the node to navigate to.
+ */
+async function navigateToNode(nodeId) {
     const node = findNodeById(treeStructure, nodeId);
-    if (node) {
-        if (node.children.length === 0) {
-            node.isRead = true;
-            updateParentReadStatus(node.parent);
+    if (!node) {
+        console.error("Navigation failed: Node not found with ID:", nodeId);
+        return;
+    }
+
+    // If the node is a leaf and has no content, fetch it with retries.
+    if (node.children.length === 0 && !node.content && node.id !== 'root') {
+        showSkeletonLoader();
+        const maxRetries = 3;
+        let success = false;
+        
+        for (let i = 0; i < maxRetries; i++) {
+            success = await elaborateOnTopic(node, false);
+            if (success) break; // Exit loop on success
+            if (i < maxRetries - 1) {
+                console.log(`Fetch failed for "${node.fullTitle}", retrying...`);
+                await new Promise(res => setTimeout(res, 500)); // Wait 0.5s before retrying
+            }
         }
 
-        // Add to navigation history
-        navigationHistory = navigationHistory.slice(0, currentHistoryIndex + 1);
-        navigationHistory.push({
-            node: node,
-            content: JSON.parse(JSON.stringify(node.content)),
-            context: {
-                topic: node.fullTitle || node.title,
-                subtopic: null,
-                fullContent: node.content
-            }
-        });
-        currentHistoryIndex = navigationHistory.length - 1;
-        
-        currentTreeNode = node;
-        treeStructure.lastVisitedNodeId = node.id; 
-
-        // --- THIS IS THE CORRECTED STATE SAVING LOGIC ---
-        treeStructure.lastActiveNodeId = nodeId; // Save last viewed node to the topic's data
-        sessionStorage.setItem('lastActiveTopicId', currentTopicId); // Save the active topic to the session
-        // --- END OF CORRECTION ---
-
-        currentContext = navigationHistory[currentHistoryIndex].context;
-        
-        updateNavigation();
-        displayContent(node);
-        updateTreeVisualization();
-        
-        // Save the changes (like isRead and lastActiveNodeId) to Firestore
-        await saveTopicsToFirestore(); 
+        if (!success) {
+            document.getElementById('mainContent').innerHTML = ''; // Clear skeleton loader
+            showError(`Failed to load "${node.fullTitle}" after several attempts.`);
+        }
     }
+
+    // This block now runs for ALL navigations, ensuring the UI state is always consistent.
+    currentTreeNode = node;
+    treeStructure.lastVisitedNodeId = node.id;
+
+    navigationHistory = navigationHistory.slice(0, currentHistoryIndex + 1);
+    navigationHistory.push({
+        node: node,
+        content: node.content ? JSON.parse(JSON.stringify(node.content)) : null,
+        context: { topic: node.fullTitle || node.title, subtopic: null, fullContent: node.content }
+    });
+    currentHistoryIndex = navigationHistory.length - 1;
+
+    updateNavigation();
+    displayContent(node); // Display content (or lack thereof)
+    updateTreeVisualization(); // Update the tree to show the active node
+    saveTopicsToFirestore();
 }
+// ==================== END: REPLACE THIS FUNCTION ====================
+
 
         // Find node by ID
         function findNodeById(node, id) {
@@ -3649,7 +3677,20 @@ function updateBreadcrumb() {
             } else if (node.content || preservedContent) {
                 renderContent(preservedContent || node.content, node.fullTitle || node.title);
                 updatePlaceholder(true);
-            }
+            }else {
+        // This is the NEW path for a node whose content failed to load.
+        // Instead of a silent failure, we show a clear message.
+        mainContent.innerHTML = `
+            <div class="topic-overview">
+                <h2>${toTitleCase(node.fullTitle || node.title)}</h2>
+                <p style="color: #dc2626; font-weight: 500;">
+                    We were unable to load the content for this section after multiple attempts. 
+                    Please try another section or navigate back and click the card again.
+                </p>
+            </div>
+        `;
+        updatePlaceholder(false);
+    }
         }
 
         // Render content
@@ -3898,35 +3939,55 @@ Example for a topic on Parabolas:
 }`;
         // This part runs the new prompt and then exits the function early.
         try {
-            conversationHistory.push({ role: "user", content: stemPrompt });
-            pruneConversationHistory();
-            const response = await fetch(BACKEND_URL + '/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages: conversationHistory })
-});            if (!response.ok) throw new Error('Failed to get STEM response');
-            const data = await response.json();
-            const botResponse = data.choices[0].message.content;
-            conversationHistory.push({ role: "assistant", content: botResponse });
+        conversationHistory.push({ role: "user", content: elaborationPrompt });
+        pruneConversationHistory();
 
-            const jsonMatch = botResponse.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) throw new Error("No valid JSON object found in the AI response.");
-            const fixedJson = repairJsonKeys(jsonMatch[0]);
-            const structuredResponse = JSON.parse(fixedJson);
-            const parsed = parseResponse(structuredResponse.explanation, structuredResponse.definitions);
-            parsed.visualAssets = structuredResponse.visualAssets || [];
-            parsed.showTellMeMore = true; // You can decide if you want this for STEM topics.
+        const response = await fetch(BACKEND_URL + '/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: conversationHistory })
+        });
 
-            targetNode.content = parsed;
-            navigateToNode(targetNode.id);
-            await saveTopicsToFirestore();
-        } catch (error) {
-            console.error("Error in STEM elaboration:", error);
-            showError('Failed to get information for this topic.');
-        } finally {
-            showLoading(false);
+        if (!response.ok) throw new Error('API request failed');
+
+        const data = await response.json();
+        const botResponse = data.choices[0].message.content;
+        conversationHistory.push({ role: "assistant", content: botResponse });
+
+        let parsed;
+        if (generateNewCards) {
+            parsed = { overview: `Here are some deeper areas to explore.`, sections: parseSyllabusResponse(botResponse), definitions: [] };
+            targetNode.children = [];
+            parsed.sections.forEach(section => {
+                createTreeNode(section.title, null, targetNode, false);
+            });
+            targetNode.children.forEach(childNode => {
+                prefetchNodeContent(childNode);
+            });
+        } else {
+            try {
+                const jsonMatch = botResponse.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) throw new Error("No valid JSON object found in AI response.");
+                const fixedJson = repairJsonKeys(jsonMatch[0]);
+                const structuredResponse = JSON.parse(fixedJson);
+                const explanation = structuredResponse.explanation || "No explanation provided.";
+                const definitions = structuredResponse.definitions || [];
+                const visualAssets = structuredResponse.visualAssets || [];
+                parsed = parseResponse(explanation, definitions);
+                parsed.visualAssets = visualAssets;
+                parsed.showTellMeMore = true;
+            } catch (e) {
+                console.error("Failed to parse AI response:", e);
+                // If parsing fails, we consider the entire operation a failure.
+                throw e; 
+            }
         }
-        return; // IMPORTANT: This stops the old prompt from running.
+        targetNode.content = parsed;
+        return true; // Return true on success
+    } catch (error) {
+        console.error("Error in elaborateOnTopic:", error);
+        return false; // Return false on failure
+    }
     }
     // The topic is now derived from the node we passed in.
     const topic = targetNode.fullTitle; 
