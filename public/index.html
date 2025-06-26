@@ -4526,21 +4526,43 @@ googleSignInBtn.addEventListener('click', () => {
             authError.textContent = error.message; 
         });
 });
+/**
+ * Normalizes an equation string. If it's a simple expression of x,
+ * it prepends 'y = '. Otherwise, it returns the original string.
+ * @param {string} expressionString - The raw equation string.
+ * @returns {string} The normalized equation string.
+ */
+ function normalizeEquation(expressionString) {
+    const processed = expressionString.trim();
+    const parts = processed.split('=');
+
+    // If no '=' is present and it looks like a function of x, assume y = f(x).
+    if (parts.length === 1) {
+        const singlePart = parts[0];
+        if (singlePart.includes('x') && !singlePart.includes('y')) {
+            return `y = ${singlePart}`;
+        }
+    }
+    
+    // If it already has an equals sign, or isn't a simple f(x), return it as is.
+    return processed;
+}
 function renderImplicitPlotter(container, dataString) {
-    // --- NEW: Generate Legend HTML ---
+    // Generate Legend HTML using the new helper function
     const equationStrings = dataString.split(';').filter(s => s.trim() !== '');
 
     const legendHTML = equationStrings.map((eq, index) => {
         const color = PLOT_COLORS[index % PLOT_COLORS.length];
+        const normalizedEq = normalizeEquation(eq); // Use the helper for the visible text
         return `
             <div class="plot-legend-item">
                 <span class="plot-legend-color-swatch" style="background-color: ${color};"></span>
-                <span class="plot-legend-equation-text">$${eq.trim()}$</span>
+                <span class="plot-legend-equation-text">$${normalizedEq.trim()}$</span>
             </div>
         `;
     }).join('');
 
-    // Create the plotter's HTML structure with the new legend container
+    // Create the plotter's HTML structure
     container.innerHTML = `
         <div id="graphContainer">
             <canvas id="functionGraph"></canvas>
@@ -4555,12 +4577,12 @@ function renderImplicitPlotter(container, dataString) {
         </div>
     `;
 
-    // --- Re-initialize the plotter logic for this specific instance ---
+    // --- Re-initialize the plotter logic ---
     const canvas = container.querySelector('#functionGraph');
     const ctx = canvas.getContext('2d');
     const errorMessage = container.querySelector('#error-message');
     const graphContainer = container.querySelector('#graphContainer');
-    
+
     let scale = 40, origin = { x: 0, y: 0 }, view = { minX: -10, maxX: 10, minY: -10, maxY: 10 };
     let isGraphDragging = false, lastMousePos = { x: 0, y: 0 };
     let plotObjects = [];
@@ -4576,12 +4598,12 @@ function renderImplicitPlotter(container, dataString) {
         calculateAndDrawEquations();
     });
     resizeObserver.observe(graphContainer);
-    
+
     const toScreenX = (x) => origin.x + x * scale;
     const toScreenY = (y) => origin.y - y * scale;
     const toGraphX = (x) => (x - origin.x) / scale;
     const toGraphY = (y) => (y - origin.y) / -scale;
-    
+
     function updateView() {
         view.minX = toGraphX(0); view.maxX = toGraphX(canvas.width);
         view.minY = toGraphY(canvas.height); view.maxY = toGraphY(0);
@@ -4632,10 +4654,10 @@ function renderImplicitPlotter(container, dataString) {
 
         objects.forEach(obj => {
             if (!obj || !obj.paths || obj.paths.length === 0) return;
-            
+
             ctx.beginPath();
-            ctx.strokeStyle = obj.color; // Use the color from the object
-            
+            ctx.strokeStyle = obj.color;
+
             obj.paths.forEach(path => {
                 if (path.length < 2) return;
                 ctx.moveTo(toScreenX(path[0].x), toScreenY(path[0].y));
@@ -4645,24 +4667,12 @@ function renderImplicitPlotter(container, dataString) {
         });
     }
 
+    // --- THIS IS THE CORRECTED, SIMPLIFIED VERSION INSIDE THE FUNCTION ---
     function calculatePaths(expression) {
         if (!expression) return [];
         try {
-            // --- NEW LOGIC START ---
-            let processedExpression = expression.trim();
-            let parts = processedExpression.split('=');
+            const processedExpression = normalizeEquation(expression);
 
-            // If no '=' is present, check if it's a simple function of x.
-            if (parts.length === 1) {
-                const singlePart = parts[0];
-                // If it contains 'x' but not 'y', assume it's y = f(x).
-                if (singlePart.includes('x') && !singlePart.includes('y')) {
-                    processedExpression = `y = ${singlePart}`;
-                }
-            }
-            // --- NEW LOGIC END ---
-
-            // Use the (potentially modified) expression for the rest of the logic.
             const finalParts = processedExpression.split('=');
             if (finalParts.length !== 2) {
                 throw new Error("Equation must have one '=' sign or be an expression of x (e.g., sin(x)).");
@@ -4720,9 +4730,9 @@ function renderImplicitPlotter(container, dataString) {
         }
         return path;
     }
-    
+
     function draw() { requestAnimationFrame(() => { if(!ctx) return; ctx.clearRect(0, 0, canvas.width, canvas.height); drawGrid(); drawAxes(); drawLabels(); drawPlot(plotObjects); }); }
-    
+
     function zoomOnPoint(zoomFactor, centerX, centerY) {
         const graphX = toGraphX(centerX);
         const graphY = toGraphY(centerY);
@@ -4756,10 +4766,10 @@ function renderImplicitPlotter(container, dataString) {
     canvas.addEventListener('mouseup', () => { if (!isGraphDragging) return; isGraphDragging = false; calculateAndDrawEquations(); });
     canvas.addEventListener('mouseleave', () => { if(isGraphDragging) { isGraphDragging = false; calculateAndDrawEquations(); } });
     canvas.addEventListener('wheel', (e) => { e.preventDefault(); const zoomFactor = e.deltaY < 0 ? 1.2 : 1 / 1.2; zoomOnPoint(zoomFactor, e.offsetX, e.offsetY); });
-    
+
     container.querySelector('#zoomInBtn').addEventListener('click', () => { zoomOnPoint(1.3, canvas.width / 2, canvas.height / 2); });
     container.querySelector('#zoomOutBtn').addEventListener('click', () => { zoomOnPoint(1 / 1.3, canvas.width / 2, canvas.height / 2); });
-    
+
     // Initial calculation
     calculateAndDrawEquations();
     triggerMathRendering(container);
