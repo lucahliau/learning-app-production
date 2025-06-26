@@ -4576,41 +4576,46 @@ function renderImplicitPlotter(container, dataString) {
     }
 
     function calculatePaths(expression) {
-        if (!expression) return [];
-        try {
-            let parts = expression.split('=');
-            if (parts.length !== 2) throw new Error("Equation must have one '=' sign.");
-            const equationNode = math.parse(`(<span class="math-inline">\{parts\[0\]\}\) \- \(</span>{parts[1]})`);
-            const compiledEquation = equationNode.compile();
-            const derivativeX = math.derivative(equationNode, 'x').compile();
-            const derivativeY = math.derivative(equationNode, 'y').compile();
-            const resolution = 75, xStep = (view.maxX - view.minX) / resolution, yStep = (view.maxY - view.minY) / resolution;
-            const grid = [], visited = new Set();
-            for (let i = 0; i <= resolution; i++) {
-                grid[i] = [];
-                for (let j = 0; j <= resolution; j++) { grid[i][j] = compiledEquation.evaluate({ x: view.minX + j * xStep, y: view.minY + i * yStep });}
-            }
-            const allPaths = [];
-            for (let i = 0; i < resolution; i++) {
-                for (let j = 0; j < resolution; j++) {
-                    const key = `<span class="math-inline">\{i\},</span>{j}`; if(visited.has(key)) continue;
-                    const a = grid[i][j], b = grid[i+1][j];
-                    if (Math.sign(a) !== Math.sign(b)) {
-                        visited.add(key);
-                        const startY = view.minY + (i + a / (a - b)) * yStep, startX = view.minX + j * xStep;
-                        let path = tracePath({ x: startX, y: startY }, compiledEquation, derivativeX, derivativeY, visited, xStep, yStep);
-                        if (path.length > 1) allPaths.push(path);
-                    }
+    if (!expression) return [];
+    try {
+        // Create a fresh, local instance of the math parser
+        const localMath = math.create(math.all);
+
+        let parts = expression.split('=');
+        if (parts.length !== 2) throw new Error("Equation must have one '=' sign.");
+
+        // Use the local instance for all math operations
+        const equationNode = localMath.parse(`(<span class="math-inline">\{parts\[0\]\}\) \- \(</span>{parts[1]})`);
+        const compiledEquation = equationNode.compile();
+        const derivativeX = localMath.derivative(equationNode, 'x').compile();
+        const derivativeY = localMath.derivative(equationNode, 'y').compile();
+
+        const resolution = 75, xStep = (view.maxX - view.minX) / resolution, yStep = (view.maxY - view.minY) / resolution;
+        const grid = [], visited = new Set();
+        for (let i = 0; i <= resolution; i++) {
+            grid[i] = [];
+            for (let j = 0; j <= resolution; j++) { grid[i][j] = compiledEquation.evaluate({ x: view.minX + j * xStep, y: view.minY + i * yStep });}
+        }
+        const allPaths = [];
+        for (let i = 0; i < resolution; i++) {
+            for (let j = 0; j < resolution; j++) {
+                const key = `<span class="math-inline">\{i\},</span>{j}`; if(visited.has(key)) continue;
+                const a = grid[i][j], b = grid[i+1][j];
+                if (Math.sign(a) !== Math.sign(b)) {
+                    visited.add(key);
+                    const startY = view.minY + (i + a / (a - b)) * yStep, startX = view.minX + j * xStep;
+                    let path = tracePath({ x: startX, y: startY }, compiledEquation, derivativeX, derivativeY, visited, xStep, yStep);
+                    if (path.length > 1) allPaths.push(path);
                 }
             }
-            return allPaths;
-        } catch (error) {
-            // Set error message but don't clear it on success, as other equations might fail.
-            errorMessage.textContent = `Error in "${expression.trim()}": Invalid equation.`;
-            console.error("Plotting Error:", error);
-            return [];
         }
+        return allPaths;
+    } catch (error) {
+        errorMessage.textContent = `Error in "${expression.trim()}": Invalid equation.`;
+        console.error("Plotting Error:", error);
+        return [];
     }
+}
 
     function tracePath(startPoint, func, derivX, derivY, visited, dx, dy) {
         const path = [startPoint]; let currentPoint = startPoint;
