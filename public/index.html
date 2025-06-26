@@ -1930,7 +1930,7 @@ function renderHybridTimeline(container, hybridData) {
         
         const maxLevel = Math.max(10, availableSpace - cardHeightEstimate - verticalPadding);
         
-        const eventVerticalLevel = Math.round(maxLevel * 0.7);
+        const eventVerticalLevel = Math.round(maxLevel * 0.5);
         const periodVerticalLevel = Math.round(maxLevel * 0.2);
 
         const processedData = hybridData.map(d => {
@@ -2014,10 +2014,10 @@ function renderHybridTimeline(container, hybridData) {
                 // Set the gap between the main timeline bar and the connector
                 if (isTop) {
                     eventWrapper.style.bottom = '50%';
-                    eventWrapper.style.marginBottom = '5px';
+                    eventWrapper.style.marginBottom = '0px';
                 } else {
                     eventWrapper.style.top = '50%';
-                    eventWrapper.style.marginTop = '5px';
+                    eventWrapper.style.marginTop = '0px';
                 }
                 
                 // Create the two separate child elements: the card and the connector
