@@ -1670,6 +1670,13 @@
 .hybrid-event:hover {
     z-index: 10;
 }
+.timeline-subtitle {
+    text-align: center;
+    font-size: 14px;
+    color: #6b7280; /* Medium grey, consistent with other text */
+    margin-top: -5px; /* Pulls it slightly closer to the main title */
+    margin-bottom: 10px; /* Adds a little space before the timeline */
+}
             </style>
 
 <script>
@@ -1914,6 +1921,7 @@ function renderHybridTimeline(container, hybridData) {
     // 1. Create the timeline's HTML frame
     container.innerHTML = `
         <h1>Timeline</h1>
+            <p class="timeline-subtitle">Hover your mouse over a partially covered card to see it in detail.</p>
         <div class="timeline-container-wrapper">
             <div class="timeline-wrapper">
                  <div class="timeline-line"></div>
