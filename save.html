@@ -1921,7 +1921,7 @@ function renderHybridTimeline(container, hybridData) {
     // 1. Create the timeline's HTML frame
     container.innerHTML = `
         <h1>Timeline</h1>
-            <p class="timeline-subtitle">Hover your mouse over a partially covered card to see it in detail.</p>
+        <p class="timeline-subtitle">Hover over a partially covered card to see it in detail. Click a card to learn more.</p>
         <div class="timeline-container-wrapper">
             <div class="timeline-wrapper">
                  <div class="timeline-line"></div>
@@ -1990,31 +1990,9 @@ function renderHybridTimeline(container, hybridData) {
 
             if (item.type === 'period') {
                 const finalBraceWidth = item.naturalBraceWidth * positionScaleFactor;
-
-                // --- NEW LOGIC TO MEASURE TEXT AND DETERMINE WIDTH ---
-                // 1. Create a temporary, invisible element to measure the title text.
-                const tempSpan = document.createElement('span');
-                tempSpan.style.fontSize = '15px'; // Must match .timeline-event-title
-                tempSpan.style.fontWeight = '600'; // Must match
-                tempSpan.style.visibility = 'hidden';
-                tempSpan.style.position = 'absolute';
-                tempSpan.style.whiteSpace = 'nowrap'; // Prevent wrapping during measurement
-                tempSpan.textContent = item.name;
-                document.body.appendChild(tempSpan);
-
-                // 2. Calculate the two potential widths.
-                const textWidth = tempSpan.offsetWidth;
-                const horizontalPadding = 40; // 20px on each side
-                const textBasedWidth = textWidth + horizontalPadding;
+                const textBasedWidth = measureTextWidth(item.name) + 40;
                 const braceBasedWidth = finalBraceWidth + 20;
-
-                // 3. Remove the temporary element.
-                document.body.removeChild(tempSpan);
-
-                // 4. The final card width is the LARGER of the two calculated widths.
                 const cardWidth = Math.max(textBasedWidth, braceBasedWidth);
-                // --- END OF NEW LOGIC ---
-
                 const cardStartPos = finalStartPos + (finalBraceWidth - cardWidth) / 2;
 
                 const eventElement = document.createElement('div');
@@ -2024,6 +2002,8 @@ function renderHybridTimeline(container, hybridData) {
                 eventElement.style.width = `${cardWidth}px`;
                 eventElement.style.marginBottom = isTop ? `${periodVerticalLevel}px` : null;
                 eventElement.style.marginTop = !isTop ? `${periodVerticalLevel}px` : null;
+                eventElement.style.cursor = 'pointer'; // Add pointer cursor
+                eventElement.onclick = () => handleTimelineCardClick(item, hybridData); // Add click handler
                 timelineWrapper.appendChild(eventElement);
 
                 const brace = document.createElement('div');
@@ -2033,21 +2013,13 @@ function renderHybridTimeline(container, hybridData) {
                 timelineWrapper.appendChild(brace);
 
             } else { 
-                // --- NEW RENDER LOGIC FOR 'event' TYPES ---
                 const cardWidth = 140;
-
-                // Create the main positioning wrapper
                 const eventWrapper = document.createElement('div');
                 eventWrapper.className = `hybrid-event ${isTop ? 'top' : 'bottom'}`;
-                
-                // Position the wrapper relative to the center of the card
                 eventWrapper.style.left = `${finalStartPos - (cardWidth / 2)}px`;
                 eventWrapper.style.width = `${cardWidth}px`;
-
-                // Set the connector line's height via a CSS variable
                 eventWrapper.style.setProperty('--connector-height', `${eventVerticalLevel}px`);
                 
-                // Set the gap between the main timeline bar and the connector
                 if (isTop) {
                     eventWrapper.style.bottom = '50%';
                     eventWrapper.style.marginBottom = '0px';
@@ -2056,7 +2028,6 @@ function renderHybridTimeline(container, hybridData) {
                     eventWrapper.style.marginTop = '0px';
                 }
                 
-                // Create the two separate child elements: the card and the connector
                 eventWrapper.innerHTML = `
                     <div class="timeline-event-card">
                         <div class="timeline-event-title">${item.name}</div>
@@ -2064,7 +2035,8 @@ function renderHybridTimeline(container, hybridData) {
                     </div>
                     <div class="timeline-connector"></div>
                 `;
-                
+                eventWrapper.style.cursor = 'pointer'; // Add pointer cursor
+                eventWrapper.onclick = () => handleTimelineCardClick(item, hybridData); // Add click handler
                 timelineWrapper.appendChild(eventWrapper);
             }
         });
@@ -3325,15 +3297,23 @@ function parseResponse(mainContentText, definitionsArray) {
         // Find and replace this entire function
 // Find and replace this entire function
 function renderTreeNode(node, level = 0) {
-    const icon = node.id === 'root' ? '' :
-                node.isUserQuestion ? '❓' :
-                node.sectionIndex ? `${node.sectionIndex}.` : '';
+    // --- NEW LOGIC for ICON ---
+    let icon = '';
+    if (node.isTimelineElaboration) {
+        icon = '🕰️';
+    } else if (node.id === 'root') {
+        icon = '';
+    } else if (node.isUserQuestion) {
+        icon = '❓';
+    } else if (node.sectionIndex) {
+        icon = `${node.sectionIndex}.`;
+    }
+    // --- END ICON LOGIC ---
     
     const statusIndicatorHTML = node.id !== 'root' ? 
         `<div class="tree-status-indicator ${node.isRead ? 'read' : ''}"></div>` : 
         '';
 
-    // The comment is now outside of the HTML string
     let html = `
         <div class="tree-node" style="margin-left: ${level * 25}px;">
             <div class="tree-node-content ${node === currentTreeNode ? 'active' : ''}" 
@@ -3349,7 +3329,17 @@ function renderTreeNode(node, level = 0) {
     
     if (node.children.length > 0) {
         html += '<div class="tree-children">';
-        node.children.forEach(child => {
+        
+        // --- NEW SORTING LOGIC ---
+        // Sort children to put timeline elaborations first
+        const sortedChildren = [...node.children].sort((a, b) => {
+            if (a.isTimelineElaboration && !b.isTimelineElaboration) return -1;
+            if (!a.isTimelineElaboration && b.isTimelineElaboration) return 1;
+            return (a.sectionIndex || Infinity) - (b.sectionIndex || Infinity);
+        });
+        // --- END SORTING LOGIC ---
+
+        sortedChildren.forEach(child => {
             html += renderTreeNode(child, level + 1);
         });
         html += '</div>';
@@ -4782,6 +4772,95 @@ function renderImplicitPlotter(container, dataString) {
     // Initial calculation
     calculateAndDrawEquations();
     triggerMathRendering(container);
+}
+/**
+ * A helper function to measure the pixel width of a string of text.
+ * @param {string} text - The text to measure.
+ * @returns {number} The width of the text in pixels.
+ */
+ function measureTextWidth(text) {
+    const tempSpan = document.createElement('span');
+    tempSpan.style.fontSize = '15px';
+    tempSpan.style.fontWeight = '600';
+    tempSpan.style.visibility = 'hidden';
+    tempSpan.style.position = 'absolute';
+    tempSpan.style.whiteSpace = 'nowrap';
+    tempSpan.textContent = text;
+    document.body.appendChild(tempSpan);
+    const width = tempSpan.offsetWidth;
+    document.body.removeChild(tempSpan);
+    return width;
+}
+
+/**
+ * Handles the click on a timeline card.
+ * @param {object} clickedItem - The data object for the clicked timeline item.
+ * @param {Array} allItems - The array of all items on the timeline for context.
+ */
+function handleTimelineCardClick(clickedItem, allItems) {
+    // Check if a node for this event already exists
+    const existingNode = currentTreeNode.children.find(child => child.fullTitle === clickedItem.name);
+    if (existingNode) {
+        navigateToNode(existingNode.id);
+        return;
+    }
+    
+    // If not, show loader and fetch the new content
+    showSkeletonLoader();
+    elaborateOnTimelineEvent(clickedItem, allItems);
+}
+
+/**
+ * Calls the API to get details about a specific timeline event.
+ * @param {object} clickedItem - The data object for the clicked timeline item.
+ * @param {Array} allItems - The array of all items on the timeline for context.
+ */
+async function elaborateOnTimelineEvent(clickedItem, allItems) {
+    const overallTopic = currentTreeNode.fullTitle;
+    const eventName = clickedItem.name;
+    const otherEvents = allItems.filter(item => item.name !== eventName).map(item => item.name).join(', ');
+
+    const prompt = `In the context of learning about "${overallTopic}", provide a detailed 2-3 paragraph explanation of the specific event or period: "${eventName}". 
+    
+    For context, other related events on the timeline include: ${otherEvents}.
+    
+    Your response MUST be a single, valid JSON object with ONLY an "explanation" key. Ensure any LaTeX uses escaped backslashes (e.g., "\\\\sqrt{x}").`;
+
+    try {
+        const tempConversation = [
+            { role: "system", content: "You are an educational assistant." },
+            { role: "user", content: prompt }
+        ];
+        
+        const response = await fetch(BACKEND_URL + '/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: tempConversation })
+        });
+
+        if (!response.ok) throw new Error('API request failed');
+
+        const result = await response.json();
+        const botResponseText = result.choices[0].message.content.replace(/^```json\s*|```$/g, '');
+        const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error("No valid JSON object found in the AI response.");
+
+        const structuredResponse = JSON.parse(jsonMatch[0]);
+        const parsed = parseResponse(structuredResponse.explanation, []);
+        parsed.showTellMeMore = true; // Add the "Tell me more" button
+
+        // Create a new node for this elaboration
+        const newNode = createTreeNode(eventName, parsed, currentTreeNode);
+        newNode.isTimelineElaboration = true; // Add a special flag
+
+        await saveTopicsToFirestore();
+        updateTreeVisualization(); // Update the map to show the new node
+        navigateToNode(newNode.id); // Navigate to the new content
+
+    } catch (error) {
+        console.error("Error elaborating on timeline event:", error);
+        showError("Failed to get details for this timeline event.");
+    }
 }
     </script>
     <!-- New Topic Modal -->
