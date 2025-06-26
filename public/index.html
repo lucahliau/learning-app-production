@@ -3148,26 +3148,32 @@ function parseResponse(mainContentText, definitionsArray) {
         definitions: definitionsArray || []
     };
 
-    // 1. First, process the entire text for markdown and paragraphs.
-    // This regex converts **text** to <strong>text</strong>
-    let processedText = mainContentText.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'); 
+    // 1. First, process the entire text for markdown. Order is important.
+    let processedText = mainContentText
+        // Headings (from most specific to least specific)
+        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+        // Bold and Italics (non-greedy)
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>');
 
-    // This regex finds blocks of text separated by two newlines (a paragraph)
-    // and wraps each block in <p> tags for proper spacing.
+    // 2. Now, wrap the results in paragraph tags, but avoid wrapping the new heading tags.
     processedText = processedText
         .split(/\n\s*\n/) // Split by one or more empty lines
         .map(p => p.trim()) // Trim whitespace from each paragraph
         .filter(p => p) // Remove any empty paragraphs
-        .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`) // Wrap in <p> and convert single newlines to <br>
+        .map(p => {
+            // If the block already starts with a heading tag, don't wrap it in a <p> tag
+            if (p.match(/^<h[1-3]>/)) {
+                return p;
+            }
+            // Otherwise, wrap it in a <p> tag and convert single newlines to <br>
+            return `<p>${p.replace(/\n/g, '<br>')}</p>`;
+        })
         .join('');
 
-    // 2. Now, assign the fully processed text to the overview.
-    // The rest of the function is simpler now.
     result.overview = processedText;
-
-    // The old logic for splitting into sections can be removed,
-    // as we are now treating the AI response as a single block of formatted content.
-    
     return result;
 }
 // Create a new helper function to wrap terms in special HTML
@@ -3447,13 +3453,7 @@ function updateBreadcrumb() {
                 const overviewDiv = document.createElement('div');
                 overviewDiv.className = 'topic-overview';
                 
-                let formattedOverview = parsedContent.overview.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                    .split(/\n\s*\n/)
-                    .map(p => p.trim())
-                    .filter(p => p)
-                    .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
-                    .join('');
-
+                let formattedOverview = parsedContent.overview;
                 const highlightedOverview = applyTermHighlighting(formattedOverview, parsedContent.definitions);
                 overviewDiv.innerHTML = `<h2>${toTitleCase(currentTreeNode.fullTitle || currentTreeNode.title)}</h2><div>${highlightedOverview}</div>`;
                 mainContent.appendChild(overviewDiv);
@@ -4470,96 +4470,90 @@ googleSignInBtn.addEventListener('click', () => {
         });
 });
 function renderImplicitPlotter(container, dataString) {
-                // Create the plotter's HTML structure
-                container.innerHTML = `
-                    <h1>Implicit Function Plotter</h1>
-                    <div id="graphContainer">
-                        <canvas id="functionGraph"></canvas>
-                        <div class="zoom-controls">
-                            <button id="zoomInBtn" class="zoom-btn" title="Zoom in">+</button>
-                            <button id="zoomOutBtn" class="zoom-btn" title="Zoom out">-</button>
-                        </div>
-                    </div>
-                    <div class="equation-input-wrapper">
-                        <label for="equationInput">Enter one or more implicit equations, separated by a semicolon (;)</label>
-                        <input type="text" id="equationInput" class="equation-input" placeholder="x^2+y^2=16; y=sin(x)">
-                        <p id="error-message"></p>
-                    </div>
-                `;
+    // Create the plotter's HTML structure
+    container.innerHTML = `
+        <div id="graphContainer">
+            <canvas id="functionGraph"></canvas>
+            <div class="zoom-controls">
+                <button id="zoomInBtn" class="zoom-btn" title="Zoom in">+</button>
+                <button id="zoomOutBtn" class="zoom-btn" title="Zoom out">-</button>
+            </div>
+        </div>
+        <div class="equation-input-wrapper">
+            <p style="text-align: center; font-size: 14px; font-family: 'Courier New', monospace; color: #4b5563; padding: 10px 0;">${dataString}</p>
+            <p id="error-message"></p>
+        </div>
+    `;
 
-                // --- Re-initialize the plotter logic for this specific instance ---
-                const canvas = container.querySelector('#functionGraph');
-                const ctx = canvas.getContext('2d');
-                const equationInput = container.querySelector('#equationInput');
-                const errorMessage = container.querySelector('#error-message');
-                const graphContainer = container.querySelector('#graphContainer');
-                
-                // Set the initial equation from the AI
-                equationInput.value = dataString;
+    // --- Re-initialize the plotter logic for this specific instance ---
+    const canvas = container.querySelector('#functionGraph');
+    const ctx = canvas.getContext('2d');
+    const errorMessage = container.querySelector('#error-message');
+    const graphContainer = container.querySelector('#graphContainer');
 
-                let scale = 40, origin = { x: 0, y: 0 }, view = { minX: -10, maxX: 10, minY: -10, maxY: 10 };
-                let isGraphDragging = false, lastMousePos = { x: 0, y: 0 };
-                let plotObjects = [];
-                let plotTimeout;
+    let scale = 40, origin = { x: 0, y: 0 }, view = { minX: -10, maxX: 10, minY: -10, maxY: 10 };
+    let isGraphDragging = false, lastMousePos = { x: 0, y: 0 };
+    let plotObjects = [];
+    let plotTimeout;
 
-                const resizeObserver = new ResizeObserver(entries => {
-                    if (!entries || !entries.length) return;
-                    const { width, height } = entries[0].contentRect;
-                    canvas.width = width; canvas.height = height;
-                    if(width === 0 || height === 0) return;
-                    origin.x = width / 2; origin.y = height / 2;
-                    updateView();
-                    calculateAndDrawEquations();
-                });
-                resizeObserver.observe(graphContainer);
-                
-                const toScreenX = (x) => origin.x + x * scale;
-                const toScreenY = (y) => origin.y - y * scale;
-                const toGraphX = (x) => (x - origin.x) / scale;
-                const toGraphY = (y) => (y - origin.y) / -scale;
-                
-                function updateView() {
-                    view.minX = toGraphX(0); view.maxX = toGraphX(canvas.width);
-                    view.minY = toGraphY(canvas.height); view.maxY = toGraphY(0);
-                }
+    const resizeObserver = new ResizeObserver(entries => {
+        if (!entries || !entries.length) return;
+        const { width, height } = entries[0].contentRect;
+        canvas.width = width; canvas.height = height;
+        if(width === 0 || height === 0) return;
+        origin.x = width / 2; origin.y = height / 2;
+        updateView();
+        calculateAndDrawEquations();
+    });
+    resizeObserver.observe(graphContainer);
 
-                function drawGrid() {
-                    if (!ctx) return;
-                    ctx.beginPath(); ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 1;
-                    const step = Math.pow(10, Math.floor(Math.log10(70 / scale)));
-                    for (let x = Math.floor(view.minX / step) * step; x < view.maxX; x += step) {
-                        const screenX = Math.round(toScreenX(x));
-                        ctx.moveTo(screenX, 0); ctx.lineTo(screenX, canvas.height);
-                    }
-                    for (let y = Math.floor(view.minY / step) * step; y < view.maxY; y += step) {
-                        const screenY = Math.round(toScreenY(y));
-                        ctx.moveTo(0, screenY); ctx.lineTo(canvas.width, screenY);
-                    }
-                    ctx.stroke();
-                }
+    const toScreenX = (x) => origin.x + x * scale;
+    const toScreenY = (y) => origin.y - y * scale;
+    const toGraphX = (x) => (x - origin.x) / scale;
+    const toGraphY = (y) => (y - origin.y) / -scale;
 
-                function drawAxes() {
+    function updateView() {
+        view.minX = toGraphX(0); view.maxX = toGraphX(canvas.width);
+        view.minY = toGraphY(canvas.height); view.maxY = toGraphY(0);
+    }
+
+    function drawGrid() {
+        if (!ctx) return;
+        ctx.beginPath(); ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 1;
+        const step = Math.pow(10, Math.floor(Math.log10(70 / scale)));
+        for (let x = Math.floor(view.minX / step) * step; x < view.maxX; x += step) {
+            const screenX = Math.round(toScreenX(x));
+            ctx.moveTo(screenX, 0); ctx.lineTo(screenX, canvas.height);
+        }
+        for (let y = Math.floor(view.minY / step) * step; y < view.maxY; y += step) {
+            const screenY = Math.round(toScreenY(y));
+            ctx.moveTo(0, screenY); ctx.lineTo(canvas.width, screenY);
+        }
+        ctx.stroke();
+    }
+
+    function drawAxes() {
         ctx.beginPath(); ctx.strokeStyle = '#374151'; ctx.lineWidth = 1.5;
         ctx.moveTo(0, origin.y); ctx.lineTo(canvas.width, origin.y);
         ctx.moveTo(origin.x, 0); ctx.lineTo(origin.x, canvas.height);
         ctx.stroke();
     }
-    
+
     function drawLabels() {
-         ctx.font = "12px sans-serif"; ctx.fillStyle = "#6b7280";
-         ctx.textAlign = "center"; ctx.textBaseline = "top";
-         const step = Math.pow(10, Math.floor(Math.log10(70/scale)));
-         for (let x = Math.floor(view.minX / step) * step; x < view.maxX; x += step) {
-             if (Math.abs(x) < 1e-9) continue;
-             ctx.fillText(x.toFixed(2).replace(/\.?0+$/, ''), toScreenX(x), origin.y + 5);
-         }
-         ctx.textAlign = "right"; ctx.textBaseline = "middle";
-         for (let y = Math.floor(view.minY/step) * step; y < view.maxY; y += step) {
-             if (Math.abs(y) < 1e-9) continue;
-             ctx.fillText(y.toFixed(2).replace(/\.?0+$/, ''), origin.x - 5, toScreenY(y));
-         }
+        ctx.font = "12px sans-serif"; ctx.fillStyle = "#6b7280";
+        ctx.textAlign = "center"; ctx.textBaseline = "top";
+        const step = Math.pow(10, Math.floor(Math.log10(70/scale)));
+        for (let x = Math.floor(view.minX / step) * step; x < view.maxX; x += step) {
+            if (Math.abs(x) < 1e-9) continue;
+            ctx.fillText(x.toFixed(2).replace(/\.?0+$/, ''), toScreenX(x), origin.y + 5);
+        }
+        ctx.textAlign = "right"; ctx.textBaseline = "middle";
+        for (let y = Math.floor(view.minY/step) * step; y < view.maxY; y += step) {
+            if (Math.abs(y) < 1e-9) continue;
+            ctx.fillText(y.toFixed(2).replace(/\.?0+$/, ''), origin.x - 5, toScreenY(y));
+        }
     }
-    
+
     function drawPlot(objects) {
         if (!objects) return;
         ctx.lineWidth = 2.5;
@@ -4568,10 +4562,10 @@ function renderImplicitPlotter(container, dataString) {
 
         objects.forEach(obj => {
             if (!obj || !obj.paths || obj.paths.length === 0) return;
-            
+
             ctx.beginPath();
             ctx.strokeStyle = obj.color; // Use the color from the object
-            
+
             obj.paths.forEach(path => {
                 if (path.length < 2) return;
                 ctx.moveTo(toScreenX(path[0].x), toScreenY(path[0].y));
@@ -4586,7 +4580,7 @@ function renderImplicitPlotter(container, dataString) {
         try {
             let parts = expression.split('=');
             if (parts.length !== 2) throw new Error("Equation must have one '=' sign.");
-            const equationNode = math.parse(`(${parts[0]}) - (${parts[1]})`);
+            const equationNode = math.parse(`(<span class="math-inline">\{parts\[0\]\}\) \- \(</span>{parts[1]})`);
             const compiledEquation = equationNode.compile();
             const derivativeX = math.derivative(equationNode, 'x').compile();
             const derivativeY = math.derivative(equationNode, 'y').compile();
@@ -4599,7 +4593,7 @@ function renderImplicitPlotter(container, dataString) {
             const allPaths = [];
             for (let i = 0; i < resolution; i++) {
                 for (let j = 0; j < resolution; j++) {
-                    const key = `${i},${j}`; if(visited.has(key)) continue;
+                    const key = `<span class="math-inline">\{i\},</span>{j}`; if(visited.has(key)) continue;
                     const a = grid[i][j], b = grid[i+1][j];
                     if (Math.sign(a) !== Math.sign(b)) {
                         visited.add(key);
@@ -4635,58 +4629,53 @@ function renderImplicitPlotter(container, dataString) {
             if (nextPoint.x < view.minX || nextPoint.x > view.maxX || nextPoint.y < view.minY || nextPoint.y > view.maxY) break;
             path.push(nextPoint); currentPoint = nextPoint;
             const gridI = Math.floor((currentPoint.y - view.minY) / dy), gridJ = Math.floor((currentPoint.x - view.minX) / dx);
-            visited.add(`${gridI},${gridJ}`);
+            visited.add(`<span class="math-inline">\{gridI\},</span>{gridJ}`);
         }
         return path;
     }
-                
-                function draw() { requestAnimationFrame(() => { if(!ctx) return; ctx.clearRect(0, 0, canvas.width, canvas.height); drawGrid(); drawAxes(); drawLabels(); drawPlot(plotObjects); }); }
-                
-                function zoomOnPoint(zoomFactor, centerX, centerY) {
-                    const graphX = toGraphX(centerX);
-                    const graphY = toGraphY(centerY);
-                    scale *= zoomFactor;
-                    origin.x = centerX - graphX * scale;
-                    origin.y = centerY + graphY * scale;
-                    updateView();
-                    draw();
-                    clearTimeout(plotTimeout);
-                    plotTimeout = setTimeout(calculateAndDrawEquations, 150);
-                }
 
-                function calculateAndDrawEquations() {
-                    errorMessage.textContent = '';
-                    const equationStrings = equationInput.value.split(';').filter(s => s.trim() !== '');
-                    plotObjects = [];
-                    equationStrings.forEach((eq, index) => {
-                        const paths = calculatePaths(eq);
-                        if (paths.length > 0) {
-                            plotObjects.push({
-                                paths: paths,
-                                color: PLOT_COLORS[index % PLOT_COLORS.length]
-                            });
-                        }
-                    });
-                    draw();
-                }
+    function draw() { requestAnimationFrame(() => { if(!ctx) return; ctx.clearRect(0, 0, canvas.width, canvas.height); drawGrid(); drawAxes(); drawLabels(); drawPlot(plotObjects); }); }
 
-                canvas.addEventListener('mousedown', (e) => { isGraphDragging = true; lastMousePos = { x: e.offsetX, y: e.offsetY }; });
-                canvas.addEventListener('mousemove', (e) => { if (!isGraphDragging) return; const dx = e.offsetX - lastMousePos.x, dy = e.offsetY - lastMousePos.y; origin.x += dx; origin.y += dy; lastMousePos = { x: e.offsetX, y: e.offsetY }; updateView(); draw(); });
-                canvas.addEventListener('mouseup', () => { if (!isGraphDragging) return; isGraphDragging = false; calculateAndDrawEquations(); });
-                canvas.addEventListener('mouseleave', () => { if(isGraphDragging) { isGraphDragging = false; calculateAndDrawEquations(); } });
-                canvas.addEventListener('wheel', (e) => { e.preventDefault(); const zoomFactor = e.deltaY < 0 ? 1.2 : 1 / 1.2; zoomOnPoint(zoomFactor, e.offsetX, e.offsetY); });
-                
-                container.querySelector('#zoomInBtn').addEventListener('click', () => { zoomOnPoint(1.3, canvas.width / 2, canvas.height / 2); });
-                container.querySelector('#zoomOutBtn').addEventListener('click', () => { zoomOnPoint(1 / 1.3, canvas.width / 2, canvas.height / 2); });
-                
-                equationInput.addEventListener('input', () => {
-                    clearTimeout(plotTimeout);
-                    plotTimeout = setTimeout(calculateAndDrawEquations, 300);
+    function zoomOnPoint(zoomFactor, centerX, centerY) {
+        const graphX = toGraphX(centerX);
+        const graphY = toGraphY(centerY);
+        scale *= zoomFactor;
+        origin.x = centerX - graphX * scale;
+        origin.y = centerY + graphY * scale;
+        updateView();
+        draw();
+        clearTimeout(plotTimeout);
+        plotTimeout = setTimeout(calculateAndDrawEquations, 150);
+    }
+
+    function calculateAndDrawEquations() {
+        errorMessage.textContent = '';
+        const equationStrings = dataString.split(';').filter(s => s.trim() !== '');
+        plotObjects = [];
+        equationStrings.forEach((eq, index) => {
+            const paths = calculatePaths(eq);
+            if (paths.length > 0) {
+                plotObjects.push({
+                    paths: paths,
+                    color: PLOT_COLORS[index % PLOT_COLORS.length]
                 });
-
-                // Initial calculation
-                calculateAndDrawEquations();
             }
+        });
+        draw();
+    }
+
+    canvas.addEventListener('mousedown', (e) => { isGraphDragging = true; lastMousePos = { x: e.offsetX, y: e.offsetY }; });
+    canvas.addEventListener('mousemove', (e) => { if (!isGraphDragging) return; const dx = e.offsetX - lastMousePos.x, dy = e.offsetY - lastMousePos.y; origin.x += dx; origin.y += dy; lastMousePos = { x: e.offsetX, y: e.offsetY }; updateView(); draw(); });
+    canvas.addEventListener('mouseup', () => { if (!isGraphDragging) return; isGraphDragging = false; calculateAndDrawEquations(); });
+    canvas.addEventListener('mouseleave', () => { if(isGraphDragging) { isGraphDragging = false; calculateAndDrawEquations(); } });
+    canvas.addEventListener('wheel', (e) => { e.preventDefault(); const zoomFactor = e.deltaY < 0 ? 1.2 : 1 / 1.2; zoomOnPoint(zoomFactor, e.offsetX, e.offsetY); });
+
+    container.querySelector('#zoomInBtn').addEventListener('click', () => { zoomOnPoint(1.3, canvas.width / 2, canvas.height / 2); });
+    container.querySelector('#zoomOutBtn').addEventListener('click', () => { zoomOnPoint(1 / 1.3, canvas.width / 2, canvas.height / 2); });
+
+    // Initial calculation
+    calculateAndDrawEquations();
+}
     </script>
     <!-- New Topic Modal -->
 <div class="modal-overlay" id="newTopicModal">
