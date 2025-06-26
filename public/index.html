@@ -1410,15 +1410,17 @@
         }
 
         /* --- TIMELINE STYLES --- */
-        .timeline-container-wrapper {
-            width: 100%;
-            position: relative;
-            padding: 15px 0; /* Increased padding to accommodate staggered cards */
-            overflow-x: auto;
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-           
-        }
+        /* --- In your <style> block --- */
+
+.timeline-container-wrapper {
+    width: 100%;
+    position: relative;
+    padding: 15px 0;
+    /* CHANGE THIS LINE */
+    overflow-x: hidden; /* Was 'auto' */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
 
         .timeline-container-wrapper::-webkit-scrollbar {
             display: none;
@@ -1836,7 +1838,6 @@ function renderHybridTimeline(container, hybridData) {
     // 1. Create the timeline's HTML frame
     container.innerHTML = `
         <h1>Timeline</h1>
-        <p style="text-align: center; color: #9ca3af; font-size: 14px; margin-top: -15px; margin-bottom: 10px;">Scroll horizontally to see more of the timeline</p>
         <div class="timeline-container-wrapper">
             <div class="timeline-wrapper">
                  <div class="timeline-line"></div>
@@ -1884,15 +1885,21 @@ function renderHybridTimeline(container, hybridData) {
 
         const totalNaturalWidth = lastNaturalPos + PADDING;
 
-        // --- 2. Determine Final Width and Scaling Factor ---
+       // --- REPLACE THE OLD LOGIC WITH THIS ---
+        // --- 2. Determine Final Width and Scaling Factor (NEW LOGIC) ---
         const containerWidth = timelineContainerWrapper.clientWidth;
-        const targetMinWidth = containerWidth * 0.9;
-
-        const finalWidth = Math.max(totalNaturalWidth, targetMinWidth);
+        
+        // The final width is ALWAYS the width of the container. No scrolling.
+        const finalWidth = containerWidth;
+        
+        // Calculate the scaling factor needed to fit the "natural" width into the container.
+        // This will be < 1 if the natural layout is wider than the container.
         const positionScaleFactor = finalWidth / totalNaturalWidth;
         
+        // Set the wrapper and line to the container's width.
         timelineWrapper.style.width = `${finalWidth}px`;
         timelineLine.style.width = `${finalWidth}px`;
+        // --- END OF REPLACEMENT ---
         
         // --- 3. Render Elements with Final Scaled Positions ---
         let lastTopEnd = -Infinity, lastBottomEnd = -Infinity;
