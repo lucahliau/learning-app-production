@@ -2009,12 +2009,12 @@ function renderHybridTimeline(container, hybridData) {
                 
                 // Set the gap between the main timeline bar and the connector
                 if (isTop) {
-                    eventWrapper.style.bottom = '50%';
-                    eventWrapper.style.marginBottom = '5px';
-                } else {
-                    eventWrapper.style.top = '50%';
-                    eventWrapper.style.marginTop = '5px';
-                }
+    eventWrapper.style.bottom = '50%';
+    eventWrapper.style.marginBottom = `${periodVerticalLevel}px`;
+} else {
+    eventWrapper.style.top = '50%';
+    eventWrapper.style.marginTop = `${periodVerticalLevel}px`;
+}
                 
                 // Create the two separate child elements: the card and the connector
                 eventWrapper.innerHTML = `
