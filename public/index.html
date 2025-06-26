@@ -1576,7 +1576,11 @@
 }
 /* For events on top, this reverses the order to show the card above the connector */
 .hybrid-event.top {
-    flex-direction: column-reverse;
+    flex-direction: column; /* This ensures the card is visually on top of its connector */
+}
+
+.hybrid-event.bottom {
+    flex-direction: column-reverse; /* This reverses the order to put the card below its connector */
 }
 
 /* This is the visible card that gets the hover effect */
@@ -2009,12 +2013,12 @@ function renderHybridTimeline(container, hybridData) {
                 
                 // Set the gap between the main timeline bar and the connector
                 if (isTop) {
-    eventWrapper.style.bottom = '50%';
-    eventWrapper.style.marginBottom = `${periodVerticalLevel}px`;
-} else {
-    eventWrapper.style.top = '50%';
-    eventWrapper.style.marginTop = `${periodVerticalLevel}px`;
-}
+                    eventWrapper.style.bottom = '50%';
+                    eventWrapper.style.marginBottom = '5px';
+                } else {
+                    eventWrapper.style.top = '50%';
+                    eventWrapper.style.marginTop = '5px';
+                }
                 
                 // Create the two separate child elements: the card and the connector
                 eventWrapper.innerHTML = `
