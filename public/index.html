@@ -2282,11 +2282,12 @@ confirmDeleteBtn.addEventListener('click', async () => {
  * @param {string} str The string to convert.
  * @returns {string} The Title Cased string.
  */
-function toTitleCase(str) {
+ function toTitleCase(str) {
     if (!str) return '';
+    // The .toLowerCase() has been removed to preserve existing capitalization within words.
     return str.replace(
         /\w\S*/g,
-        (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
+        (txt) => txt.charAt(0).toUpperCase() + txt.substr(1)
     );
 }
         // --- ADD THIS SNIPPET FOR SIGN OUT FUNCTIONALITY ---
@@ -4511,7 +4512,7 @@ function renderImplicitPlotter(container, dataString) {
                         </div>
                     </div>
                     <div class="equation-input-wrapper">
-                        <p class="equation-input" style="text-align: center; border: none; background: none; padding: 15px 0;">${dataString}</p>
+                        <p class="equation-input" style="text-align: center; border: none; background: none; padding: 15px 0;">$${dataString}$</p>
                         <p id="error-message"></p>
                     </div>
                 `;
@@ -4706,6 +4707,8 @@ function renderImplicitPlotter(container, dataString) {
                 
                 // Initial calculation
                 calculateAndDrawEquations();
+                triggerMathRendering(container);
+
             }
     </script>
     <!-- New Topic Modal -->
