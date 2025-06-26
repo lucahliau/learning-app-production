@@ -2486,7 +2486,7 @@ function showModalLoading(isLoading) {
 }
 async function fetchQuiz(textContent) {
     showModalLoading(true); // Re-using your existing modal loader
-    const prompt = `Based *only* on the following text, create a multiple-choice quiz with 4 questions. The questions must be answerable solely from the provided text.
+    const prompt = `Based *only* on the following text, create a multiple-choice quiz with 6-10 questions. The questions must be answerable solely from the provided text.
 
     Your response MUST be a valid JSON object. Do not include any other text or explanations. The JSON object should follow this exact structure:
     {
@@ -3004,7 +3004,7 @@ The JSON object must have two required keys ("category", "syllabus") and one opt
 
 1.  **"category"**: Categorize this topic into ONE of the following predefined categories: ${categories.join(', ')}.
 2.  **"syllabus"**: Design a syllabus as a numbered list of 4-8 unique and compelling module titles for the topic. This value must be a single string. The modules should be specific to the topic and not generic at all. Provide only the titles. Avoid generic titles like "Introduction" or "Key Concepts.", 'historical context'.
-3.  **"visualAssets" (Optional)**: If the topic is inherently historical or best understood chronologically (e.g., a history topic), include this key. If not, OMIT this key entirely.
+3.  **"visualAssets" (Optional)**: If the topic is inherently historical or best understood chronologically (e.g., a history topic), include this key. If you choose to include it, make it detailed e.g. aim for 5-10 events/periods, though more if the topic demands it. For instance if asked about chinese imperial history make sure to include all the dynasties, not just some. If not, OMIT this key entirely.
     * If included, it MUST be an array containing a single object for a timeline.
     * The object's "type" MUST be "hybrid_timeline".
     * The object's "data" MUST be an array of event and/or period objects covering the topic's key milestones. An event must have a single date (e.g. a year) - if it spans more than 1 year or 1 date it should be classified as a period.
