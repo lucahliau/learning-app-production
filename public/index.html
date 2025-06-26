@@ -1942,7 +1942,7 @@ function renderHybridTimeline(container, hybridData) {
         
         const maxLevel = Math.max(10, availableSpace - cardHeightEstimate - verticalPadding);
         
-        const eventVerticalLevel = Math.round(maxLevel * 0.7);
+        const eventVerticalLevel = Math.round(maxLevel * 0.5);
         const periodVerticalLevel = Math.round(maxLevel * 0.2);
 
         const processedData = hybridData.map(d => {
