@@ -3688,7 +3688,7 @@ async function elaborateOnCurrent() {
 Your response MUST be a single, valid JSON object with no other text before or after it.
 The JSON object must have three keys: "explanation", "definitions", and an optional "visualAssets".
 
-1.  In the "explanation" value, provide a detailed, in-depth explanation suitable for the topic. **For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters. Use $ for inline math (e.g., Let $x$ be a variable) and $$ for display math (e.g., $$E = mc^2$$).**
+1.  In the "explanation" value, provide a detailed, in-depth explanation suitable for the topic. **For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters. Use $ for inline math (e.g., Let $x$ be a variable) and $$ for display math (e.g., $$E = mc^2$$). CRITICALLY, any backslash \\ in your LaTeX must be escaped as a double backslash \\\\ within the JSON string (e.g., write "\\\\sqrt" instead of "\\sqrt").**
 2.  In the "definitions" value, provide an array of objects for any technical terms used.
 3.  In the "visualAssets" value, (this key is optional, but **strongly encouraged** for STEM topics), you MUST use this key if the explanation can be enhanced with graphs or charts.
     * The value must be an array of "layout_row" objects. Each row represents a horizontal container.
