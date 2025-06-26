@@ -1416,15 +1416,15 @@
         /* --- TIMELINE STYLES --- */
         /* --- In your <style> block --- */
 
-.timeline-container-wrapper {
-    width: 100%;
-    position: relative;
-    padding: 15px 0;
-    /* CHANGE THIS LINE */
-    overflow-x: hidden; /* Was 'auto' */
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
+        .timeline-container-wrapper {
+            width: 100%;
+            position: relative;
+            padding: 15px 0;
+            overflow: hidden; /* Changed to hide overflow on BOTH axes */
+            height: 300px; /* ADDED: This sets a fixed height */
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
 
         .timeline-container-wrapper::-webkit-scrollbar {
             display: none;
@@ -1921,7 +1921,7 @@ const parseDateToFractionalYear = (dateStr) => {
     return null;
 };
 function renderHybridTimeline(container, hybridData) {
-    // 1. Create the timeline's HTML frame (without the "scroll" message)
+    // 1. Create the timeline's HTML frame
     container.innerHTML = `
         <h1>Timeline</h1>
         <div class="timeline-container-wrapper">
@@ -1937,6 +1937,20 @@ function renderHybridTimeline(container, hybridData) {
 
     // This block contains the new, corrected rendering logic.
     requestAnimationFrame(() => {
+        // --- NEW: Dynamically Calculate Vertical Levels ---
+        const containerHeight = timelineContainerWrapper.clientHeight; // Get the container's actual height (e.g., 300px)
+        const availableSpace = containerHeight / 2; // Space above or below the center line
+        const cardHeightEstimate = 50; // An approximation of an event card's height
+        const verticalPadding = 15; // A small safety margin to keep it from touching the edge
+        
+        // Calculate the largest possible vertical distance
+        const maxLevel = Math.max(20, availableSpace - cardHeightEstimate - verticalPadding);
+        
+        // Create three proportional levels based on the max possible distance
+        const eventVerticalLevels = [maxLevel, maxLevel * 0.7, maxLevel * 0.4].map(Math.round);
+        // The old hardcoded value was: const eventVerticalLevels = [85, 110, 150];
+        // --- END OF NEW LOGIC ---
+
         const processedData = hybridData.map(d => {
             if (d.type === 'period') {
                 const startYear = parseDateToFractionalYear(d.startStr);
@@ -1954,7 +1968,7 @@ function renderHybridTimeline(container, hybridData) {
         const compressionExponent = 0.5;
         const scaleValue = (value) => Math.pow(Math.max(0, value), compressionExponent) * 4;
 
-        // --- 1. Calculate "Natural" Layout (No Padding) ---
+        // 1. Calculate "Natural" Layout
         let lastNaturalPos = 0;
         let lastEventEndYear = processedData.length > 0 ? (processedData[0].type === 'period' ? processedData[0].startYear : processedData[0].year) : 0;
         
@@ -1970,9 +1984,9 @@ function renderHybridTimeline(container, hybridData) {
         });
         const totalNaturalWidth = lastNaturalPos;
 
-        // --- 2. Determine Final Width and Scaling Factor ---
+        // 2. Determine Final Width and Scaling Factor
         const containerWidth = timelineContainerWrapper.clientWidth;
-        const HORIZONTAL_MARGIN = 80; // Fixed space on left/right to keep cards in view
+        const HORIZONTAL_MARGIN = 80;
         
         timelineWrapper.style.width = `${containerWidth}px`;
         timelineLine.style.width = `${containerWidth}px`;
@@ -1980,15 +1994,13 @@ function renderHybridTimeline(container, hybridData) {
         const safeAreaWidth = containerWidth - (2 * HORIZONTAL_MARGIN);
         const positionScaleFactor = totalNaturalWidth > 0 ? safeAreaWidth / totalNaturalWidth : 0;
         
-        // --- 3. Render Elements with Final Scaled Positions ---
+        // 3. Render Elements with Final Scaled Positions
         let lastTopEnd = -Infinity, lastBottomEnd = -Infinity;
         let eventTopLevel = 0, eventBottomLevel = 0;
         const periodVerticalLevel = 25;
-        const eventVerticalLevels = [85, 110, 150];
-
+        
         processedData.forEach((item, index) => {
             const isTop = index % 2 === 0;
-            // NEW POSITIONING LOGIC: Scale first, then add the margin.
             const finalStartPos = (item.naturalStartPos * positionScaleFactor) + HORIZONTAL_MARGIN;
 
             if (item.type === 'period') {
