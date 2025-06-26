@@ -3326,13 +3326,13 @@ function closeNewTopicModal() {
     // This new prompt asks for a JSON object with two keys: "category" and "syllabus".
     // REPLACE the existing prompt in the handleNewTopicSubmit function
 
-    const prompt = `You are an expert, rigorous and intellectual curriculum designer who follows tasks they have been set with precision and speed. Your task is to design a unique syllabus for "${topic}" for a "${sophistication}" audience.
+    const prompt = `You are an expert, rigorous and intellectual curriculum designer who follows tasks they have been set with precision and speed. Your task is to devise a syllabus. In case a, the topic you are asked about already has a syllabus e.g. GCSE math graphs or SAT algebra. In this case you should use those syllabi as best you can, being rigorously comprehensive and MECE. In case b, you are asked about a topic in more abstract terms like "iranian history since 1800" or "chinese diplomacy". In this case your task is to design a unique syllabus for the topic "${topic}" for a "${sophistication}" audience.
 
 Your response MUST be a single, valid JSON object with NO other text before or after it.
 The JSON object must have two required keys ("category", "syllabus") and one optional key ("visualAssets").
 
 1.  **"category"**: Categorize this topic into ONE of the following predefined categories: ${categories.join(', ')}.
-2.  **"syllabus"**: Design a syllabus as a numbered list of 4-8 unique and compelling module titles for the topic. This value must be a single string. The modules should be specific to the topic and not generic at all. Provide only the titles. Avoid generic titles like "Introduction" or "Key Concepts.", 'historical context'.
+2.  **"syllabus"**: In case a, write a syllabus with 6-12 modules, which together are MECE. In case b, Design a syllabus as a numbered list of 4-8 unique and compelling module titles for the topic. In both cases this value must be a single string. The modules should be specific to the topic and in case b, not generic at all. Provide only the titles. Avoid generic titles like "Introduction" or "Key Concepts.", 'historical context'.
 3.  **"visualAssets" (Optional)**:
     * **IF the topic's category is NOT "Science" or "Mathematics"** and is inherently historical or best understood chronologically, you MAY include this key. If you choose to include it, make it detailed e.g. aim for 5-10 events/periods, though more if the topic demands it. For instance if asked about chinese imperial history make sure to include all the dynasties, not just some.
     * **IF the topic's category IS "Science" or "Mathematics", OMIT this key entirely.**
