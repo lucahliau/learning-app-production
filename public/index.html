@@ -1826,7 +1826,7 @@
  * using the KaTeX library.
  * @param {HTMLElement} element - The parent element to search within.
  */
-function renderMathInElement(element) {
+function triggerMathRendering(element) {
     // This is a KaTeX function that will find and render math expressions.
     // We need to import an additional script for it to work.
     if (window.renderMathInElement) {
@@ -3579,8 +3579,8 @@ function updateBreadcrumb() {
                 tellMeMoreBtn.onclick = () => elaborateOnCurrent();
                 mainContent.appendChild(tellMeMoreBtn);
             }
-            renderMathInElement(mainContent);
-        }
+            triggerMathRendering(mainContent);
+                }
 
 
         // Create card element
