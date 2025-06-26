@@ -2457,28 +2457,26 @@ async function loadTopicsFromFirestore(userId) {
             console.log("Topics loaded successfully!");
         } else {
             console.log("No saved topics found for this user. Starting fresh.");
-            learningTopics = {}; // Start with an empty object
+            learningTopics = {};
         }
 
-        // --- NEW SESSION RESTORATION LOGIC ---
+        // --- REVISED SESSION RESTORATION LOGIC ---
         const lastTopicId = sessionStorage.getItem('lastActiveTopicId');
-        const lastNodeId = sessionStorage.getItem('lastActiveNodeId');
 
-        // Check if we have a saved state and if that topic still exists
-        if (lastTopicId && lastNodeId && learningTopics[lastTopicId]) {
-            console.log(`Restoring session to topic: ${lastTopicId}, node: ${lastNodeId}`);
-            // Load the topic and navigate directly to the last viewed node
-            loadLearningTopic(lastTopicId, lastNodeId);
+        // Check if we have a saved topic and if that topic still exists
+        if (lastTopicId && learningTopics[lastTopicId]) {
+            console.log(`Restoring session to topic: ${lastTopicId}`);
+            // Let the new, smarter loadLearningTopic handle the rest.
+            loadLearningTopic(lastTopicId);
         } else {
             // If no saved state, show the main menu as before
             renderTopicCards();
             switchView('landingView');
         }
-        // --- END OF NEW LOGIC ---
+        // --- END OF REVISED LOGIC ---
 
     } catch (error) {
         console.error("Error loading topics: ", error);
-        // Fallback to the main menu on error
         renderTopicCards();
         switchView('landingView');
     }
@@ -2922,21 +2920,31 @@ document.getElementById('sortControls').addEventListener('click', (e) => {
  */
 // Find and replace this entire function
 function loadLearningTopic(topicId, initialNodeId = 'root') {
-        currentTopicId = topicId; // This line is the issue
+    // --- NEW LOGIC TO REMEMBER LAST NODE ---
+    const lastTopicId = sessionStorage.getItem('lastActiveTopicId');
+    const lastNodeId = sessionStorage.getItem('lastActiveNodeId');
+
+    // If we are loading the same topic we were just on, and we weren't told to go
+    // to a specific node (i.e., we came from the main menu), then go to the last node instead.
+    if (topicId === lastTopicId && initialNodeId === 'root' && lastNodeId) {
+        initialNodeId = lastNodeId;
+    }
+    // --- END OF NEW LOGIC ---
+
+    currentTopicId = topicId;
     const topicData = learningTopics[topicId];
     if (!topicData) {
         console.error("Topic not found:", topicId);
         return;
     }
-    topicData.lastOpened = Date.now(); // ADD THIS LINE
+    topicData.lastOpened = Date.now();
 
     treeStructure = topicData;
     navigationHistory = [];
     currentHistoryIndex = -1;
 
-    // Applied here for the sidebar title when loading a topic
     document.getElementById('sidebarTitle').innerHTML = createTagsHTML(treeStructure);
-    navigateToNode(initialNodeId);
+    navigateToNode(initialNodeId); // Use the potentially updated initialNodeId
     switchView('learningView');
 }
        /**
