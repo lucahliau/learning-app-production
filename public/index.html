@@ -2022,10 +2022,10 @@ function renderHybridTimeline(container, hybridData) {
                 
                 if (isTop) {
                     eventWrapper.style.bottom = '50%';
-                    eventWrapper.style.marginBottom = '5px';
+                    eventWrapper.style.marginBottom = '0px';
                 } else {
                     eventWrapper.style.top = '50%';
-                    eventWrapper.style.marginTop = '5px';
+                    eventWrapper.style.marginTop = '0px';
                 }
                 
                 eventWrapper.innerHTML = `
@@ -2340,6 +2340,21 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 const googleProvider = new firebase.auth.GoogleAuthProvider();
 
+ // ======================= START: ADD THIS CODE =======================
+ window.addEventListener('beforeunload', () => {
+        // Only save the state if a topic is actually loaded and the user is in the learning view.
+        if (currentTopicId && currentTreeNode && document.getElementById('learningView').classList.contains('active')) {
+            const stateToSave = {
+                topicId: currentTopicId,
+                nodeId: currentTreeNode.id
+            };
+            // Use sessionStorage to store the state for the current session.
+            // It's automatically cleared when the browser tab is closed.
+            sessionStorage.setItem('learningAppLastState', JSON.stringify(stateToSave));
+            console.log('Saved state to sessionStorage:', stateToSave);
+        }
+    });
+    // ======================== END: ADD THIS CODE ========================
 
 // At the top of your script, get references to the new elements
 const authView = document.getElementById('authView');
@@ -2446,33 +2461,101 @@ async function saveTopicsToFirestore() {
         console.log("Save failed: No user is currently logged in.");
     }
 }
+// ADD THIS EVENT LISTENER
+window.addEventListener('beforeunload', () => {
+    if (currentTopicId && currentTreeNode && document.getElementById('learningView').classList.contains('active')) {
+        const stateToSave = {
+            topicId: currentTopicId,
+            nodeId: currentTreeNode.id
+        };
+        sessionStorage.setItem('learningAppLastState', JSON.stringify(stateToSave));
+        console.log('Saved state to sessionStorage:', stateToSave);
+    }
+});
+// ADD THESE TWO FUNCTIONS
 
+function setupLearningViewForTopic(topicId) {
+    currentTopicId = topicId;
+    const topicData = learningTopics[topicId];
+    if (!topicData) {
+        console.error("Topic not found:", topicId);
+        return false;
+    }
+    topicData.lastOpened = Date.now();
+    treeStructure = topicData;
+    navigationHistory = [];
+    currentHistoryIndex = -1;
+    document.getElementById('sidebarTitle').innerHTML = createTagsHTML(treeStructure);
+    switchView('learningView');
+    return true;
+}
+
+function restoreLastSession() {
+    const savedStateJSON = sessionStorage.getItem('learningAppLastState');
+    if (savedStateJSON) {
+        sessionStorage.removeItem('learningAppLastState');
+        try {
+            const savedState = JSON.parse(savedStateJSON);
+            const { topicId, nodeId } = savedState;
+            if (topicId && nodeId && learningTopics[topicId]) {
+                const targetNode = findNodeById(learningTopics[topicId], nodeId);
+                if (targetNode) {
+                    console.log('Restoring previous session state:', savedState);
+                    if (setupLearningViewForTopic(topicId)) {
+                        navigateToNode(nodeId);
+                        return true;
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Failed to parse or restore session state:', error);
+        }
+    }
+    return false;
+}
 // Function to load topics when a user logs in
+// =================== START: REPLACE THIS FUNCTION ===================
+// REPLACE the entire loadTopicsFromFirestore function
 async function loadTopicsFromFirestore(userId) {
     try {
         const doc = await db.collection('userTopics').doc(userId).get();
         if (doc.exists) {
             const data = doc.data();
-            // Important: We need a way to restore the circular 'parent' references
-            // that JSON.stringify removes.
-            learningTopics = restoreParents(data.topics);
-            console.log("Topics loaded successfully!");
+            learningTopics = restoreAndFixData(data.topics);
+            console.log("Topics loaded successfully! IDs are now persistent.");
         } else {
             console.log("No saved topics found for this user. Starting fresh.");
-            learningTopics = {}; // Start with an empty object
+            learningTopics = {};
         }
-        // After loading, render the cards on the landing page
-        renderTopicCards();
+
+        // Attempt to restore the last session.
+        const wasSessionRestored = restoreLastSession();
+
+        // If a session was NOT restored, show the default landing page.
+        if (!wasSessionRestored) {
+            renderTopicCards();
+            switchView('landingView');
+        }
     } catch (error) {
         console.error("Error loading topics: ", error);
+        renderTopicCards();
+        switchView('landingView');
     }
 }
+// ==================== END: REPLACE THIS FUNCTION ====================
 
 // Helper function to restore the parent-child links in your tree
-function restoreParents(topics) {
+// REPLACE the existing restoreParents function with this new one
+function restoreAndFixData(topics) {
     Object.values(topics).forEach(topic => {
         function traverse(node, parent) {
+            // Assign a persistent ID if one doesn't exist (for old data)
+            if (!node.id) {
+                node.id = generateUniqueId();
+            }
+            // Restore the circular parent reference
             node.parent = parent;
+
             if (node.children) {
                 node.children.forEach(child => traverse(child, node));
             }
@@ -2900,29 +2983,79 @@ document.getElementById('sortControls').addEventListener('click', (e) => {
     }
 });
 
+// =================== START: REPLACE THIS CODE BLOCK ===================
+
 /**
- * Loads a specific topic's data into the learning view.
- * @param {string} topicId - The ID of the topic to load.
+ * Sets up the learning view for a given topic, but does not navigate to a node.
+ * @param {string} topicId - The ID of the topic to set up.
+ * @returns {boolean} True if setup was successful, false otherwise.
  */
-// Find and replace this entire function
-function loadLearningTopic(topicId) {
-    currentTopicId = topicId; // This line is the issue
+ function setupLearningViewForTopic(topicId) {
+    currentTopicId = topicId;
     const topicData = learningTopics[topicId];
     if (!topicData) {
         console.error("Topic not found:", topicId);
-        return;
+        return false;
     }
-    topicData.lastOpened = Date.now(); // ADD THIS LINE
+    topicData.lastOpened = Date.now(); // Update last opened time
 
     treeStructure = topicData;
     navigationHistory = [];
     currentHistoryIndex = -1;
 
-    // Applied here for the sidebar title when loading a topic
     document.getElementById('sidebarTitle').innerHTML = createTagsHTML(treeStructure);
-    navigateToNode('root');
     switchView('learningView');
+    return true;
 }
+// ======================= START: ADD THIS CODE =======================
+/**
+ * Checks sessionStorage for a saved state and restores it if found.
+ * @returns {boolean} True if a state was successfully restored, otherwise false.
+ */
+ function restoreLastSession() {
+    const savedStateJSON = sessionStorage.getItem('learningAppLastState');
+    if (savedStateJSON) {
+        // Clear the state once we've read it, so a subsequent refresh doesn't
+        // get stuck in a loop if something goes wrong.
+        sessionStorage.removeItem('learningAppLastState');
+        try {
+            const savedState = JSON.parse(savedStateJSON);
+            const { topicId, nodeId } = savedState;
+
+            // Check if the saved topic and node still exist in our loaded data.
+            if (topicId && nodeId && learningTopics[topicId]) {
+                const topicData = learningTopics[topicId];
+                const targetNode = findNodeById(topicData, nodeId);
+
+                if (targetNode) {
+                    console.log('Restoring previous session state:', savedState);
+                    // Use the helper to set up the main view
+                    if(setupLearningViewForTopic(topicId)) {
+                        // Then navigate to the specific node from the saved state.
+                        navigateToNode(nodeId);
+                        return true; // Indicate that state was restored.
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Failed to parse or restore session state:', error);
+            // In case of error, ensure the corrupted state is cleared.
+            sessionStorage.removeItem('learningAppLastState');
+        }
+    }
+    return false; // No valid state was found or restored.
+}
+// ======================== END: ADD THIS CODE ========================
+
+// This is the updated `loadLearningTopic` function
+// REPLACE the existing loadLearningTopic function
+function loadLearningTopic(topicId) {
+    if (setupLearningViewForTopic(topicId)) {
+        navigateToNode('root');
+    }
+}
+
+// ==================== END: REPLACE THIS CODE BLOCK ====================
        /**
  * Resets the learning view and displays the initial syllabus for a new topic.
  * @param {string} topicTitle - The title of the new topic.
@@ -2996,7 +3129,6 @@ function loadLearningTopic(topicId) {
             sectionIndex: null
         };
         let currentTreeNode = treeStructure;
-        let nodeIdCounter = 0;
 
         // Current context tracking
         let currentContext = {
@@ -3246,27 +3378,27 @@ function parseResponse(mainContentText, definitionsArray) {
             return text;
         }
         // Create tree node
-        function createTreeNode(title, content, parent, isUserQuestion = false) {
-            const node = {
-                id: `node-${++nodeIdCounter}`,
-                title: title.length > 30 ? title.substring(0, 30) + '...' : title,
-                fullTitle: title,
-                content: content,
-                parent: parent,
-                children: [],
-                isUserQuestion: isUserQuestion,
-                sectionIndex: null,
-                isRead: false
-            };
-            
-            if (parent) {
-                parent.children.push(node);
-                // Update section indices for all non-question siblings
-                updateSectionIndices(parent);
-            }
-            
-            return node;
-        }
+        // REPLACE the existing createTreeNode function
+function createTreeNode(title, content, parent, isUserQuestion = false) {
+    const node = {
+        id: generateUniqueId(), // Use the new robust ID generator
+        title: title.length > 30 ? title.substring(0, 30) + '...' : title,
+        fullTitle: title,
+        content: content,
+        parent: parent,
+        children: [],
+        isUserQuestion: isUserQuestion,
+        sectionIndex: null,
+        isRead: false
+    };
+
+    if (parent) {
+        parent.children.push(node);
+        updateSectionIndices(parent);
+    }
+
+    return node;
+}
 
         // Update section indices for children
         function updateSectionIndices(parent) {
@@ -3350,48 +3482,43 @@ function renderTreeNode(node, level = 0) {
 }
         // Navigate to tree node
         async function navigateToNode(nodeId) {
-            const node = findNodeById(treeStructure, nodeId);
-            if (node) {
-                if (node.children.length === 0 && !node.content && node.id !== 'root') {
-            
-            // This function fetches the content from the API. It will then call
-            // navigateToNode again, but the second time the content will exist.
-            await elaborateOnTopic(node, false);             
-            // Stop the rest of this function from running, because elaborateOnTopic
-            // has already handled the navigation.
-            return; 
+    const node = findNodeById(treeStructure, nodeId);
+    if (node) {
+        if (node.children.length === 0) {
+            node.isRead = true;
+            updateParentReadStatus(node.parent);
         }
-                // *** LOGIC TO MARK NODE AS READ IS ADDED HERE ***
-                // We only mark it as read if it's a content node (doesn't have children).
-                // The status of parent nodes is determined by the `updateParentReadStatus` function.
-                if (node.children.length === 0) {
-                    node.isRead = true;
-                    // After marking this node, check if its parent is now fully read.
-                    updateParentReadStatus(node.parent);
-                }
-                saveTopicsToFirestore(); // Save the change in the node's "read" status
 
-                // Add to navigation history
-                navigationHistory = navigationHistory.slice(0, currentHistoryIndex + 1);
-                navigationHistory.push({
-                    node: node,
-                    content: JSON.parse(JSON.stringify(node.content)), // Deep copy
-                    context: {
-                        topic: node.fullTitle || node.title,
-                        subtopic: null,
-                        fullContent: node.content
-                    }
-                });
-                currentHistoryIndex = navigationHistory.length - 1;
-                
-                currentTreeNode = node;
-                currentContext = navigationHistory[currentHistoryIndex].context;
-                
-                updateNavigation();
-                displayContent(node);
-                updateTreeVisualization(); // This will redraw the tree with the new 'read' status
+        // Add to navigation history
+        navigationHistory = navigationHistory.slice(0, currentHistoryIndex + 1);
+        navigationHistory.push({
+            node: node,
+            content: JSON.parse(JSON.stringify(node.content)),
+            context: {
+                topic: node.fullTitle || node.title,
+                subtopic: null,
+                fullContent: node.content
             }
-        }
+        });
+        currentHistoryIndex = navigationHistory.length - 1;
+        
+        currentTreeNode = node;
+        
+        // --- THIS IS THE CORRECTED STATE SAVING LOGIC ---
+        treeStructure.lastActiveNodeId = nodeId; // Save last viewed node to the topic's data
+        sessionStorage.setItem('lastActiveTopicId', currentTopicId); // Save the active topic to the session
+        // --- END OF CORRECTION ---
+
+        currentContext = navigationHistory[currentHistoryIndex].context;
+        
+        updateNavigation();
+        displayContent(node);
+        updateTreeVisualization();
+        
+        // Save the changes (like isRead and lastActiveNodeId) to Firestore
+        await saveTopicsToFirestore(); 
+    }
+}
 
         // Find node by ID
         function findNodeById(node, id) {
@@ -3413,7 +3540,10 @@ function renderTreeNode(node, level = 0) {
             
             updateBreadcrumb();
         }
-
+// ADD THIS NEW FUNCTION
+function generateUniqueId() {
+    return `node-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+}
         // Update breadcrumb
         // Find and replace this entire function
 function updateBreadcrumb() {
@@ -4422,7 +4552,6 @@ newTopicModal.addEventListener('click', (e) => {
 });
 
 // Initialize the app on the landing page
-switchView('landingView');
 // --- FINAL REVISION: Tooltip Repositioning Logic ---
 const mainContent = document.getElementById('mainContent');
 

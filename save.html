@@ -2461,22 +2461,73 @@ async function saveTopicsToFirestore() {
         console.log("Save failed: No user is currently logged in.");
     }
 }
+// ADD THIS EVENT LISTENER
+window.addEventListener('beforeunload', () => {
+    if (currentTopicId && currentTreeNode && document.getElementById('learningView').classList.contains('active')) {
+        const stateToSave = {
+            topicId: currentTopicId,
+            nodeId: currentTreeNode.id
+        };
+        sessionStorage.setItem('learningAppLastState', JSON.stringify(stateToSave));
+        console.log('Saved state to sessionStorage:', stateToSave);
+    }
+});
+// ADD THESE TWO FUNCTIONS
 
+function setupLearningViewForTopic(topicId) {
+    currentTopicId = topicId;
+    const topicData = learningTopics[topicId];
+    if (!topicData) {
+        console.error("Topic not found:", topicId);
+        return false;
+    }
+    topicData.lastOpened = Date.now();
+    treeStructure = topicData;
+    navigationHistory = [];
+    currentHistoryIndex = -1;
+    document.getElementById('sidebarTitle').innerHTML = createTagsHTML(treeStructure);
+    switchView('learningView');
+    return true;
+}
+
+function restoreLastSession() {
+    const savedStateJSON = sessionStorage.getItem('learningAppLastState');
+    if (savedStateJSON) {
+        sessionStorage.removeItem('learningAppLastState');
+        try {
+            const savedState = JSON.parse(savedStateJSON);
+            const { topicId, nodeId } = savedState;
+            if (topicId && nodeId && learningTopics[topicId]) {
+                const targetNode = findNodeById(learningTopics[topicId], nodeId);
+                if (targetNode) {
+                    console.log('Restoring previous session state:', savedState);
+                    if (setupLearningViewForTopic(topicId)) {
+                        navigateToNode(nodeId);
+                        return true;
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Failed to parse or restore session state:', error);
+        }
+    }
+    return false;
+}
 // Function to load topics when a user logs in
 // =================== START: REPLACE THIS FUNCTION ===================
+// REPLACE the entire loadTopicsFromFirestore function
 async function loadTopicsFromFirestore(userId) {
     try {
         const doc = await db.collection('userTopics').doc(userId).get();
         if (doc.exists) {
             const data = doc.data();
-            learningTopics = restoreParents(data.topics);
-            console.log("Topics loaded successfully!");
+            learningTopics = restoreAndFixData(data.topics);
+            console.log("Topics loaded successfully! IDs are now persistent.");
         } else {
             console.log("No saved topics found for this user. Starting fresh.");
             learningTopics = {};
         }
 
-        // --- THIS IS THE NEW LOGIC ---
         // Attempt to restore the last session.
         const wasSessionRestored = restoreLastSession();
 
@@ -2485,11 +2536,8 @@ async function loadTopicsFromFirestore(userId) {
             renderTopicCards();
             switchView('landingView');
         }
-        // --- END OF NEW LOGIC ---
-
     } catch (error) {
         console.error("Error loading topics: ", error);
-        // Fallback to the landing page in case of any error.
         renderTopicCards();
         switchView('landingView');
     }
@@ -2497,10 +2545,17 @@ async function loadTopicsFromFirestore(userId) {
 // ==================== END: REPLACE THIS FUNCTION ====================
 
 // Helper function to restore the parent-child links in your tree
-function restoreParents(topics) {
+// REPLACE the existing restoreParents function with this new one
+function restoreAndFixData(topics) {
     Object.values(topics).forEach(topic => {
         function traverse(node, parent) {
+            // Assign a persistent ID if one doesn't exist (for old data)
+            if (!node.id) {
+                node.id = generateUniqueId();
+            }
+            // Restore the circular parent reference
             node.parent = parent;
+
             if (node.children) {
                 node.children.forEach(child => traverse(child, node));
             }
@@ -2993,9 +3048,9 @@ document.getElementById('sortControls').addEventListener('click', (e) => {
 // ======================== END: ADD THIS CODE ========================
 
 // This is the updated `loadLearningTopic` function
+// REPLACE the existing loadLearningTopic function
 function loadLearningTopic(topicId) {
     if (setupLearningViewForTopic(topicId)) {
-        // The save is handled by navigateToNode, which calls saveTopicsToFirestore.
         navigateToNode('root');
     }
 }
@@ -3074,7 +3129,6 @@ function loadLearningTopic(topicId) {
             sectionIndex: null
         };
         let currentTreeNode = treeStructure;
-        let nodeIdCounter = 0;
 
         // Current context tracking
         let currentContext = {
@@ -3324,27 +3378,27 @@ function parseResponse(mainContentText, definitionsArray) {
             return text;
         }
         // Create tree node
-        function createTreeNode(title, content, parent, isUserQuestion = false) {
-            const node = {
-                id: `node-${++nodeIdCounter}`,
-                title: title.length > 30 ? title.substring(0, 30) + '...' : title,
-                fullTitle: title,
-                content: content,
-                parent: parent,
-                children: [],
-                isUserQuestion: isUserQuestion,
-                sectionIndex: null,
-                isRead: false
-            };
-            
-            if (parent) {
-                parent.children.push(node);
-                // Update section indices for all non-question siblings
-                updateSectionIndices(parent);
-            }
-            
-            return node;
-        }
+        // REPLACE the existing createTreeNode function
+function createTreeNode(title, content, parent, isUserQuestion = false) {
+    const node = {
+        id: generateUniqueId(), // Use the new robust ID generator
+        title: title.length > 30 ? title.substring(0, 30) + '...' : title,
+        fullTitle: title,
+        content: content,
+        parent: parent,
+        children: [],
+        isUserQuestion: isUserQuestion,
+        sectionIndex: null,
+        isRead: false
+    };
+
+    if (parent) {
+        parent.children.push(node);
+        updateSectionIndices(parent);
+    }
+
+    return node;
+}
 
         // Update section indices for children
         function updateSectionIndices(parent) {
@@ -3486,7 +3540,10 @@ function renderTreeNode(node, level = 0) {
             
             updateBreadcrumb();
         }
-
+// ADD THIS NEW FUNCTION
+function generateUniqueId() {
+    return `node-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+}
         // Update breadcrumb
         // Find and replace this entire function
 function updateBreadcrumb() {
