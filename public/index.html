@@ -1937,19 +1937,22 @@ function renderHybridTimeline(container, hybridData) {
 
     // This block contains the new, corrected rendering logic.
     requestAnimationFrame(() => {
-        // --- NEW: Dynamically Calculate Vertical Levels ---
-        const containerHeight = timelineContainerWrapper.clientHeight; // Get the container's actual height (e.g., 300px)
-        const availableSpace = containerHeight / 2; // Space above or below the center line
-        const cardHeightEstimate = 50; // An approximation of an event card's height
-        const verticalPadding = 15; // A small safety margin to keep it from touching the edge
+        // --- UPDATED: Dynamic Vertical Level Calculation ---
+        const containerHeight = timelineContainerWrapper.clientHeight;
+        const availableSpace = containerHeight / 2;
+        const cardHeightEstimate = 50;
+        const verticalPadding = 15;
         
-        // Calculate the largest possible vertical distance
-        const maxLevel = Math.max(20, availableSpace - cardHeightEstimate - verticalPadding);
+        // The minimum 'floor' value is reduced from 20 to 10 for more flexibility.
+        const maxLevel = Math.max(10, availableSpace - cardHeightEstimate - verticalPadding);
         
-        // Create three proportional levels based on the max possible distance
+        // This is for the text-only 'event' types
         const eventVerticalLevels = [maxLevel, maxLevel * 0.7, maxLevel * 0.4].map(Math.round);
-        // The old hardcoded value was: const eventVerticalLevels = [85, 110, 150];
-        // --- END OF NEW LOGIC ---
+        
+        // REPLACED: The old hardcoded value was const periodVerticalLevel = 25;
+        // This is for the card-based 'period' types, now also dynamic.
+        const periodVerticalLevel = Math.round(maxLevel * 0.6);
+        // --- END OF UPDATE ---
 
         const processedData = hybridData.map(d => {
             if (d.type === 'period') {
@@ -1997,7 +2000,6 @@ function renderHybridTimeline(container, hybridData) {
         // 3. Render Elements with Final Scaled Positions
         let lastTopEnd = -Infinity, lastBottomEnd = -Infinity;
         let eventTopLevel = 0, eventBottomLevel = 0;
-        const periodVerticalLevel = 25;
         
         processedData.forEach((item, index) => {
             const isTop = index % 2 === 0;
@@ -2013,6 +2015,7 @@ function renderHybridTimeline(container, hybridData) {
                 eventElement.innerHTML = `<div class="timeline-event-title">${item.name}</div><div class="timeline-event-date">${item.startStr} - ${item.endStr}</div>`;
                 eventElement.style.left = `${cardStartPos}px`;
                 eventElement.style.width = `${cardWidth}px`;
+                // Uses the new dynamic periodVerticalLevel
                 eventElement.style.marginBottom = isTop ? `${periodVerticalLevel}px` : null;
                 eventElement.style.marginTop = !isTop ? `${periodVerticalLevel}px` : null;
                 timelineWrapper.appendChild(eventElement);
