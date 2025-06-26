@@ -1624,6 +1624,33 @@
     transform: translateX(-50%) scale(1.1); 
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }*/
+/* ADD these new CSS rules to your main <style> block */
+
+    .visual-asset-row {
+    display: flex;
+    flex-wrap: wrap; /* Allows columns to wrap on smaller screens if needed */
+    gap: 20px;
+    margin: 25px 0;
+    align-items: stretch; /* Make columns same height */
+}
+
+.visual-asset-column {
+    flex: 1; /* Each column takes up equal space */
+    min-width: 300px; /* Prevents columns from getting too squished */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Ensure lab containers inside columns behave correctly */
+.visual-asset-column .lab-container {
+    padding: 15px; /* Reduce padding for smaller containers */
+    height: 100%;
+}
+
+.visual-asset-column .lab-container h1 {
+    font-size: 18px; /* Smaller title for inline graphs */
+    margin-bottom: 10px;
+}
             </style>
 
 <script>
@@ -2997,6 +3024,8 @@ function closeNewTopicModal() {
     ];
 
     // This new prompt asks for a JSON object with two keys: "category" and "syllabus".
+    // REPLACE the existing prompt in the handleNewTopicSubmit function
+
     const prompt = `You are an expert, rigorous and intellectual curriculum designer who follows tasks they have been set with precision and speed. Your task is to design a unique syllabus for "${topic}" for a "${sophistication}" audience.
 
 Your response MUST be a single, valid JSON object with NO other text before or after it.
@@ -3004,7 +3033,9 @@ The JSON object must have two required keys ("category", "syllabus") and one opt
 
 1.  **"category"**: Categorize this topic into ONE of the following predefined categories: ${categories.join(', ')}.
 2.  **"syllabus"**: Design a syllabus as a numbered list of 4-8 unique and compelling module titles for the topic. This value must be a single string. The modules should be specific to the topic and not generic at all. Provide only the titles. Avoid generic titles like "Introduction" or "Key Concepts.", 'historical context'.
-3.  **"visualAssets" (Optional)**: If the topic is inherently historical or best understood chronologically (e.g., a history topic), include this key. If you choose to include it, make it detailed e.g. aim for 5-10 events/periods, though more if the topic demands it. For instance if asked about chinese imperial history make sure to include all the dynasties, not just some. If not, OMIT this key entirely.
+3.  **"visualAssets" (Optional)**:
+    * **IF the topic's category is NOT "Science" or "Mathematics"** and is inherently historical or best understood chronologically, you MAY include this key. If you choose to include it, make it detailed e.g. aim for 5-10 events/periods, though more if the topic demands it. For instance if asked about chinese imperial history make sure to include all the dynasties, not just some.
+    * **IF the topic's category IS "Science" or "Mathematics", OMIT this key entirely.**
     * If included, it MUST be an array containing a single object for a timeline.
     * The object's "type" MUST be "hybrid_timeline".
     * The object's "data" MUST be an array of event and/or period objects covering the topic's key milestones. An event must have a single date (e.g. a year) - if it spans more than 1 year or 1 date it should be classified as a period.
@@ -3419,37 +3450,62 @@ function updateBreadcrumb() {
             }
  // --- NEW: VISUAL ASSET DISPATCHER ---
  if (parsedContent.visualAssets && parsedContent.visualAssets.length > 0) {
-    parsedContent.visualAssets.forEach(asset => {
-        // Create a single container for the asset
-        const assetContainer = document.createElement('div');
-        assetContainer.className = 'lab-container';
-        assetContainer.style.marginTop = '40px';
-        
-        // Call the appropriate render function, passing the container to be filled
-        // --- ADD THIS CORRECTED CODE IN ITS PLACE ---
-const assetType = asset.type.trim(); // Trim whitespace to be safe
+                parsedContent.visualAssets.forEach(asset => {
+                    // Check if this asset is our new row structure
+                    if (asset.type === 'layout_row' && asset.columns) {
+                        const rowContainer = document.createElement('div');
+                        rowContainer.className = 'visual-asset-row';
 
-// This is the new, corrected line
-if (assetType.includes('hybrid_timeline')) {
-        console.log("INCLUDES HYBRID")
-        renderHybridTimeline(assetContainer, asset.data);
-} else if (assetType === 'implicit_plotter') {
-    renderImplicitPlotter(assetContainer, asset.data);
-} else if (assetType === 'bar_chart') {
-    const barChartId = 'asset-' + Date.now() + Math.random().toString(36).substring(2, 9);
-    assetContainer.innerHTML = `<h1>Bar Chart</h1><div class="chart-container bar-chart-container"><canvas id="${barChartId}"></canvas></div>`;
-    renderBarChart(barChartId, asset.data);
-} else if (assetType === 'pie_chart') {
-    const pieChartId = 'asset-' + Date.now() + Math.random().toString(36).substring(2, 9);
-    const legendId = 'legend-' + pieChartId;
-    assetContainer.innerHTML = `<h1>Pie Chart</h1><div class="chart-container pie-chart-wrapper"><div class="pie-chart-container"><canvas id="${pieChartId}"></canvas></div><div class="pie-legend-container" id="${legendId}"></div></div>`;
-    renderPieChart(pieChartId, legendId, asset.data);
-}
-        
-        // Append the fully prepared container to the page once
-        mainContent.appendChild(assetContainer);
-    });
-}
+                        asset.columns.forEach(columnAsset => {
+                            const columnContainer = document.createElement('div');
+                            columnContainer.className = 'visual-asset-column';
+                            
+                            // Use existing render functions but pass the smaller column as the container
+                            const assetType = columnAsset.type.trim();
+                            if (assetType === 'implicit_plotter') {
+                                // For plotters, we wrap them in a lab-container to keep their styles
+                                const labWrapper = document.createElement('div');
+                                labWrapper.className = 'lab-container';
+                                labWrapper.style.margin = '0'; // Reset margin
+                                labWrapper.style.width = '100%'; // Take full width of column
+                                renderImplicitPlotter(labWrapper, columnAsset.data);
+                                columnContainer.appendChild(labWrapper);
+
+                            } else if (assetType === 'bar_chart' || assetType === 'pie_chart') {
+                                // For charts, the structure is simpler
+                                const chartWrapper = document.createElement('div');
+                                chartWrapper.className = 'chart-container'; // Generic chart styles
+                                const chartId = 'asset-' + Date.now() + Math.random().toString(36).substring(2, 9);
+                                chartWrapper.innerHTML = `<canvas id="${chartId}"></canvas>`;
+                                
+                                if (assetType === 'bar_chart') {
+                                    chartWrapper.classList.add('bar-chart-container');
+                                    renderBarChart(chartId, columnAsset.data);
+                                } else {
+                                    chartWrapper.classList.add('pie-chart-container');
+                                    // Note: Pie chart with inline legend might need more specific styling
+                                    renderPieChart(chartId, null, columnAsset.data);
+                                }
+                                columnContainer.appendChild(chartWrapper);
+                            }
+                            rowContainer.appendChild(columnContainer);
+                        });
+                        mainContent.appendChild(rowContainer);
+
+                    } else {
+                        // --- Fallback for old/non-row assets (like timelines) ---
+                        const assetContainer = document.createElement('div');
+                        assetContainer.className = 'lab-container';
+                        assetContainer.style.marginTop = '40px';
+                        
+                        const assetType = asset.type.trim();
+                        if (assetType.includes('hybrid_timeline')) {
+                            renderHybridTimeline(assetContainer, asset.data);
+                        }
+                        mainContent.appendChild(assetContainer);
+                    }
+                });
+            }
             // Render the sub-topic cards
             if (parsedContent.sections && parsedContent.sections.length > 0) {
                 const cardsGrid = document.createElement('div');
@@ -3574,7 +3630,85 @@ async function elaborateOnCurrent() {
         // REPIACE the entire function
         async function elaborateOnTopic(targetNode, generateNewCards = false) {
     showSkeletonLoader(); // <-- ADD THIS LINE
+    const topicRootNode = findNodeById(treeStructure, currentTopicId);
+    const topicCategory = topicRootNode.category;
+    const isStemTopic = topicCategory === 'Science' || topicCategory === 'Mathematics';
 
+    if (isStemTopic && !generateNewCards) {
+        // This is the new, specialized prompt for STEM topics.
+        const stemPrompt = `You are an expert educator specializing in Science and Mathematics who carries out tasks with precision and speed. Your task is to provide a detailed explanation of the topic "${targetNode.fullTitle}".
+
+Your response MUST be a single, valid JSON object with no other text before or after it.
+The JSON object must have three keys: "explanation", "definitions", and an optional "visualAssets".
+
+1.  In the "explanation" value, provide a detailed, in-depth explanation suitable for the topic. Use markdown for formatting.
+2.  In the "definitions" value, provide an array of objects for any technical terms used.
+3.  In the "visualAssets" value, (this key is optional, but **strongly encouraged** for STEM topics), you MUST use this key if the explanation can be enhanced with graphs or charts.
+    * The value must be an array of "layout_row" objects. Each row represents a horizontal container.
+    * Each "layout_row" object has a "columns" key, which is an array of visual assets to display side-by-side.
+    * Each asset in the "columns" array is an object with a "type" and "data".
+
+Here are the available asset types for the "columns":
+
+* **For a function graph:**
+    * "type": "implicit_plotter"
+    * "data": (String) A single string with one or more equations separated by semicolons (e.g., "y=x^2; y=-x^2").
+* **For a bar chart:**
+    * "type": "bar_chart"
+    * "data": (String) A multi-line string with each line in "Label: Value" format.
+* **For a pie chart:**
+    * "type": "pie_chart"
+    * "data": (String) A multi-line string with each line in "Label: Percentage" format.
+
+Example for a topic on Parabolas:
+{
+  "explanation": "A parabola is a U-shaped curve defined by a quadratic equation...",
+  "definitions": [{"term": "focus", "definition": "A special point used to construct the curve."}],
+  "visualAssets": [
+    {
+      "type": "layout_row",
+      "columns": [
+        { "type": "implicit_plotter", "data": "y=x^2" },
+        { "type": "implicit_plotter", "data": "y=-x^2+4" }
+      ]
+    },
+    {
+      "type": "layout_row",
+      "columns": [
+        { "type": "implicit_plotter", "data": "x=y^2-2" }
+      ]
+    }
+  ]
+}`;
+        // This part runs the new prompt and then exits the function early.
+        try {
+            conversationHistory.push({ role: "user", content: stemPrompt });
+            pruneConversationHistory();
+            const response = await fetch(BACKEND_URL + '/chat', { /*...fetch options...*/ body: JSON.stringify({ messages: conversationHistory }) });
+            if (!response.ok) throw new Error('Failed to get STEM response');
+            const data = await response.json();
+            const botResponse = data.choices[0].message.content;
+            conversationHistory.push({ role: "assistant", content: botResponse });
+
+            const jsonMatch = botResponse.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) throw new Error("No valid JSON object found in the AI response.");
+            const structuredResponse = JSON.parse(jsonMatch[0]);
+
+            const parsed = parseResponse(structuredResponse.explanation, structuredResponse.definitions);
+            parsed.visualAssets = structuredResponse.visualAssets || [];
+            parsed.showTellMeMore = true; // You can decide if you want this for STEM topics.
+
+            targetNode.content = parsed;
+            navigateToNode(targetNode.id);
+            await saveTopicsToFirestore();
+        } catch (error) {
+            console.error("Error in STEM elaboration:", error);
+            showError('Failed to get information for this topic.');
+        } finally {
+            showLoading(false);
+        }
+        return; // IMPORTANT: This stops the old prompt from running.
+    }
     // The topic is now derived from the node we passed in.
     const topic = targetNode.fullTitle; 
 
