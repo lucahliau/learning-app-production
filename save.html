@@ -2460,20 +2460,20 @@ async function loadTopicsFromFirestore(userId) {
             learningTopics = {};
         }
 
-        // --- REVISED SESSION RESTORATION LOGIC ---
+        // --- CORRECTED SESSION RESTORATION LOGIC ---
         const lastTopicId = sessionStorage.getItem('lastActiveTopicId');
 
-        // Check if we have a saved topic and if that topic still exists
+        // Check if we have a saved topic ID and if that topic exists in our loaded data
         if (lastTopicId && learningTopics[lastTopicId]) {
             console.log(`Restoring session to topic: ${lastTopicId}`);
-            // Let the new, smarter loadLearningTopic handle the rest.
+            // The new, smarter loadLearningTopic will handle navigating to the correct node.
             loadLearningTopic(lastTopicId);
         } else {
-            // If no saved state, show the main menu as before
+            // If no valid saved state, show the main menu as the default.
             renderTopicCards();
             switchView('landingView');
         }
-        // --- END OF REVISED LOGIC ---
+        // --- END OF CORRECTION ---
 
     } catch (error) {
         console.error("Error loading topics: ", error);
@@ -2919,18 +2919,7 @@ document.getElementById('sortControls').addEventListener('click', (e) => {
  * @param {string} topicId - The ID of the topic to load.
  */
 // Find and replace this entire function
-function loadLearningTopic(topicId, initialNodeId = 'root') {
-    // --- NEW LOGIC TO REMEMBER LAST NODE ---
-    const lastTopicId = sessionStorage.getItem('lastActiveTopicId');
-    const lastNodeId = sessionStorage.getItem('lastActiveNodeId');
-
-    // If we are loading the same topic we were just on, and we weren't told to go
-    // to a specific node (i.e., we came from the main menu), then go to the last node instead.
-    if (topicId === lastTopicId && initialNodeId === 'root' && lastNodeId) {
-        initialNodeId = lastNodeId;
-    }
-    // --- END OF NEW LOGIC ---
-
+function loadLearningTopic(topicId) { // The second argument is no longer needed
     currentTopicId = topicId;
     const topicData = learningTopics[topicId];
     if (!topicData) {
@@ -2944,7 +2933,11 @@ function loadLearningTopic(topicId, initialNodeId = 'root') {
     currentHistoryIndex = -1;
 
     document.getElementById('sidebarTitle').innerHTML = createTagsHTML(treeStructure);
-    navigateToNode(initialNodeId); // Use the potentially updated initialNodeId
+    
+    // --- NEW LOGIC: Use the saved node ID from the topic data, or default to 'root' ---
+    const targetNodeId = topicData.lastActiveNodeId || 'root';
+    navigateToNode(targetNodeId);
+    
     switchView('learningView');
 }
        /**
@@ -3374,50 +3367,43 @@ function renderTreeNode(node, level = 0) {
 }
         // Navigate to tree node
         async function navigateToNode(nodeId) {
-            const node = findNodeById(treeStructure, nodeId);
-            if (node) {
-                if (node.children.length === 0 && !node.content && node.id !== 'root') {
-            
-            // This function fetches the content from the API. It will then call
-            // navigateToNode again, but the second time the content will exist.
-            await elaborateOnTopic(node, false);             
-            // Stop the rest of this function from running, because elaborateOnTopic
-            // has already handled the navigation.
-            return; 
+    const node = findNodeById(treeStructure, nodeId);
+    if (node) {
+        if (node.children.length === 0) {
+            node.isRead = true;
+            updateParentReadStatus(node.parent);
         }
-                // *** LOGIC TO MARK NODE AS READ IS ADDED HERE ***
-                // We only mark it as read if it's a content node (doesn't have children).
-                // The status of parent nodes is determined by the `updateParentReadStatus` function.
-                if (node.children.length === 0) {
-                    node.isRead = true;
-                    // After marking this node, check if its parent is now fully read.
-                    updateParentReadStatus(node.parent);
-                }
-                saveTopicsToFirestore(); // Save the change in the node's "read" status
 
-                // Add to navigation history
-                navigationHistory = navigationHistory.slice(0, currentHistoryIndex + 1);
-                navigationHistory.push({
-                    node: node,
-                    content: JSON.parse(JSON.stringify(node.content)), // Deep copy
-                    context: {
-                        topic: node.fullTitle || node.title,
-                        subtopic: null,
-                        fullContent: node.content
-                    }
-                });
-                currentHistoryIndex = navigationHistory.length - 1;
-                
-                currentTreeNode = node;
-                sessionStorage.setItem('lastActiveTopicId', currentTopicId);
-                sessionStorage.setItem('lastActiveNodeId', nodeId);
-                currentContext = navigationHistory[currentHistoryIndex].context;
-                
-                updateNavigation();
-                displayContent(node);
-                updateTreeVisualization(); // This will redraw the tree with the new 'read' status
+        // Add to navigation history
+        navigationHistory = navigationHistory.slice(0, currentHistoryIndex + 1);
+        navigationHistory.push({
+            node: node,
+            content: JSON.parse(JSON.stringify(node.content)),
+            context: {
+                topic: node.fullTitle || node.title,
+                subtopic: null,
+                fullContent: node.content
             }
-        }
+        });
+        currentHistoryIndex = navigationHistory.length - 1;
+        
+        currentTreeNode = node;
+        
+        // --- THIS IS THE CORRECTED STATE SAVING LOGIC ---
+        treeStructure.lastActiveNodeId = nodeId; // Save last viewed node to the topic's data
+        sessionStorage.setItem('lastActiveTopicId', currentTopicId); // Save the active topic to the session
+        // --- END OF CORRECTION ---
+
+        currentContext = navigationHistory[currentHistoryIndex].context;
+        
+        updateNavigation();
+        displayContent(node);
+        updateTreeVisualization();
+        
+        // Save the changes (like isRead and lastActiveNodeId) to Firestore
+        await saveTopicsToFirestore(); 
+    }
+}
 
         // Find node by ID
         function findNodeById(node, id) {
