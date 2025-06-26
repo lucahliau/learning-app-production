@@ -1817,7 +1817,17 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script>
-
+/**
+ * Fixes malformed JSON by wrapping unquoted keys in double quotes.
+ * e.g., { topic: "Science" } becomes { "topic": "Science" }
+ * @param {string} jsonString - The potentially malformed JSON string.
+ * @returns {string} A repaired JSON string.
+ */
+ function repairJsonKeys(jsonString) {
+    // This regular expression finds property names that are not in double quotes
+    // and wraps them in double quotes to make the JSON valid.
+    return jsonString.replace(/(?<=[\{,]\s*)(\w+)(?=\s*:)/g, '"$1"');
+}
 // --- ADVANCED DATE PARSING & SCALING (No Changes) ---
 const isLeapYear = (year) => (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
 const getDayOfYear = (date) => {
@@ -2106,8 +2116,9 @@ Here are the available asset types and their required data formats:
         const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error(`Prefetch found no JSON for "${topic}"`);
 
-        const structuredResponse = JSON.parse(jsonMatch[0]);
-        const explanation = structuredResponse.explanation || "No explanation provided.";
+        const fixedJson = repairJsonKeys(jsonMatch[0]);
+        const structuredResponse = JSON.parse(fixedJson);
+                const explanation = structuredResponse.explanation || "No explanation provided.";
         const definitions = structuredResponse.definitions || [];
         const visualAssets = structuredResponse.visualAssets || []; // Handle visual assets
 
@@ -2563,7 +2574,8 @@ async function fetchQuiz(textContent) {
         const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error("No valid JSON object found in the AI response.");
         
-        const parsedJson = JSON.parse(jsonMatch[0]);
+        const parsedJson = repairJsonKeys(jsonMatch[0]);
+        const structuredResponse = JSON.parse(fixedJson);
         return parsedJson.questions || [];
 
     } catch (error) {
@@ -2941,7 +2953,6 @@ function loadLearningTopic(topicId) {
 
         const BACKEND_URL = '/api';
         const PLOT_COLORS = ['#6366f1', '#f59e0b', '#14b8a6', '#ef4444', '#8b5cf6', '#3b82f6'];
-
         // Navigation and content management
         let navigationHistory = [];
         let currentHistoryIndex = -1;
@@ -3705,8 +3716,8 @@ Example for a topic on Parabolas:
 
             const jsonMatch = botResponse.match(/\{[\s\S]*\}/);
             if (!jsonMatch) throw new Error("No valid JSON object found in the AI response.");
-            const structuredResponse = JSON.parse(jsonMatch[0]);
-
+            const fixedJson = repairJsonKeys(jsonMatch[0]);
+            const structuredResponse = JSON.parse(fixedJson);
             const parsed = parseResponse(structuredResponse.explanation, structuredResponse.definitions);
             parsed.visualAssets = structuredResponse.visualAssets || [];
             parsed.showTellMeMore = true; // You can decide if you want this for STEM topics.
@@ -3821,8 +3832,9 @@ Example JSON structure for a history topic:
                 if (!jsonMatch) throw new Error("No valid JSON object found in the AI response.");
                 
                 // Parse the JSON to get the explanation and definitions
-                const structuredResponse = JSON.parse(jsonMatch[0]);
-                const explanation = structuredResponse.explanation || "No explanation provided.";
+                const fixedJson = repairJsonKeys(jsonMatch[0]);
+                const structuredResponse = JSON.parse(fixedJson);
+                                const explanation = structuredResponse.explanation || "No explanation provided.";
                 const definitions = structuredResponse.definitions || [];
 
                  // ADD THIS LINE to grab the visual assets from the response
@@ -4470,90 +4482,90 @@ googleSignInBtn.addEventListener('click', () => {
         });
 });
 function renderImplicitPlotter(container, dataString) {
-    // Create the plotter's HTML structure
-    container.innerHTML = `
-        <div id="graphContainer">
-            <canvas id="functionGraph"></canvas>
-            <div class="zoom-controls">
-                <button id="zoomInBtn" class="zoom-btn" title="Zoom in">+</button>
-                <button id="zoomOutBtn" class="zoom-btn" title="Zoom out">-</button>
-            </div>
-        </div>
-        <div class="equation-input-wrapper">
-            <p style="text-align: center; font-size: 14px; font-family: 'Courier New', monospace; color: #4b5563; padding: 10px 0;">${dataString}</p>
-            <p id="error-message"></p>
-        </div>
-    `;
+                // Create the plotter's HTML structure
+                container.innerHTML = `
+                    <div id="graphContainer">
+                        <canvas id="functionGraph"></canvas>
+                        <div class="zoom-controls">
+                            <button id="zoomInBtn" class="zoom-btn" title="Zoom in">+</button>
+                            <button id="zoomOutBtn" class="zoom-btn" title="Zoom out">-</button>
+                        </div>
+                    </div>
+                    <div class="equation-input-wrapper">
+                        <p class="equation-input" style="text-align: center; border: none; background: none; padding: 15px 0;">${dataString}</p>
+                        <p id="error-message"></p>
+                    </div>
+                `;
 
-    // --- Re-initialize the plotter logic for this specific instance ---
-    const canvas = container.querySelector('#functionGraph');
-    const ctx = canvas.getContext('2d');
-    const errorMessage = container.querySelector('#error-message');
-    const graphContainer = container.querySelector('#graphContainer');
+                // --- Re-initialize the plotter logic for this specific instance ---
+                const canvas = container.querySelector('#functionGraph');
+                const ctx = canvas.getContext('2d');
+                const errorMessage = container.querySelector('#error-message');
+                const graphContainer = container.querySelector('#graphContainer');
+                
+                let scale = 40, origin = { x: 0, y: 0 }, view = { minX: -10, maxX: 10, minY: -10, maxY: 10 };
+                let isGraphDragging = false, lastMousePos = { x: 0, y: 0 };
+                let plotObjects = [];
+                let plotTimeout;
 
-    let scale = 40, origin = { x: 0, y: 0 }, view = { minX: -10, maxX: 10, minY: -10, maxY: 10 };
-    let isGraphDragging = false, lastMousePos = { x: 0, y: 0 };
-    let plotObjects = [];
-    let plotTimeout;
+                const resizeObserver = new ResizeObserver(entries => {
+                    if (!entries || !entries.length) return;
+                    const { width, height } = entries[0].contentRect;
+                    canvas.width = width; canvas.height = height;
+                    if(width === 0 || height === 0) return;
+                    origin.x = width / 2; origin.y = height / 2;
+                    updateView();
+                    calculateAndDrawEquations();
+                });
+                resizeObserver.observe(graphContainer);
+                
+                const toScreenX = (x) => origin.x + x * scale;
+                const toScreenY = (y) => origin.y - y * scale;
+                const toGraphX = (x) => (x - origin.x) / scale;
+                const toGraphY = (y) => (y - origin.y) / -scale;
+                
+                function updateView() {
+                    view.minX = toGraphX(0); view.maxX = toGraphX(canvas.width);
+                    view.minY = toGraphY(canvas.height); view.maxY = toGraphY(0);
+                }
 
-    const resizeObserver = new ResizeObserver(entries => {
-        if (!entries || !entries.length) return;
-        const { width, height } = entries[0].contentRect;
-        canvas.width = width; canvas.height = height;
-        if(width === 0 || height === 0) return;
-        origin.x = width / 2; origin.y = height / 2;
-        updateView();
-        calculateAndDrawEquations();
-    });
-    resizeObserver.observe(graphContainer);
+                function drawGrid() {
+                    if (!ctx) return;
+                    ctx.beginPath(); ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 1;
+                    const step = Math.pow(10, Math.floor(Math.log10(70 / scale)));
+                    for (let x = Math.floor(view.minX / step) * step; x < view.maxX; x += step) {
+                        const screenX = Math.round(toScreenX(x));
+                        ctx.moveTo(screenX, 0); ctx.lineTo(screenX, canvas.height);
+                    }
+                    for (let y = Math.floor(view.minY / step) * step; y < view.maxY; y += step) {
+                        const screenY = Math.round(toScreenY(y));
+                        ctx.moveTo(0, screenY); ctx.lineTo(canvas.width, screenY);
+                    }
+                    ctx.stroke();
+                }
 
-    const toScreenX = (x) => origin.x + x * scale;
-    const toScreenY = (y) => origin.y - y * scale;
-    const toGraphX = (x) => (x - origin.x) / scale;
-    const toGraphY = (y) => (y - origin.y) / -scale;
-
-    function updateView() {
-        view.minX = toGraphX(0); view.maxX = toGraphX(canvas.width);
-        view.minY = toGraphY(canvas.height); view.maxY = toGraphY(0);
-    }
-
-    function drawGrid() {
-        if (!ctx) return;
-        ctx.beginPath(); ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 1;
-        const step = Math.pow(10, Math.floor(Math.log10(70 / scale)));
-        for (let x = Math.floor(view.minX / step) * step; x < view.maxX; x += step) {
-            const screenX = Math.round(toScreenX(x));
-            ctx.moveTo(screenX, 0); ctx.lineTo(screenX, canvas.height);
-        }
-        for (let y = Math.floor(view.minY / step) * step; y < view.maxY; y += step) {
-            const screenY = Math.round(toScreenY(y));
-            ctx.moveTo(0, screenY); ctx.lineTo(canvas.width, screenY);
-        }
-        ctx.stroke();
-    }
-
-    function drawAxes() {
+                function drawAxes() {
         ctx.beginPath(); ctx.strokeStyle = '#374151'; ctx.lineWidth = 1.5;
         ctx.moveTo(0, origin.y); ctx.lineTo(canvas.width, origin.y);
         ctx.moveTo(origin.x, 0); ctx.lineTo(origin.x, canvas.height);
         ctx.stroke();
     }
-
+    
     function drawLabels() {
-        ctx.font = "12px sans-serif"; ctx.fillStyle = "#6b7280";
-        ctx.textAlign = "center"; ctx.textBaseline = "top";
-        const step = Math.pow(10, Math.floor(Math.log10(70/scale)));
-        for (let x = Math.floor(view.minX / step) * step; x < view.maxX; x += step) {
-            if (Math.abs(x) < 1e-9) continue;
-            ctx.fillText(x.toFixed(2).replace(/\.?0+$/, ''), toScreenX(x), origin.y + 5);
-        }
-        ctx.textAlign = "right"; ctx.textBaseline = "middle";
-        for (let y = Math.floor(view.minY/step) * step; y < view.maxY; y += step) {
-            if (Math.abs(y) < 1e-9) continue;
-            ctx.fillText(y.toFixed(2).replace(/\.?0+$/, ''), origin.x - 5, toScreenY(y));
-        }
+         ctx.font = "12px sans-serif"; ctx.fillStyle = "#6b7280";
+         ctx.textAlign = "center"; ctx.textBaseline = "top";
+         const step = Math.pow(10, Math.floor(Math.log10(70/scale)));
+         for (let x = Math.floor(view.minX / step) * step; x < view.maxX; x += step) {
+             if (Math.abs(x) < 1e-9) continue;
+             ctx.fillText(x.toFixed(2).replace(/\.?0+$/, ''), toScreenX(x), origin.y + 5);
+         }
+         ctx.textAlign = "right"; ctx.textBaseline = "middle";
+         for (let y = Math.floor(view.minY/step) * step; y < view.maxY; y += step) {
+             if (Math.abs(y) < 1e-9) continue;
+             ctx.fillText(y.toFixed(2).replace(/\.?0+$/, ''), origin.x - 5, toScreenY(y));
+         }
     }
-
+    
     function drawPlot(objects) {
         if (!objects) return;
         ctx.lineWidth = 2.5;
@@ -4562,10 +4574,10 @@ function renderImplicitPlotter(container, dataString) {
 
         objects.forEach(obj => {
             if (!obj || !obj.paths || obj.paths.length === 0) return;
-
+            
             ctx.beginPath();
             ctx.strokeStyle = obj.color; // Use the color from the object
-
+            
             obj.paths.forEach(path => {
                 if (path.length < 2) return;
                 ctx.moveTo(toScreenX(path[0].x), toScreenY(path[0].y));
@@ -4576,46 +4588,41 @@ function renderImplicitPlotter(container, dataString) {
     }
 
     function calculatePaths(expression) {
-    if (!expression) return [];
-    try {
-        // Create a fresh, local instance of the math parser
-        const localMath = math.create(math.all);
-
-        let parts = expression.split('=');
-        if (parts.length !== 2) throw new Error("Equation must have one '=' sign.");
-
-        // Use the local instance for all math operations
-        const equationNode = localMath.parse(`(<span class="math-inline">\{parts\[0\]\}\) \- \(</span>{parts[1]})`);
-        const compiledEquation = equationNode.compile();
-        const derivativeX = localMath.derivative(equationNode, 'x').compile();
-        const derivativeY = localMath.derivative(equationNode, 'y').compile();
-
-        const resolution = 75, xStep = (view.maxX - view.minX) / resolution, yStep = (view.maxY - view.minY) / resolution;
-        const grid = [], visited = new Set();
-        for (let i = 0; i <= resolution; i++) {
-            grid[i] = [];
-            for (let j = 0; j <= resolution; j++) { grid[i][j] = compiledEquation.evaluate({ x: view.minX + j * xStep, y: view.minY + i * yStep });}
-        }
-        const allPaths = [];
-        for (let i = 0; i < resolution; i++) {
-            for (let j = 0; j < resolution; j++) {
-                const key = `<span class="math-inline">\{i\},</span>{j}`; if(visited.has(key)) continue;
-                const a = grid[i][j], b = grid[i+1][j];
-                if (Math.sign(a) !== Math.sign(b)) {
-                    visited.add(key);
-                    const startY = view.minY + (i + a / (a - b)) * yStep, startX = view.minX + j * xStep;
-                    let path = tracePath({ x: startX, y: startY }, compiledEquation, derivativeX, derivativeY, visited, xStep, yStep);
-                    if (path.length > 1) allPaths.push(path);
+        if (!expression) return [];
+        try {
+            let parts = expression.split('=');
+            if (parts.length !== 2) throw new Error("Equation must have one '=' sign.");
+            const equationNode = math.parse(`(${parts[0]}) - (${parts[1]})`);
+            const compiledEquation = equationNode.compile();
+            const derivativeX = math.derivative(equationNode, 'x').compile();
+            const derivativeY = math.derivative(equationNode, 'y').compile();
+            const resolution = 75, xStep = (view.maxX - view.minX) / resolution, yStep = (view.maxY - view.minY) / resolution;
+            const grid = [], visited = new Set();
+            for (let i = 0; i <= resolution; i++) {
+                grid[i] = [];
+                for (let j = 0; j <= resolution; j++) { grid[i][j] = compiledEquation.evaluate({ x: view.minX + j * xStep, y: view.minY + i * yStep });}
+            }
+            const allPaths = [];
+            for (let i = 0; i < resolution; i++) {
+                for (let j = 0; j < resolution; j++) {
+                    const key = `${i},${j}`; if(visited.has(key)) continue;
+                    const a = grid[i][j], b = grid[i+1][j];
+                    if (Math.sign(a) !== Math.sign(b)) {
+                        visited.add(key);
+                        const startY = view.minY + (i + a / (a - b)) * yStep, startX = view.minX + j * xStep;
+                        let path = tracePath({ x: startX, y: startY }, compiledEquation, derivativeX, derivativeY, visited, xStep, yStep);
+                        if (path.length > 1) allPaths.push(path);
+                    }
                 }
             }
+            return allPaths;
+        } catch (error) {
+            // Set error message but don't clear it on success, as other equations might fail.
+            errorMessage.textContent = `Error in "${expression.trim()}": Invalid equation.`;
+            console.error("Plotting Error:", error);
+            return [];
         }
-        return allPaths;
-    } catch (error) {
-        errorMessage.textContent = `Error in "${expression.trim()}": Invalid equation.`;
-        console.error("Plotting Error:", error);
-        return [];
     }
-}
 
     function tracePath(startPoint, func, derivX, derivY, visited, dx, dy) {
         const path = [startPoint]; let currentPoint = startPoint;
@@ -4634,53 +4641,53 @@ function renderImplicitPlotter(container, dataString) {
             if (nextPoint.x < view.minX || nextPoint.x > view.maxX || nextPoint.y < view.minY || nextPoint.y > view.maxY) break;
             path.push(nextPoint); currentPoint = nextPoint;
             const gridI = Math.floor((currentPoint.y - view.minY) / dy), gridJ = Math.floor((currentPoint.x - view.minX) / dx);
-            visited.add(`<span class="math-inline">\{gridI\},</span>{gridJ}`);
+            visited.add(`${gridI},${gridJ}`);
         }
         return path;
     }
+                
+                function draw() { requestAnimationFrame(() => { if(!ctx) return; ctx.clearRect(0, 0, canvas.width, canvas.height); drawGrid(); drawAxes(); drawLabels(); drawPlot(plotObjects); }); }
+                
+                function zoomOnPoint(zoomFactor, centerX, centerY) {
+                    const graphX = toGraphX(centerX);
+                    const graphY = toGraphY(centerY);
+                    scale *= zoomFactor;
+                    origin.x = centerX - graphX * scale;
+                    origin.y = centerY + graphY * scale;
+                    updateView();
+                    draw();
+                    clearTimeout(plotTimeout);
+                    plotTimeout = setTimeout(calculateAndDrawEquations, 150);
+                }
 
-    function draw() { requestAnimationFrame(() => { if(!ctx) return; ctx.clearRect(0, 0, canvas.width, canvas.height); drawGrid(); drawAxes(); drawLabels(); drawPlot(plotObjects); }); }
+                function calculateAndDrawEquations() {
+                    errorMessage.textContent = '';
+                    const equationStrings = dataString.split(';').filter(s => s.trim() !== '');
+                    plotObjects = [];
+                    equationStrings.forEach((eq, index) => {
+                        const paths = calculatePaths(eq);
+                        if (paths.length > 0) {
+                            plotObjects.push({
+                                paths: paths,
+                                color: PLOT_COLORS[index % PLOT_COLORS.length]
+                            });
+                        }
+                    });
+                    draw();
+                }
 
-    function zoomOnPoint(zoomFactor, centerX, centerY) {
-        const graphX = toGraphX(centerX);
-        const graphY = toGraphY(centerY);
-        scale *= zoomFactor;
-        origin.x = centerX - graphX * scale;
-        origin.y = centerY + graphY * scale;
-        updateView();
-        draw();
-        clearTimeout(plotTimeout);
-        plotTimeout = setTimeout(calculateAndDrawEquations, 150);
-    }
-
-    function calculateAndDrawEquations() {
-        errorMessage.textContent = '';
-        const equationStrings = dataString.split(';').filter(s => s.trim() !== '');
-        plotObjects = [];
-        equationStrings.forEach((eq, index) => {
-            const paths = calculatePaths(eq);
-            if (paths.length > 0) {
-                plotObjects.push({
-                    paths: paths,
-                    color: PLOT_COLORS[index % PLOT_COLORS.length]
-                });
+                canvas.addEventListener('mousedown', (e) => { isGraphDragging = true; lastMousePos = { x: e.offsetX, y: e.offsetY }; });
+                canvas.addEventListener('mousemove', (e) => { if (!isGraphDragging) return; const dx = e.offsetX - lastMousePos.x, dy = e.offsetY - lastMousePos.y; origin.x += dx; origin.y += dy; lastMousePos = { x: e.offsetX, y: e.offsetY }; updateView(); draw(); });
+                canvas.addEventListener('mouseup', () => { if (!isGraphDragging) return; isGraphDragging = false; calculateAndDrawEquations(); });
+                canvas.addEventListener('mouseleave', () => { if(isGraphDragging) { isGraphDragging = false; calculateAndDrawEquations(); } });
+                canvas.addEventListener('wheel', (e) => { e.preventDefault(); const zoomFactor = e.deltaY < 0 ? 1.2 : 1 / 1.2; zoomOnPoint(zoomFactor, e.offsetX, e.offsetY); });
+                
+                container.querySelector('#zoomInBtn').addEventListener('click', () => { zoomOnPoint(1.3, canvas.width / 2, canvas.height / 2); });
+                container.querySelector('#zoomOutBtn').addEventListener('click', () => { zoomOnPoint(1 / 1.3, canvas.width / 2, canvas.height / 2); });
+                
+                // Initial calculation
+                calculateAndDrawEquations();
             }
-        });
-        draw();
-    }
-
-    canvas.addEventListener('mousedown', (e) => { isGraphDragging = true; lastMousePos = { x: e.offsetX, y: e.offsetY }; });
-    canvas.addEventListener('mousemove', (e) => { if (!isGraphDragging) return; const dx = e.offsetX - lastMousePos.x, dy = e.offsetY - lastMousePos.y; origin.x += dx; origin.y += dy; lastMousePos = { x: e.offsetX, y: e.offsetY }; updateView(); draw(); });
-    canvas.addEventListener('mouseup', () => { if (!isGraphDragging) return; isGraphDragging = false; calculateAndDrawEquations(); });
-    canvas.addEventListener('mouseleave', () => { if(isGraphDragging) { isGraphDragging = false; calculateAndDrawEquations(); } });
-    canvas.addEventListener('wheel', (e) => { e.preventDefault(); const zoomFactor = e.deltaY < 0 ? 1.2 : 1 / 1.2; zoomOnPoint(zoomFactor, e.offsetX, e.offsetY); });
-
-    container.querySelector('#zoomInBtn').addEventListener('click', () => { zoomOnPoint(1.3, canvas.width / 2, canvas.height / 2); });
-    container.querySelector('#zoomOutBtn').addEventListener('click', () => { zoomOnPoint(1 / 1.3, canvas.width / 2, canvas.height / 2); });
-
-    // Initial calculation
-    calculateAndDrawEquations();
-}
     </script>
     <!-- New Topic Modal -->
 <div class="modal-overlay" id="newTopicModal">
