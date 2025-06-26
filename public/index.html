@@ -3480,108 +3480,108 @@ function updateBreadcrumb() {
         // Render content
        // Render content
        function renderContent(parsedContent, userQuestion = null) {
-        console.log("Step 3: Content received by renderContent:", parsedContent);
+            console.log("Step 3: Content received by renderContent:", parsedContent);
             const mainContent = document.getElementById('mainContent');
             mainContent.innerHTML = '';
-            
-            // Render the main text explanation (overview)
-            if (parsedContent.overview) {
-                const overviewDiv = document.createElement('div');
-                overviewDiv.className = 'topic-overview';
-                
-                let formattedOverview = parsedContent.overview;
-                const highlightedOverview = applyTermHighlighting(formattedOverview, parsedContent.definitions);
-                overviewDiv.innerHTML = `<h2>${toTitleCase(currentTreeNode.fullTitle || currentTreeNode.title)}</h2><div>${highlightedOverview}</div>`;
-                mainContent.appendChild(overviewDiv);
-            }
- // --- NEW: VISUAL ASSET DISPATCHER ---
- if (parsedContent.visualAssets && parsedContent.visualAssets.length > 0) {
-                parsedContent.visualAssets.forEach(asset => {
-                    // Check if this asset is our new row structure
-                    if (asset.type === 'layout_row' && asset.columns) {
-                        const rowContainer = document.createElement('div');
-                        rowContainer.className = 'visual-asset-row';
 
-                        asset.columns.forEach(columnAsset => {
-                            const columnContainer = document.createElement('div');
-                            columnContainer.className = 'visual-asset-column';
-                            
-                            // Use existing render functions but pass the smaller column as the container
-                            const assetType = columnAsset.type.trim();
-                            if (assetType === 'implicit_plotter') {
-                                // For plotters, we wrap them in a lab-container to keep their styles
-                                const labWrapper = document.createElement('div');
-                                labWrapper.className = 'lab-container';
-                                labWrapper.style.margin = '0'; // Reset margin
-                                labWrapper.style.width = '100%'; // Take full width of column
-                                renderImplicitPlotter(labWrapper, columnAsset.data);
-                                columnContainer.appendChild(labWrapper);
-
-                            } else if (assetType === 'bar_chart' || assetType === 'pie_chart') {
-                                // For charts, the structure is simpler
-                                const chartWrapper = document.createElement('div');
-                                chartWrapper.className = 'chart-container'; // Generic chart styles
-                                const chartId = 'asset-' + Date.now() + Math.random().toString(36).substring(2, 9);
-                                chartWrapper.innerHTML = `<canvas id="${chartId}"></canvas>`;
-                                
-                                if (assetType === 'bar_chart') {
-                                    chartWrapper.classList.add('bar-chart-container');
-                                    renderBarChart(chartId, columnAsset.data);
-                                } else {
-                                    chartWrapper.classList.add('pie-chart-container');
-                                    // Note: Pie chart with inline legend might need more specific styling
-                                    renderPieChart(chartId, null, columnAsset.data);
-                                }
-                                columnContainer.appendChild(chartWrapper);
-                            }
-                            rowContainer.appendChild(columnContainer);
-                        });
-                        mainContent.appendChild(rowContainer);
-
-                    } else {
-                        // --- Fallback for old/non-row assets (like timelines) ---
-                        const assetContainer = document.createElement('div');
-                        assetContainer.className = 'lab-container';
-                        assetContainer.style.marginTop = '40px';
-                        
-                        const assetType = asset.type.trim();
-                        if (assetType.includes('hybrid_timeline')) {
-                            renderHybridTimeline(assetContainer, asset.data);
-                        }
-                        mainContent.appendChild(assetContainer);
-                    }
-                });
-            }
-            // Render the sub-topic cards
-            if (parsedContent.sections && parsedContent.sections.length > 0) {
-                const cardsGrid = document.createElement('div');
-                cardsGrid.className = 'cards-grid';
-                const parentNodeId = currentTreeNode.id;
-
-                parsedContent.sections.forEach((section, index) => {
-                    if (!section.isExpanded) {
-                        const childNode = currentTreeNode.children.find(child => child.fullTitle === section.title || child.title === section.title);
-                        const isNodeRead = childNode ? childNode.isRead : false;
-                        const childNodeId = childNode ? childNode.id : null;
-                        const card = createCard(section, index, isNodeRead, childNodeId, parentNodeId);
-                        cardsGrid.appendChild(card);
-                    }
-                });
-                mainContent.appendChild(cardsGrid);
-            }
-
-           
-
-            // Render the "Tell me more" button if applicable
-            if (parsedContent.showTellMeMore) {
-                const tellMeMoreBtn = document.createElement('button');
-                tellMeMoreBtn.className = 'tell-me-more-button';
-                tellMeMoreBtn.innerHTML = `Tell me more about this <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14m0 0l-7-7m7 7l7-7"/></svg>`;
-                tellMeMoreBtn.onclick = () => elaborateOnCurrent();
-                mainContent.appendChild(tellMeMoreBtn);
-            }
-            triggerMathRendering(mainContent);
+            try {
+                // Render the main text explanation (overview)
+                if (parsedContent.overview) {
+                    const overviewDiv = document.createElement('div');
+                    overviewDiv.className = 'topic-overview';
+                    
+                    let formattedOverview = parsedContent.overview;
+                    const highlightedOverview = applyTermHighlighting(formattedOverview, parsedContent.definitions);
+                    overviewDiv.innerHTML = `<h2>${toTitleCase(currentTreeNode.fullTitle || currentTreeNode.title)}</h2><div>${highlightedOverview}</div>`;
+                    mainContent.appendChild(overviewDiv);
                 }
+
+                // --- NEW: VISUAL ASSET DISPATCHER ---
+                if (parsedContent.visualAssets && parsedContent.visualAssets.length > 0) {
+                    parsedContent.visualAssets.forEach(asset => {
+                        // Check if this asset is our new row structure
+                        if (asset.type === 'layout_row' && asset.columns) {
+                            const rowContainer = document.createElement('div');
+                            rowContainer.className = 'visual-asset-row';
+
+                            asset.columns.forEach(columnAsset => {
+                                const columnContainer = document.createElement('div');
+                                columnContainer.className = 'visual-asset-column';
+                                
+                                const assetType = columnAsset.type.trim();
+                                if (assetType === 'implicit_plotter') {
+                                    const labWrapper = document.createElement('div');
+                                    labWrapper.className = 'lab-container';
+                                    labWrapper.style.margin = '0'; 
+                                    labWrapper.style.width = '100%'; 
+                                    renderImplicitPlotter(labWrapper, columnAsset.data);
+                                    columnContainer.appendChild(labWrapper);
+
+                                } else if (assetType === 'bar_chart' || assetType === 'pie_chart') {
+                                    const chartWrapper = document.createElement('div');
+                                    chartWrapper.className = 'chart-container'; 
+                                    const chartId = 'asset-' + Date.now() + Math.random().toString(36).substring(2, 9);
+                                    chartWrapper.innerHTML = `<canvas id="${chartId}"></canvas>`;
+                                    
+                                    if (assetType === 'bar_chart') {
+                                        chartWrapper.classList.add('bar-chart-container');
+                                        renderBarChart(chartId, columnAsset.data);
+                                    } else {
+                                        chartWrapper.classList.add('pie-chart-container');
+                                        renderPieChart(chartId, null, columnAsset.data);
+                                    }
+                                    columnContainer.appendChild(chartWrapper);
+                                }
+                                rowContainer.appendChild(columnContainer);
+                            });
+                            mainContent.appendChild(rowContainer);
+
+                        } else {
+                            // --- Fallback for old/non-row assets (like timelines) ---
+                            const assetContainer = document.createElement('div');
+                            assetContainer.className = 'lab-container';
+                            assetContainer.style.marginTop = '40px';
+                            
+                            const assetType = asset.type.trim();
+                            if (assetType.includes('hybrid_timeline')) {
+                                renderHybridTimeline(assetContainer, asset.data);
+                            }
+                            mainContent.appendChild(assetContainer);
+                        }
+                    });
+                }
+                
+                // Render the sub-topic cards
+                if (parsedContent.sections && parsedContent.sections.length > 0) {
+                    const cardsGrid = document.createElement('div');
+                    cardsGrid.className = 'cards-grid';
+                    const parentNodeId = currentTreeNode.id;
+
+                    parsedContent.sections.forEach((section, index) => {
+                        if (!section.isExpanded) {
+                            const childNode = currentTreeNode.children.find(child => child.fullTitle === section.title || child.title === section.title);
+                            const isNodeRead = childNode ? childNode.isRead : false;
+                            const childNodeId = childNode ? childNode.id : null;
+                            const card = createCard(section, index, isNodeRead, childNodeId, parentNodeId);
+                            cardsGrid.appendChild(card);
+                        }
+                    });
+                    mainContent.appendChild(cardsGrid);
+                }
+
+                // Render the "Tell me more" button if applicable
+                if (parsedContent.showTellMeMore) {
+                    const tellMeMoreBtn = document.createElement('button');
+                    tellMeMoreBtn.className = 'tell-me-more-button';
+                    tellMeMoreBtn.innerHTML = `Tell me more about this <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14m0 0l-7-7m7 7l7-7"/></svg>`;
+                    tellMeMoreBtn.onclick = () => elaborateOnCurrent();
+                    mainContent.appendChild(tellMeMoreBtn);
+                }
+            } finally {
+                // This will now run even if an error occurs while rendering a chart or timeline.
+                triggerMathRendering(mainContent);
+            }
+        }
 
 
         // Create card element
