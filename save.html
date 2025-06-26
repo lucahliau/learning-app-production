@@ -2340,6 +2340,21 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 const googleProvider = new firebase.auth.GoogleAuthProvider();
 
+ // ======================= START: ADD THIS CODE =======================
+ window.addEventListener('beforeunload', () => {
+        // Only save the state if a topic is actually loaded and the user is in the learning view.
+        if (currentTopicId && currentTreeNode && document.getElementById('learningView').classList.contains('active')) {
+            const stateToSave = {
+                topicId: currentTopicId,
+                nodeId: currentTreeNode.id
+            };
+            // Use sessionStorage to store the state for the current session.
+            // It's automatically cleared when the browser tab is closed.
+            sessionStorage.setItem('learningAppLastState', JSON.stringify(stateToSave));
+            console.log('Saved state to sessionStorage:', stateToSave);
+        }
+    });
+    // ======================== END: ADD THIS CODE ========================
 
 // At the top of your script, get references to the new elements
 const authView = document.getElementById('authView');
@@ -2448,6 +2463,7 @@ async function saveTopicsToFirestore() {
 }
 
 // Function to load topics when a user logs in
+// =================== START: REPLACE THIS FUNCTION ===================
 async function loadTopicsFromFirestore(userId) {
     try {
         const doc = await db.collection('userTopics').doc(userId).get();
@@ -2460,27 +2476,25 @@ async function loadTopicsFromFirestore(userId) {
             learningTopics = {};
         }
 
-        // --- CORRECTED SESSION RESTORATION LOGIC ---
-        const lastTopicId = sessionStorage.getItem('lastActiveTopicId');
+        // --- THIS IS THE NEW LOGIC ---
+        // Attempt to restore the last session.
+        const wasSessionRestored = restoreLastSession();
 
-        // Check if we have a saved topic ID and if that topic exists in our loaded data
-        if (lastTopicId && learningTopics[lastTopicId]) {
-            console.log(`Restoring session to topic: ${lastTopicId}`);
-            // The new, smarter loadLearningTopic will handle navigating to the correct node.
-            loadLearningTopic(lastTopicId);
-        } else {
-            // If no valid saved state, show the main menu as the default.
+        // If a session was NOT restored, show the default landing page.
+        if (!wasSessionRestored) {
             renderTopicCards();
             switchView('landingView');
         }
-        // --- END OF CORRECTION ---
+        // --- END OF NEW LOGIC ---
 
     } catch (error) {
         console.error("Error loading topics: ", error);
+        // Fallback to the landing page in case of any error.
         renderTopicCards();
         switchView('landingView');
     }
 }
+// ==================== END: REPLACE THIS FUNCTION ====================
 
 // Helper function to restore the parent-child links in your tree
 function restoreParents(topics) {
@@ -2914,32 +2928,79 @@ document.getElementById('sortControls').addEventListener('click', (e) => {
     }
 });
 
+// =================== START: REPLACE THIS CODE BLOCK ===================
+
 /**
- * Loads a specific topic's data into the learning view.
- * @param {string} topicId - The ID of the topic to load.
+ * Sets up the learning view for a given topic, but does not navigate to a node.
+ * @param {string} topicId - The ID of the topic to set up.
+ * @returns {boolean} True if setup was successful, false otherwise.
  */
-// Find and replace this entire function
-function loadLearningTopic(topicId) { // The second argument is no longer needed
+ function setupLearningViewForTopic(topicId) {
     currentTopicId = topicId;
     const topicData = learningTopics[topicId];
     if (!topicData) {
         console.error("Topic not found:", topicId);
-        return;
+        return false;
     }
-    topicData.lastOpened = Date.now();
+    topicData.lastOpened = Date.now(); // Update last opened time
 
     treeStructure = topicData;
     navigationHistory = [];
     currentHistoryIndex = -1;
 
     document.getElementById('sidebarTitle').innerHTML = createTagsHTML(treeStructure);
-    
-    // --- NEW LOGIC: Use the saved node ID from the topic data, or default to 'root' ---
-    const targetNodeId = topicData.lastActiveNodeId || 'root';
-    navigateToNode(targetNodeId);
-    
     switchView('learningView');
+    return true;
 }
+// ======================= START: ADD THIS CODE =======================
+/**
+ * Checks sessionStorage for a saved state and restores it if found.
+ * @returns {boolean} True if a state was successfully restored, otherwise false.
+ */
+ function restoreLastSession() {
+    const savedStateJSON = sessionStorage.getItem('learningAppLastState');
+    if (savedStateJSON) {
+        // Clear the state once we've read it, so a subsequent refresh doesn't
+        // get stuck in a loop if something goes wrong.
+        sessionStorage.removeItem('learningAppLastState');
+        try {
+            const savedState = JSON.parse(savedStateJSON);
+            const { topicId, nodeId } = savedState;
+
+            // Check if the saved topic and node still exist in our loaded data.
+            if (topicId && nodeId && learningTopics[topicId]) {
+                const topicData = learningTopics[topicId];
+                const targetNode = findNodeById(topicData, nodeId);
+
+                if (targetNode) {
+                    console.log('Restoring previous session state:', savedState);
+                    // Use the helper to set up the main view
+                    if(setupLearningViewForTopic(topicId)) {
+                        // Then navigate to the specific node from the saved state.
+                        navigateToNode(nodeId);
+                        return true; // Indicate that state was restored.
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Failed to parse or restore session state:', error);
+            // In case of error, ensure the corrupted state is cleared.
+            sessionStorage.removeItem('learningAppLastState');
+        }
+    }
+    return false; // No valid state was found or restored.
+}
+// ======================== END: ADD THIS CODE ========================
+
+// This is the updated `loadLearningTopic` function
+function loadLearningTopic(topicId) {
+    if (setupLearningViewForTopic(topicId)) {
+        // The save is handled by navigateToNode, which calls saveTopicsToFirestore.
+        navigateToNode('root');
+    }
+}
+
+// ==================== END: REPLACE THIS CODE BLOCK ====================
        /**
  * Resets the learning view and displays the initial syllabus for a new topic.
  * @param {string} topicTitle - The title of the new topic.
