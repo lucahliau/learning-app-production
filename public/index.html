@@ -4610,9 +4610,27 @@ function renderImplicitPlotter(container, dataString) {
     function calculatePaths(expression) {
         if (!expression) return [];
         try {
-            let parts = expression.split('=');
-            if (parts.length !== 2) throw new Error("Equation must have one '=' sign.");
-            const equationNode = math.parse(`(${parts[0]}) - (${parts[1]})`);
+            // --- NEW LOGIC START ---
+            let processedExpression = expression.trim();
+            let parts = processedExpression.split('=');
+
+            // If no '=' is present, check if it's a simple function of x.
+            if (parts.length === 1) {
+                const singlePart = parts[0];
+                // If it contains 'x' but not 'y', assume it's y = f(x).
+                if (singlePart.includes('x') && !singlePart.includes('y')) {
+                    processedExpression = `y = ${singlePart}`;
+                }
+            }
+            // --- NEW LOGIC END ---
+
+            // Use the (potentially modified) expression for the rest of the logic.
+            const finalParts = processedExpression.split('=');
+            if (finalParts.length !== 2) {
+                throw new Error("Equation must have one '=' sign or be an expression of x (e.g., sin(x)).");
+            }
+
+            const equationNode = math.parse(`(${finalParts[0]}) - (${finalParts[1]})`);
             const compiledEquation = equationNode.compile();
             const derivativeX = math.derivative(equationNode, 'x').compile();
             const derivativeY = math.derivative(equationNode, 'y').compile();
