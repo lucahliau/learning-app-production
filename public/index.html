@@ -1655,6 +1655,31 @@
     font-size: 18px; /* Smaller title for inline graphs */
     margin-bottom: 10px;
 }
+/* --- NEW: Styles for the Plotter Legend --- */
+.plot-legend-container {
+    display: flex;
+    justify-content: center; /* Center the legend items horizontally */
+    align-items: center;
+    flex-wrap: wrap; /* Allow items to wrap to the next line on small screens */
+    gap: 15px 25px; /* Vertical and horizontal gap between items */
+    padding: 10px 0;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+.plot-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Space between the color swatch and the equation */
+    font-size: 16px;
+}
+
+.plot-legend-color-swatch {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 1px solid rgba(0,0,0,0.1); /* A subtle border for light colors */
+    flex-shrink: 0; /* Prevents the swatch from shrinking */
+}
             </style>
 
 <script>
@@ -4502,90 +4527,103 @@ googleSignInBtn.addEventListener('click', () => {
         });
 });
 function renderImplicitPlotter(container, dataString) {
-                // Create the plotter's HTML structure
-                container.innerHTML = `
-                    <div id="graphContainer">
-                        <canvas id="functionGraph"></canvas>
-                        <div class="zoom-controls">
-                            <button id="zoomInBtn" class="zoom-btn" title="Zoom in">+</button>
-                            <button id="zoomOutBtn" class="zoom-btn" title="Zoom out">-</button>
-                        </div>
-                    </div>
-                    <div class="equation-input-wrapper">
-                        <p class="equation-input" style="text-align: center; border: none; background: none; padding: 15px 0;">$${dataString}$</p>
-                        <p id="error-message"></p>
-                    </div>
-                `;
+    // --- NEW: Generate Legend HTML ---
+    const equationStrings = dataString.split(';').filter(s => s.trim() !== '');
 
-                // --- Re-initialize the plotter logic for this specific instance ---
-                const canvas = container.querySelector('#functionGraph');
-                const ctx = canvas.getContext('2d');
-                const errorMessage = container.querySelector('#error-message');
-                const graphContainer = container.querySelector('#graphContainer');
-                
-                let scale = 40, origin = { x: 0, y: 0 }, view = { minX: -10, maxX: 10, minY: -10, maxY: 10 };
-                let isGraphDragging = false, lastMousePos = { x: 0, y: 0 };
-                let plotObjects = [];
-                let plotTimeout;
+    const legendHTML = equationStrings.map((eq, index) => {
+        const color = PLOT_COLORS[index % PLOT_COLORS.length];
+        return `
+            <div class="plot-legend-item">
+                <span class="plot-legend-color-swatch" style="background-color: ${color};"></span>
+                <span class="plot-legend-equation-text">$${eq.trim()}$</span>
+            </div>
+        `;
+    }).join('');
 
-                const resizeObserver = new ResizeObserver(entries => {
-                    if (!entries || !entries.length) return;
-                    const { width, height } = entries[0].contentRect;
-                    canvas.width = width; canvas.height = height;
-                    if(width === 0 || height === 0) return;
-                    origin.x = width / 2; origin.y = height / 2;
-                    updateView();
-                    calculateAndDrawEquations();
-                });
-                resizeObserver.observe(graphContainer);
-                
-                const toScreenX = (x) => origin.x + x * scale;
-                const toScreenY = (y) => origin.y - y * scale;
-                const toGraphX = (x) => (x - origin.x) / scale;
-                const toGraphY = (y) => (y - origin.y) / -scale;
-                
-                function updateView() {
-                    view.minX = toGraphX(0); view.maxX = toGraphX(canvas.width);
-                    view.minY = toGraphY(canvas.height); view.maxY = toGraphY(0);
-                }
+    // Create the plotter's HTML structure with the new legend container
+    container.innerHTML = `
+        <div id="graphContainer">
+            <canvas id="functionGraph"></canvas>
+            <div class="zoom-controls">
+                <button id="zoomInBtn" class="zoom-btn" title="Zoom in">+</button>
+                <button id="zoomOutBtn" class="zoom-btn" title="Zoom out">-</button>
+            </div>
+        </div>
+        <div class="equation-input-wrapper">
+            <div class="plot-legend-container">${legendHTML}</div>
+            <p id="error-message"></p>
+        </div>
+    `;
 
-                function drawGrid() {
-                    if (!ctx) return;
-                    ctx.beginPath(); ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 1;
-                    const step = Math.pow(10, Math.floor(Math.log10(70 / scale)));
-                    for (let x = Math.floor(view.minX / step) * step; x < view.maxX; x += step) {
-                        const screenX = Math.round(toScreenX(x));
-                        ctx.moveTo(screenX, 0); ctx.lineTo(screenX, canvas.height);
-                    }
-                    for (let y = Math.floor(view.minY / step) * step; y < view.maxY; y += step) {
-                        const screenY = Math.round(toScreenY(y));
-                        ctx.moveTo(0, screenY); ctx.lineTo(canvas.width, screenY);
-                    }
-                    ctx.stroke();
-                }
+    // --- Re-initialize the plotter logic for this specific instance ---
+    const canvas = container.querySelector('#functionGraph');
+    const ctx = canvas.getContext('2d');
+    const errorMessage = container.querySelector('#error-message');
+    const graphContainer = container.querySelector('#graphContainer');
+    
+    let scale = 40, origin = { x: 0, y: 0 }, view = { minX: -10, maxX: 10, minY: -10, maxY: 10 };
+    let isGraphDragging = false, lastMousePos = { x: 0, y: 0 };
+    let plotObjects = [];
+    let plotTimeout;
 
-                function drawAxes() {
+    const resizeObserver = new ResizeObserver(entries => {
+        if (!entries || !entries.length) return;
+        const { width, height } = entries[0].contentRect;
+        canvas.width = width; canvas.height = height;
+        if(width === 0 || height === 0) return;
+        origin.x = width / 2; origin.y = height / 2;
+        updateView();
+        calculateAndDrawEquations();
+    });
+    resizeObserver.observe(graphContainer);
+    
+    const toScreenX = (x) => origin.x + x * scale;
+    const toScreenY = (y) => origin.y - y * scale;
+    const toGraphX = (x) => (x - origin.x) / scale;
+    const toGraphY = (y) => (y - origin.y) / -scale;
+    
+    function updateView() {
+        view.minX = toGraphX(0); view.maxX = toGraphX(canvas.width);
+        view.minY = toGraphY(canvas.height); view.maxY = toGraphY(0);
+    }
+
+    function drawGrid() {
+        if (!ctx) return;
+        ctx.beginPath(); ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 1;
+        const step = Math.pow(10, Math.floor(Math.log10(70 / scale)));
+        for (let x = Math.floor(view.minX / step) * step; x < view.maxX; x += step) {
+            const screenX = Math.round(toScreenX(x));
+            ctx.moveTo(screenX, 0); ctx.lineTo(screenX, canvas.height);
+        }
+        for (let y = Math.floor(view.minY / step) * step; y < view.maxY; y += step) {
+            const screenY = Math.round(toScreenY(y));
+            ctx.moveTo(0, screenY); ctx.lineTo(canvas.width, screenY);
+        }
+        ctx.stroke();
+    }
+
+    function drawAxes() {
         ctx.beginPath(); ctx.strokeStyle = '#374151'; ctx.lineWidth = 1.5;
         ctx.moveTo(0, origin.y); ctx.lineTo(canvas.width, origin.y);
         ctx.moveTo(origin.x, 0); ctx.lineTo(origin.x, canvas.height);
         ctx.stroke();
     }
-    
+
     function drawLabels() {
-         ctx.font = "12px sans-serif"; ctx.fillStyle = "#6b7280";
-         ctx.textAlign = "center"; ctx.textBaseline = "top";
-         const step = Math.pow(10, Math.floor(Math.log10(70/scale)));
-         for (let x = Math.floor(view.minX / step) * step; x < view.maxX; x += step) {
-             if (Math.abs(x) < 1e-9) continue;
-             ctx.fillText(x.toFixed(2).replace(/\.?0+$/, ''), toScreenX(x), origin.y + 5);
-         }
-         ctx.textAlign = "right"; ctx.textBaseline = "middle";
-         for (let y = Math.floor(view.minY/step) * step; y < view.maxY; y += step) {
-             if (Math.abs(y) < 1e-9) continue;
-             ctx.fillText(y.toFixed(2).replace(/\.?0+$/, ''), origin.x - 5, toScreenY(y));
-         }
+            ctx.font = "12px sans-serif"; ctx.fillStyle = "#6b7280";
+            ctx.textAlign = "center"; ctx.textBaseline = "top";
+            const step = Math.pow(10, Math.floor(Math.log10(70/scale)));
+            for (let x = Math.floor(view.minX / step) * step; x < view.maxX; x += step) {
+                if (Math.abs(x) < 1e-9) continue;
+                ctx.fillText(x.toFixed(2).replace(/\.?0+$/, ''), toScreenX(x), origin.y + 5);
+            }
+            ctx.textAlign = "right"; ctx.textBaseline = "middle";
+            for (let y = Math.floor(view.minY/step) * step; y < view.maxY; y += step) {
+                if (Math.abs(y) < 1e-9) continue;
+                ctx.fillText(y.toFixed(2).replace(/\.?0+$/, ''), origin.x - 5, toScreenY(y));
+            }
     }
-    
+
     function drawPlot(objects) {
         if (!objects) return;
         ctx.lineWidth = 2.5;
@@ -4655,7 +4693,6 @@ function renderImplicitPlotter(container, dataString) {
             }
             return allPaths;
         } catch (error) {
-            // Set error message but don't clear it on success, as other equations might fail.
             errorMessage.textContent = `Error in "${expression.trim()}": Invalid equation.`;
             console.error("Plotting Error:", error);
             return [];
@@ -4683,51 +4720,50 @@ function renderImplicitPlotter(container, dataString) {
         }
         return path;
     }
-                
-                function draw() { requestAnimationFrame(() => { if(!ctx) return; ctx.clearRect(0, 0, canvas.width, canvas.height); drawGrid(); drawAxes(); drawLabels(); drawPlot(plotObjects); }); }
-                
-                function zoomOnPoint(zoomFactor, centerX, centerY) {
-                    const graphX = toGraphX(centerX);
-                    const graphY = toGraphY(centerY);
-                    scale *= zoomFactor;
-                    origin.x = centerX - graphX * scale;
-                    origin.y = centerY + graphY * scale;
-                    updateView();
-                    draw();
-                    clearTimeout(plotTimeout);
-                    plotTimeout = setTimeout(calculateAndDrawEquations, 150);
-                }
+    
+    function draw() { requestAnimationFrame(() => { if(!ctx) return; ctx.clearRect(0, 0, canvas.width, canvas.height); drawGrid(); drawAxes(); drawLabels(); drawPlot(plotObjects); }); }
+    
+    function zoomOnPoint(zoomFactor, centerX, centerY) {
+        const graphX = toGraphX(centerX);
+        const graphY = toGraphY(centerY);
+        scale *= zoomFactor;
+        origin.x = centerX - graphX * scale;
+        origin.y = centerY + graphY * scale;
+        updateView();
+        draw();
+        clearTimeout(plotTimeout);
+        plotTimeout = setTimeout(calculateAndDrawEquations, 150);
+    }
 
-                function calculateAndDrawEquations() {
-                    errorMessage.textContent = '';
-                    const equationStrings = dataString.split(';').filter(s => s.trim() !== '');
-                    plotObjects = [];
-                    equationStrings.forEach((eq, index) => {
-                        const paths = calculatePaths(eq);
-                        if (paths.length > 0) {
-                            plotObjects.push({
-                                paths: paths,
-                                color: PLOT_COLORS[index % PLOT_COLORS.length]
-                            });
-                        }
-                    });
-                    draw();
-                }
-
-                canvas.addEventListener('mousedown', (e) => { isGraphDragging = true; lastMousePos = { x: e.offsetX, y: e.offsetY }; });
-                canvas.addEventListener('mousemove', (e) => { if (!isGraphDragging) return; const dx = e.offsetX - lastMousePos.x, dy = e.offsetY - lastMousePos.y; origin.x += dx; origin.y += dy; lastMousePos = { x: e.offsetX, y: e.offsetY }; updateView(); draw(); });
-                canvas.addEventListener('mouseup', () => { if (!isGraphDragging) return; isGraphDragging = false; calculateAndDrawEquations(); });
-                canvas.addEventListener('mouseleave', () => { if(isGraphDragging) { isGraphDragging = false; calculateAndDrawEquations(); } });
-                canvas.addEventListener('wheel', (e) => { e.preventDefault(); const zoomFactor = e.deltaY < 0 ? 1.2 : 1 / 1.2; zoomOnPoint(zoomFactor, e.offsetX, e.offsetY); });
-                
-                container.querySelector('#zoomInBtn').addEventListener('click', () => { zoomOnPoint(1.3, canvas.width / 2, canvas.height / 2); });
-                container.querySelector('#zoomOutBtn').addEventListener('click', () => { zoomOnPoint(1 / 1.3, canvas.width / 2, canvas.height / 2); });
-                
-                // Initial calculation
-                calculateAndDrawEquations();
-                triggerMathRendering(container);
-
+    function calculateAndDrawEquations() {
+        errorMessage.textContent = '';
+        const currentEquationStrings = dataString.split(';').filter(s => s.trim() !== '');
+        plotObjects = [];
+        currentEquationStrings.forEach((eq, index) => {
+            const paths = calculatePaths(eq);
+            if (paths.length > 0) {
+                plotObjects.push({
+                    paths: paths,
+                    color: PLOT_COLORS[index % PLOT_COLORS.length]
+                });
             }
+        });
+        draw();
+    }
+
+    canvas.addEventListener('mousedown', (e) => { isGraphDragging = true; lastMousePos = { x: e.offsetX, y: e.offsetY }; });
+    canvas.addEventListener('mousemove', (e) => { if (!isGraphDragging) return; const dx = e.offsetX - lastMousePos.x, dy = e.offsetY - lastMousePos.y; origin.x += dx; origin.y += dy; lastMousePos = { x: e.offsetX, y: e.offsetY }; updateView(); draw(); });
+    canvas.addEventListener('mouseup', () => { if (!isGraphDragging) return; isGraphDragging = false; calculateAndDrawEquations(); });
+    canvas.addEventListener('mouseleave', () => { if(isGraphDragging) { isGraphDragging = false; calculateAndDrawEquations(); } });
+    canvas.addEventListener('wheel', (e) => { e.preventDefault(); const zoomFactor = e.deltaY < 0 ? 1.2 : 1 / 1.2; zoomOnPoint(zoomFactor, e.offsetX, e.offsetY); });
+    
+    container.querySelector('#zoomInBtn').addEventListener('click', () => { zoomOnPoint(1.3, canvas.width / 2, canvas.height / 2); });
+    container.querySelector('#zoomOutBtn').addEventListener('click', () => { zoomOnPoint(1 / 1.3, canvas.width / 2, canvas.height / 2); });
+    
+    // Initial calculation
+    calculateAndDrawEquations();
+    triggerMathRendering(container);
+}
     </script>
     <!-- New Topic Modal -->
 <div class="modal-overlay" id="newTopicModal">
