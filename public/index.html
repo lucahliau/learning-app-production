@@ -5301,7 +5301,11 @@ Example JSON structure:
  * Elaborates on the current node's content in place, adding new paragraphs
  * and identifying/highlighting new technical terms.
  */
- async function elaborateInPlace() {
+ /**
+ * Elaborates on the current node's content in place, adding new paragraphs
+ * and identifying/highlighting new technical terms.
+ */
+async function elaborateInPlace() {
     const currentNode = currentTreeNode;
     if (!currentNode || !currentNode.content || !currentNode.content.overview) {
         showError("There is no content here to elaborate on.");
@@ -5344,7 +5348,7 @@ ${existingParagraphs}
 TASK:
 The user has clicked "Tell me more". Your task is to generate 2-3 new paragraphs of text that follow on naturally from the existing paragraphs, going into more depth. If you include a visual reference (timeline or graph equation) feel free to refer in your "explanation" content directly to them.
 
-Your response MUST be a single, valid JSON object with no other text before or after it. The JSON object must have two required keys ("newText", "newDefinitions") and one optional key ("visualAssets").
+Your response MUST be a single, valid JSON object with no other text before or after it. CRITICAL: All keys and string values must use double quotes (").
 
 1.  In the "newText" value, provide the 2-3 new paragraphs.
 2.  In the "newDefinitions" value, provide an array of objects for any technical terms found ONLY in your new text. Each object should have a "term" and a "definition". Only define terms that are truly technical and not common knowledge.
@@ -5385,24 +5389,40 @@ Example Response:
         if (!response.ok) throw new Error('API request failed');
 
         const result = await response.json();
+        const botResponseText = result.choices[0].message.content;
         
-        const botResponseText = result.choices[0].message.content.replace(/^```json\s*|```$/g, '');
-        
-        // --- START OF FIX ---
-        // Precisely extract the JSON object from the response text.
-        const startIndex = botResponseText.indexOf('{');
-        const endIndex = botResponseText.lastIndexOf('}');
+        let structuredResponse;
+        let jsonString = botResponseText;
 
-        if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
-            throw new Error("AI did not return a valid JSON object.");
+        try {
+            // --- START OF FIX ---
+            // 1. Find the start and end of the potential JSON object.
+            const startIndex = jsonString.indexOf('{');
+            const endIndex = jsonString.lastIndexOf('}');
+
+            if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
+                throw new Error("No valid JSON object found in the AI response.");
+            }
+
+            // 2. Extract the potential JSON string.
+            jsonString = jsonString.substring(startIndex, endIndex + 1);
+
+            // 3. Attempt to parse it.
+            structuredResponse = JSON.parse(jsonString);
+            // --- END OF FIX ---
+
+        } catch (e) {
+            // --- START OF DEBUGGING LOG ---
+            // If parsing fails, this block will run.
+            console.error("---!!!--- JSON PARSING FAILED ---!!!---");
+            console.error("The code could not parse the following text received from the AI:");
+            console.log(jsonString); // This will print the exact problematic string.
+            console.error("The specific error was:", e.message);
+            // --- END OF DEBUGGING LOG ---
+            
+            // Show a generic error to the user.
+            throw new Error("The AI returned data in a format that could not be read. Please check the console for details.");
         }
-        
-        const jsonString = botResponseText.substring(startIndex, endIndex + 1);
-        // --- END OF FIX ---
-
-        const sanitizedJsonString = jsonString.replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t");
-        const fixedJson = repairJsonKeys(sanitizedJsonString);
-        const structuredResponse = JSON.parse(fixedJson);
         
         const newText = structuredResponse.newText || "";
         const newDefinitions = structuredResponse.newDefinitions || [];
@@ -5433,7 +5453,7 @@ Example Response:
 
     } catch (error) {
         console.error("Error during in-place elaboration:", error);
-        showError("Sorry, I was unable to generate more content for this section.");
+        showError(error.message || "Sorry, I was unable to generate more content for this section.");
     } finally {
         showLoading(false);
     }
