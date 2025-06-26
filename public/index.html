@@ -2101,14 +2101,13 @@ Here are the available asset types and their required data formats:
 
         const data = await response.json();
         const botResponseText = data.choices[0].message.content;
+        botResponseText = botResponseText.replace(/^```json\s*|```$/g, '');
 
         const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error(`Prefetch found no JSON for "${topic}"`);
 
-        const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
-if (!jsonMatch) throw new Error(`Prefetch found no JSON for "${topic}"`);
-
-const structuredResponse = JSON.parse(jsonMatch[0]);        const explanation = structuredResponse.explanation || "No explanation provided.";
+        const structuredResponse = JSON.parse(jsonMatch[0]);
+        const explanation = structuredResponse.explanation || "No explanation provided.";
         const definitions = structuredResponse.definitions || [];
         const visualAssets = structuredResponse.visualAssets || []; // Handle visual assets
 
@@ -2124,7 +2123,13 @@ const structuredResponse = JSON.parse(jsonMatch[0]);        const explanation = 
         await saveTopicsToFirestore();
 
     } catch (error) {
-        console.error("Prefetch error:", error);
+        // --- LINE C: (REPLACE THE EXISTING console.error) ---
+            // When an error happens, log the problematic text for easy debugging
+            console.error("Prefetch error:", error);
+            const rawResponse = error.response ? await error.response.text() : "No raw response available.";
+            console.log("--- FAILED TO PARSE THIS AI RESPONSE ---");
+            console.log(rawResponse);
+            console.log("---------------------------------------");
         // We don't show a UI error here as it's a background process
     } finally {
         // Mark prefetching as complete regardless of outcome
