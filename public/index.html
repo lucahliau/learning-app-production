@@ -5297,7 +5297,11 @@ Example JSON structure:
  * Elaborates on the current node's content in place, adding new paragraphs
  * and identifying/highlighting new technical terms.
  */
-async function elaborateInPlace() {
+/**
+ * Elaborates on the current node's content in place, adding new paragraphs
+ * and identifying/highlighting new technical terms.
+ */
+ async function elaborateInPlace() {
     const currentNode = currentTreeNode;
     if (!currentNode || !currentNode.content || !currentNode.content.overview) {
         showError("There is no content here to elaborate on.");
@@ -5382,28 +5386,32 @@ Example Response:
 
         const result = await response.json();
         
-        // --- START OF FIX ---
-        // Strip markdown fences (e.g., ```json) from the response before parsing.
         const botResponseText = result.choices[0].message.content.replace(/^```json\s*|```$/g, '');
-        // --- END OF FIX ---
         
-        const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error("AI did not return valid JSON.");
+        // --- START OF FIX ---
+        // Precisely extract the JSON object from the response text.
+        const startIndex = botResponseText.indexOf('{');
+        const endIndex = botResponseText.lastIndexOf('}');
 
-        const sanitizedJsonString = jsonMatch[0].replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t");
+        if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
+            throw new Error("AI did not return a valid JSON object.");
+        }
+        
+        const jsonString = botResponseText.substring(startIndex, endIndex + 1);
+        // --- END OF FIX ---
+
+        const sanitizedJsonString = jsonString.replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t");
         const fixedJson = repairJsonKeys(sanitizedJsonString);
         const structuredResponse = JSON.parse(fixedJson);
         
         const newText = structuredResponse.newText || "";
         const newDefinitions = structuredResponse.newDefinitions || [];
-        const visualAssets = structuredResponse.visualAssets || []; // Get visual assets
+        const visualAssets = structuredResponse.visualAssets || [];
 
-        // Add the newly found definitions to the node's existing list
         if (newDefinitions.length > 0) {
             currentNode.content.definitions.push(...newDefinitions);
         }
 
-        // Add the new visual assets to the node's existing list
         if (visualAssets.length > 0) {
             if (!currentNode.content.visualAssets) {
                 currentNode.content.visualAssets = [];
