@@ -1835,7 +1835,7 @@ const parseDateToFractionalYear = (dateStr) => {
     return null;
 };
 function renderHybridTimeline(container, hybridData) {
-    // 1. Create the timeline's HTML frame
+    // 1. Create the timeline's HTML frame (without the "scroll" message)
     container.innerHTML = `
         <h1>Timeline</h1>
         <div class="timeline-container-wrapper">
@@ -1849,6 +1849,7 @@ function renderHybridTimeline(container, hybridData) {
     const timelineLine = container.querySelector('.timeline-line');
     if (!timelineWrapper || !timelineLine) return;
 
+    // This block contains the new, corrected rendering logic.
     requestAnimationFrame(() => {
         const processedData = hybridData.map(d => {
             if (d.type === 'period') {
@@ -1866,40 +1867,32 @@ function renderHybridTimeline(container, hybridData) {
 
         const compressionExponent = 0.5;
         const scaleValue = (value) => Math.pow(Math.max(0, value), compressionExponent) * 4;
-        const PADDING = 40;
 
-        // --- 1. Calculate the "Natural" Layout ---
-        let lastNaturalPos = PADDING;
-        let lastNaturalYear = processedData[0].type === 'period' ? processedData[0].startYear : processedData[0].year;
+        // --- 1. Calculate "Natural" Layout (No Padding) ---
+        let lastNaturalPos = 0;
+        let lastEventEndYear = processedData.length > 0 ? (processedData[0].type === 'period' ? processedData[0].startYear : processedData[0].year) : 0;
         
         processedData.forEach(item => {
-            const currentYear = item.type === 'period' ? item.startYear : item.year;
-            const timeGap = currentYear - lastNaturalYear;
+            const currentEventStartYear = item.type === 'period' ? item.startYear : item.year;
+            const timeGap = currentEventStartYear - lastEventEndYear;
             
-            item.naturalStartPos = lastNaturalPos + scaleValue(timeGap);
-            item.naturalBraceWidth = item.type === 'period' ? scaleValue(item.duration) : 0;
+            item.naturalStartPos = lastNaturalPos + scaleValue(Math.max(0, timeGap));
+            item.naturalBraceWidth = item.type === 'period' ? scaleValue(Math.max(0, item.duration)) : 0;
             
             lastNaturalPos = item.naturalStartPos + item.naturalBraceWidth;
-            lastNaturalYear = currentYear;
+            lastEventEndYear = item.type === 'period' ? item.endYear : item.year;
         });
+        const totalNaturalWidth = lastNaturalPos;
 
-        const totalNaturalWidth = lastNaturalPos + PADDING;
-
-       // --- REPLACE THE OLD LOGIC WITH THIS ---
-        // --- 2. Determine Final Width and Scaling Factor (NEW LOGIC) ---
+        // --- 2. Determine Final Width and Scaling Factor ---
         const containerWidth = timelineContainerWrapper.clientWidth;
+        const HORIZONTAL_MARGIN = 80; // Fixed space on left/right to keep cards in view
         
-        // The final width is ALWAYS the width of the container. No scrolling.
-        const finalWidth = containerWidth;
+        timelineWrapper.style.width = `${containerWidth}px`;
+        timelineLine.style.width = `${containerWidth}px`;
         
-        // Calculate the scaling factor needed to fit the "natural" width into the container.
-        // This will be < 1 if the natural layout is wider than the container.
-        const positionScaleFactor = finalWidth / totalNaturalWidth;
-        
-        // Set the wrapper and line to the container's width.
-        timelineWrapper.style.width = `${finalWidth}px`;
-        timelineLine.style.width = `${finalWidth}px`;
-        // --- END OF REPLACEMENT ---
+        const safeAreaWidth = containerWidth - (2 * HORIZONTAL_MARGIN);
+        const positionScaleFactor = totalNaturalWidth > 0 ? safeAreaWidth / totalNaturalWidth : 0;
         
         // --- 3. Render Elements with Final Scaled Positions ---
         let lastTopEnd = -Infinity, lastBottomEnd = -Infinity;
@@ -1909,7 +1902,8 @@ function renderHybridTimeline(container, hybridData) {
 
         processedData.forEach((item, index) => {
             const isTop = index % 2 === 0;
-            const finalStartPos = item.naturalStartPos * positionScaleFactor;
+            // NEW POSITIONING LOGIC: Scale first, then add the margin.
+            const finalStartPos = (item.naturalStartPos * positionScaleFactor) + HORIZONTAL_MARGIN;
 
             if (item.type === 'period') {
                 const finalBraceWidth = item.naturalBraceWidth * positionScaleFactor;
@@ -1930,62 +1924,54 @@ function renderHybridTimeline(container, hybridData) {
                 brace.style.left = `${finalStartPos}px`;
                 brace.style.width = `${finalBraceWidth}px`;
                 timelineWrapper.appendChild(brace);
+
             } else { // type === 'event'
-    const cardWidth = 140;
-    
-    // 1. Create an invisible wrapper that gets positioned on the timeline
-    const eventWrapper = document.createElement('div');
-    eventWrapper.className = `hybrid-event ${isTop ? 'top' : 'bottom'}`;
-    eventWrapper.style.left = `${finalStartPos}px`;
-    eventWrapper.style.transform = 'translateX(-50%)'; // The wrapper handles centering
+                const cardWidth = 140;
+                const eventWrapper = document.createElement('div');
+                eventWrapper.className = `hybrid-event ${isTop ? 'top' : 'bottom'}`;
+                eventWrapper.style.left = `${finalStartPos}px`;
+                eventWrapper.style.transform = 'translateX(-50%)';
 
-    // 2. Create a separate container for just the text content
-    const textElement = document.createElement('div');
-    textElement.className = 'hybrid-event-content'; // A new class for clarity
-    textElement.style.transition = 'transform 0.2s ease-in-out'; // Add transition here
-    textElement.innerHTML = `<div class="hybrid-event-title">${item.name}</div><div class="hybrid-event-date">${item.dateStr}</div>`;
+                const textElement = document.createElement('div');
+                textElement.className = 'hybrid-event-content';
+                textElement.style.transition = 'transform 0.2s ease-in-out';
+                textElement.innerHTML = `<div class="hybrid-event-title">${item.name}</div><div class="hybrid-event-date">${item.dateStr}</div>`;
+                
+                textElement.addEventListener('mouseover', () => {
+                    eventWrapper.style.zIndex = '10'; 
+                    textElement.style.transform = 'scale(1.1)';
+                    textElement.style.textShadow = '0 2px 8px rgba(0, 0, 0, 0.3)';
+                });
 
-    // 3. Apply the hover listeners ONLY to the text container
-    textElement.addEventListener('mouseover', () => {
-        // The z-index is applied to the entire wrapper to bring both text and line to the front
-        eventWrapper.style.zIndex = '10'; 
-        textElement.style.transform = 'scale(1.1)'; // Only scale the text
-        textElement.style.textShadow = '0 2px 8px rgba(0, 0, 0, 0.3)';
-    });
+                textElement.addEventListener('mouseout', () => {
+                    eventWrapper.style.zIndex = '5';
+                    textElement.style.transform = 'scale(1)';
+                    textElement.style.textShadow = 'none';
+                });
 
-    textElement.addEventListener('mouseout', () => {
-        eventWrapper.style.zIndex = '5';
-        textElement.style.transform = 'scale(1)'; // Revert scale to normal
-        textElement.style.textShadow = 'none';
-    });
-
-    // 4. Create the connector as before
-    const connector = document.createElement('div');
-    connector.className = `hybrid-event-connector ${isTop ? 'top' : 'bottom'}`;
-    
-    // --- The rest of the logic remains the same ---
-
-    let currentEventLevel;
-    if (isTop) {
-        if (finalStartPos - cardWidth / 2 < lastTopEnd + 10) eventTopLevel = (eventTopLevel + 1) % eventVerticalLevels.length;
-        currentEventLevel = eventVerticalLevels[eventTopLevel];
-        eventWrapper.style.marginBottom = `${currentEventLevel}px`;
-        lastTopEnd = finalStartPos + cardWidth / 2;
-    } else {
-        if (finalStartPos - cardWidth / 2 < lastBottomEnd + 10) bottomLevel = (eventBottomLevel + 1) % eventVerticalLevels.length;
-        currentEventLevel = eventVerticalLevels[bottomLevel];
-        eventWrapper.style.marginTop = `${currentEventLevel}px`;
-        lastBottomEnd = finalStartPos + cardWidth / 2;
-    }
-    
-    connector.style.setProperty('--connector-height', `${currentEventLevel}px`);
-    
-    // 5. Append text and connector as SIBLINGS to the wrapper
-    eventWrapper.appendChild(textElement);
-    eventWrapper.appendChild(connector);
-    
-    timelineWrapper.appendChild(eventWrapper);
-}
+                const connector = document.createElement('div');
+                connector.className = `hybrid-event-connector ${isTop ? 'top' : 'bottom'}`;
+                
+                let currentEventLevel;
+                if (isTop) {
+                    if (finalStartPos - cardWidth / 2 < lastTopEnd + 10) eventTopLevel = (eventTopLevel + 1) % eventVerticalLevels.length;
+                    currentEventLevel = eventVerticalLevels[eventTopLevel];
+                    eventWrapper.style.marginBottom = `${currentEventLevel}px`;
+                    lastTopEnd = finalStartPos + cardWidth / 2;
+                } else {
+                    if (finalStartPos - cardWidth / 2 < lastBottomEnd + 10) eventBottomLevel = (eventBottomLevel + 1) % eventVerticalLevels.length;
+                    currentEventLevel = eventVerticalLevels[eventBottomLevel];
+                    eventWrapper.style.marginTop = `${currentEventLevel}px`;
+                    lastBottomEnd = finalStartPos + cardWidth / 2;
+                }
+                
+                connector.style.setProperty('--connector-height', `${currentEventLevel}px`);
+                
+                eventWrapper.appendChild(textElement);
+                eventWrapper.appendChild(connector);
+                
+                timelineWrapper.appendChild(eventWrapper);
+            }
         });
     });
 }
