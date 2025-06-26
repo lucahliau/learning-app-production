@@ -2453,18 +2453,34 @@ async function loadTopicsFromFirestore(userId) {
         const doc = await db.collection('userTopics').doc(userId).get();
         if (doc.exists) {
             const data = doc.data();
-            // Important: We need a way to restore the circular 'parent' references
-            // that JSON.stringify removes.
             learningTopics = restoreParents(data.topics);
             console.log("Topics loaded successfully!");
         } else {
             console.log("No saved topics found for this user. Starting fresh.");
             learningTopics = {}; // Start with an empty object
         }
-        // After loading, render the cards on the landing page
-        renderTopicCards();
+
+        // --- NEW SESSION RESTORATION LOGIC ---
+        const lastTopicId = sessionStorage.getItem('lastActiveTopicId');
+        const lastNodeId = sessionStorage.getItem('lastActiveNodeId');
+
+        // Check if we have a saved state and if that topic still exists
+        if (lastTopicId && lastNodeId && learningTopics[lastTopicId]) {
+            console.log(`Restoring session to topic: ${lastTopicId}, node: ${lastNodeId}`);
+            // Load the topic and navigate directly to the last viewed node
+            loadLearningTopic(lastTopicId, lastNodeId);
+        } else {
+            // If no saved state, show the main menu as before
+            renderTopicCards();
+            switchView('landingView');
+        }
+        // --- END OF NEW LOGIC ---
+
     } catch (error) {
         console.error("Error loading topics: ", error);
+        // Fallback to the main menu on error
+        renderTopicCards();
+        switchView('landingView');
     }
 }
 
@@ -2905,8 +2921,8 @@ document.getElementById('sortControls').addEventListener('click', (e) => {
  * @param {string} topicId - The ID of the topic to load.
  */
 // Find and replace this entire function
-function loadLearningTopic(topicId) {
-    currentTopicId = topicId; // This line is the issue
+function loadLearningTopic(topicId, initialNodeId = 'root') {
+        currentTopicId = topicId; // This line is the issue
     const topicData = learningTopics[topicId];
     if (!topicData) {
         console.error("Topic not found:", topicId);
@@ -2920,7 +2936,7 @@ function loadLearningTopic(topicId) {
 
     // Applied here for the sidebar title when loading a topic
     document.getElementById('sidebarTitle').innerHTML = createTagsHTML(treeStructure);
-    navigateToNode('root');
+    navigateToNode(initialNodeId);
     switchView('learningView');
 }
        /**
@@ -3385,6 +3401,8 @@ function renderTreeNode(node, level = 0) {
                 currentHistoryIndex = navigationHistory.length - 1;
                 
                 currentTreeNode = node;
+                sessionStorage.setItem('lastActiveTopicId', currentTopicId);
+                sessionStorage.setItem('lastActiveNodeId', nodeId);
                 currentContext = navigationHistory[currentHistoryIndex].context;
                 
                 updateNavigation();
