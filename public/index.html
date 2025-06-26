@@ -1461,14 +1461,10 @@
         }
         
         .timeline-event:hover {
-    z-index: 10; /* Keep the z-index change on the main container */
-}
-
-.timeline-event:hover .timeline-event-content {
-    /* Apply the transform and shadow to the inner content ONLY */
-    transform: scale(1.1);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-}
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border-color: #6366f1;
+        }
         
         .timeline-event.top {
             bottom: 50%;
@@ -1567,72 +1563,49 @@
         .zoom-btn:hover {
             background-color: #f3f4f6;
         }
-        /* --- HYBRID TIMELINE STYLES --- */
-    .hybrid-event {
-        position: absolute;
-        text-align: center;
-        z-index: 5;
-    }
+       /* --- REVISED HYBRID TIMELINE STYLES --- */
 
-    .hybrid-event-title {
-        font-size: 14px;
-        font-weight: 600;
-        color: #11182c;
-    }
+/* This is the main positioning wrapper. It has no visual styles. */
+.hybrid-event {
+    position: absolute;
+    z-index: 5;
+    display: flex;
+    flex-direction: column; /* Stacks the card and connector vertically */
+    align-items: center;
+    transition: all 0.2s ease-in-out; /* Moved from old shared rule */
+}
+/* For events on top, this reverses the order to show the card above the connector */
+.hybrid-event.top {
+    flex-direction: column-reverse;
+}
 
-    .hybrid-event-date {
-        font-size: 11px;
-        color: #6b7280;
-    }
-
-    .hybrid-event-connector {
-        position: absolute;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 2px;
-        background-color: #11182c; /* Black connector line */
-        z-index: 1;
-        /* Height is set dynamically by the script */
-        height: var(--connector-height, 25px);
-    }
-
-    .hybrid-event.top {
-        bottom: 50%;
-    }
-    .hybrid-event.bottom {
-        top: 50%;
-    }
-
-    .hybrid-event-connector.top {
-        top: 100%;
-    }
-
-    .hybrid-event-connector.bottom {
-        bottom: 100%;
-        
-    }
-    /* Add this to make the hover effect smooth */
-/* --- ADD THESE NEW RULES --- */
-
-/* 1. A shared rule to make the hover effect smooth for both types */
-.timeline-event, .hybrid-event {
+/* This is the visible card that gets the hover effect */
+.timeline-event-card {
+    background-color: #ffffff;
+    border: 1px solid #11182c; /* The user-requested black border */
+    border-radius: 12px;
+    padding: 10px 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
     transition: all 0.2s ease-in-out;
+    width: 140px; /* A fixed width for event cards */
+    text-align: center;
+    cursor: default;
 }
 
-/* 2. A specific hover effect for the CARDS with backgrounds */
-.timeline-event:hover {
+/* The hover effect is now ONLY on the card, not the whole wrapper */
+.timeline-event-card:hover {
+    transform: scale(1.08);
     z-index: 10;
-    transform: scale(1.05) translateY(-3px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    border-color: #6366f1; /* Keeps the purple hover color for consistency */
 }
 
-/* 3. A specific hover effect for the TEXT-ONLY events *//*
-.hybrid-event:hover {
-    z-index: 10;
-    transform: translateX(-50%) scale(1.1); 
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}*/
-/* ADD these new CSS rules to your main <style> block */
+/* This is the dedicated, non-scaling connector line */
+.timeline-connector {
+    width: 2px;
+    background-color: #11182c; /* The black connector line */
+    height: var(--connector-height, 25px); /* Height is set by JavaScript */
+}
 
     .visual-asset-row {
     display: flex;
@@ -1688,12 +1661,6 @@
 .timeline-event.event-style {
     border-color: #11182c; /* A dark, almost black color for the border */
     text-align: center; /* Center the text inside the new event card */
-}
-.timeline-event-content {
-    background-color: #ffffff; /* Give the content a background */
-    border-radius: 12px; /* Match the parent's rounding */
-    padding: 10px 12px;
-    transition: all 0.3s ease; /* Animate all properties smoothly */
 }
             </style>
 
@@ -1950,9 +1917,8 @@ function renderHybridTimeline(container, hybridData) {
     const timelineLine = container.querySelector('.timeline-line');
     if (!timelineWrapper || !timelineLine) return;
 
-    // This block contains the new, corrected rendering logic.
     requestAnimationFrame(() => {
-        // --- UPDATED: Dynamic Vertical Level Calculation ---
+        // Dynamic Vertical Level Calculation
         const containerHeight = timelineContainerWrapper.clientHeight;
         const availableSpace = containerHeight / 2;
         const cardHeightEstimate = 50;
@@ -1960,12 +1926,8 @@ function renderHybridTimeline(container, hybridData) {
         
         const maxLevel = Math.max(10, availableSpace - cardHeightEstimate - verticalPadding);
         
-        // Spacing for the new event cards, using a single consistent level
-        const eventVerticalLevel = Math.round(maxLevel * 0.5);
-        
-        // Spacing for the period cards, using the tighter 0.2 multiplier
+        const eventVerticalLevel = Math.round(maxLevel * 0.7);
         const periodVerticalLevel = Math.round(maxLevel * 0.2);
-        // --- END OF UPDATE ---
 
         const processedData = hybridData.map(d => {
             if (d.type === 'period') {
@@ -2031,25 +1993,39 @@ function renderHybridTimeline(container, hybridData) {
                 timelineWrapper.appendChild(brace);
 
             } else { 
-                // --- NEW LOGIC for rendering 'event' types as cards ---
-                const cardWidth = 140; // A fixed width for event cards
-                const cardStartPos = finalStartPos - (cardWidth / 2);
+                // --- NEW RENDER LOGIC FOR 'event' TYPES ---
+                const cardWidth = 140;
 
-                const eventElement = document.createElement('div');
-                // The 'event-style' class gives it the vertical bar and black border
-                eventElement.className = `timeline-event event-style ${isTop ? 'top' : 'bottom'}`;
-                eventElement.innerHTML = `<div class="timeline-event-content"><div class="timeline-event-title">${item.name}</div><div class="timeline-event-date">${item.dateStr}</div></div>`;                
-                eventElement.style.left = `${cardStartPos}px`;
-                eventElement.style.width = `${cardWidth}px`;
+                // Create the main positioning wrapper
+                const eventWrapper = document.createElement('div');
+                eventWrapper.className = `hybrid-event ${isTop ? 'top' : 'bottom'}`;
                 
-                // Use the new single eventVerticalLevel for spacing
-                eventElement.style.marginBottom = isTop ? `${eventVerticalLevel}px` : null;
-                eventElement.style.marginTop = !isTop ? `${eventVerticalLevel}px` : null;
+                // Position the wrapper relative to the center of the card
+                eventWrapper.style.left = `${finalStartPos - (cardWidth / 2)}px`;
+                eventWrapper.style.width = `${cardWidth}px`;
 
-                // Set the CSS variable for the connector line's height
-                eventElement.style.setProperty('--connector-height', `${eventVerticalLevel}px`);
+                // Set the connector line's height via a CSS variable
+                eventWrapper.style.setProperty('--connector-height', `${eventVerticalLevel}px`);
                 
-                timelineWrapper.appendChild(eventElement);
+                // Set the gap between the main timeline bar and the connector
+                if (isTop) {
+                    eventWrapper.style.bottom = '50%';
+                    eventWrapper.style.marginBottom = '5px';
+                } else {
+                    eventWrapper.style.top = '50%';
+                    eventWrapper.style.marginTop = '5px';
+                }
+                
+                // Create the two separate child elements: the card and the connector
+                eventWrapper.innerHTML = `
+                    <div class="timeline-event-card">
+                        <div class="timeline-event-title">${item.name}</div>
+                        <div class="timeline-event-date">${item.dateStr}</div>
+                    </div>
+                    <div class="timeline-connector"></div>
+                `;
+                
+                timelineWrapper.appendChild(eventWrapper);
             }
         });
     });
