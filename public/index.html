@@ -2237,7 +2237,10 @@ Here are the available asset types and their required data formats:
             const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
             if (!jsonMatch) throw new Error(`Prefetch found no JSON for "${topic}"`);
 
-            const fixedJson = repairJsonKeys(jsonMatch[0]);
+            // FIX: Sanitize the JSON string to escape control characters
+            const sanitizedJsonString = jsonMatch[0].replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t");
+
+            const fixedJson = repairJsonKeys(sanitizedJsonString);
             const structuredResponse = JSON.parse(fixedJson);
             const explanation = structuredResponse.explanation || "No explanation provided.";
             const definitions = structuredResponse.definitions || [];
@@ -4076,7 +4079,11 @@ Example for a topic on Parabolas:
             try {
                 const jsonMatch = botResponse.match(/\{[\s\S]*\}/);
                 if (!jsonMatch) throw new Error("No valid JSON object found in AI response.");
-                const fixedJson = repairJsonKeys(jsonMatch[0]);
+
+                // FIX: Sanitize the JSON string to escape control characters
+                const sanitizedJsonString = jsonMatch[0].replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t");
+
+                const fixedJson = repairJsonKeys(sanitizedJsonString);
                 const structuredResponse = JSON.parse(fixedJson);
                 const explanation = structuredResponse.explanation || "No explanation provided.";
                 const definitions = structuredResponse.definitions || [];
