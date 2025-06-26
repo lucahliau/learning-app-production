@@ -1461,10 +1461,14 @@
         }
         
         .timeline-event:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-            border-color: #6366f1;
-        }
+    z-index: 10; /* Keep the z-index change on the main container */
+}
+
+.timeline-event:hover .timeline-event-content {
+    /* Apply the transform and shadow to the inner content ONLY */
+    transform: scale(1.1);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
         
         .timeline-event.top {
             bottom: 50%;
@@ -1684,6 +1688,12 @@
 .timeline-event.event-style {
     border-color: #11182c; /* A dark, almost black color for the border */
     text-align: center; /* Center the text inside the new event card */
+}
+.timeline-event-content {
+    background-color: #ffffff; /* Give the content a background */
+    border-radius: 12px; /* Match the parent's rounding */
+    padding: 10px 12px;
+    transition: all 0.3s ease; /* Animate all properties smoothly */
 }
             </style>
 
@@ -2028,8 +2038,7 @@ function renderHybridTimeline(container, hybridData) {
                 const eventElement = document.createElement('div');
                 // The 'event-style' class gives it the vertical bar and black border
                 eventElement.className = `timeline-event event-style ${isTop ? 'top' : 'bottom'}`;
-                eventElement.innerHTML = `<div class="timeline-event-title">${item.name}</div><div class="timeline-event-date">${item.dateStr}</div>`;
-                
+                eventElement.innerHTML = `<div class="timeline-event-content"><div class="timeline-event-title">${item.name}</div><div class="timeline-event-date">${item.dateStr}</div></div>`;                
                 eventElement.style.left = `${cardStartPos}px`;
                 eventElement.style.width = `${cardWidth}px`;
                 
