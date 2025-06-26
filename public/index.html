@@ -2940,7 +2940,8 @@ function loadLearningTopic(topicId) {
 }
 
         const BACKEND_URL = '/api';
-        
+        const PLOT_COLORS = ['#6366f1', '#f59e0b', '#14b8a6', '#ef4444', '#8b5cf6', '#3b82f6'];
+
         // Navigation and content management
         let navigationHistory = [];
         let currentHistoryIndex = -1;
@@ -3998,7 +3999,6 @@ async function checkConnection() {
         // Wait until the document is fully loaded to run this script
         document.addEventListener('DOMContentLoaded', function () {
             // --- COLOR PALETTE FOR MULTI-LINE PLOTS ---
-    const PLOT_COLORS = ['#6366f1', '#f59e0b', '#14b8a6', '#ef4444', '#8b5cf6', '#3b82f6'];
 
 
 
