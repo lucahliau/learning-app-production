@@ -3529,12 +3529,18 @@ let conversationHistory = [
  * @param {Array} definitionsArray The array of definitions from the AI.
  * @returns {object} A content object ready for rendering.
  */
-function parseResponse(mainContentText, definitionsArray) {
+/**
+ * A robust, streamlined function to parse AI content, now with
+ * math-aware line break conversion.
+ * @param {string} mainContentText The explanation text from the AI.
+ * @param {Array} definitionsArray The array of definitions from the AI.
+ * @returns {object} A content object ready for rendering.
+ */
+ function parseResponse(mainContentText, definitionsArray) {
     const rawText = mainContentText || "";
     console.log("DEBUG: Raw text received by parser:", rawText);
 
     // Step 1: Normalize the input string.
-    // This replaces literal '\\n' with actual newlines and '\\"' with quotes.
     const normalizedText = rawText.replace(/\\n/g, '\n').replace(/\\"/g, '"');
 
     // Step 2: Convert basic markdown to HTML.
@@ -3542,23 +3548,37 @@ function parseResponse(mainContentText, definitionsArray) {
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*(.*?)\*/g, '<em>$1</em>');
 
-    // Step 3: Handle paragraphs correctly.
-    // This is the most critical step to prevent run-on text.
-    // We split the text into paragraphs wherever there are two or more newlines.
+    // --- START: UPDATED PARAGRAPH LOGIC ---
+    // Step 3: Handle paragraphs with math-aware line breaks.
     const paragraphs = html
-        .split(/(\n\s*){2,}/g) // Split by 2+ newlines
-        .filter(p => p && p.trim() !== '') // Filter out empty strings from the split
+        .split(/(\n\s*){2,}/g) // Split by 2+ newlines to form paragraphs.
+        .filter(p => p && p.trim() !== '') // Filter out empty strings from the split.
         .map(p => {
-            // For each paragraph, trim it and replace single newlines with <br> tags.
             const trimmedParagraph = p.trim();
-            // This ensures that even if a paragraph has some LaTeX, it's wrapped correctly.
-            return `<p>${trimmedParagraph.replace(/\n/g, '<br>')}</p>`;
+
+            // We now split EACH paragraph into math and text segments.
+            const splitRegex = /(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$|\\\[[\s\S]*?\\\]|\\\(.*?\\\))/g;
+            const segments = trimmedParagraph.split(splitRegex);
+
+            // Process the segments to only add <br> tags to the text parts.
+            const processedSegments = segments.map((segment, index) => {
+                // If it's a math segment (odd index) or empty, leave it completely alone.
+                if (!segment || index % 2 !== 0) {
+                    return segment;
+                }
+                // This is a text segment. We can safely replace any newlines with <br> tags here.
+                return segment.replace(/\n/g, '<br>');
+            });
+
+            // Re-join the segments and wrap the whole thing in a <p> tag.
+            const finalParagraphHtml = processedSegments.join('');
+            return `<p>${finalParagraphHtml}</p>`;
         });
+    // --- END: UPDATED PARAGRAPH LOGIC ---
 
     html = paragraphs.join('');
 
     // Step 4: Final safety net for backslashes.
-    // This catches any remaining double-slashes from inconsistent AI output.
     html = html.replace(/\\\\/g, '\\');
 
     console.log("DEBUG: Final processed HTML for rendering:", html);
