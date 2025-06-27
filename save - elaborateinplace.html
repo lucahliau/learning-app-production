@@ -1952,10 +1952,43 @@ function triggerMathRendering(element) {
  * @param {string} jsonString - The potentially malformed JSON string.
  * @returns {string} A repaired JSON string.
  */
- function repairJsonKeys(jsonString) {
-    // This regular expression finds property names that are not in double quotes
-    // and wraps them in double quotes to make the JSON valid.
-    return jsonString.replace(/(?<=[\{,]\s*)(\w+)(?=\s*:)/g, '"$1"');
+ /**
+ * A robust function to find, clean, and parse a JSON object from a raw text string.
+ * This handles conversational text, code fences, and invalid escape characters.
+ * @param {string} rawText The raw text response from the AI.
+ * @returns {object} The parsed JavaScript object.
+ */
+ /**
+ * A robust function to find and parse a JSON object from a raw text string.
+ * This version relies on the AI producing valid JSON and the native parser.
+ * @param {string} rawText The raw text response from the AI.
+ * @returns {object} The parsed JavaScript object.
+ */
+function sanitizeAndParseJson(rawText) {
+    // Find the JSON block, ignoring conversational text and code fences like ```json
+    const startIndex = rawText.indexOf('{');
+    const endIndex = raw.lastIndexOf('}');
+
+    if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
+        console.error("COULD NOT FIND JSON in the following text:", rawText);
+        throw new Error("No valid JSON object found in the AI response.");
+    }
+
+    // Extract the potential JSON string
+    let jsonString = rawText.substring(startIndex, endIndex + 1);
+
+    // The aggressive .replace(/\\/g, '\\\\') line has been REMOVED.
+    // This was the cause of the double-backslash issue in your LaTeX.
+
+    try {
+        return JSON.parse(jsonString);
+    } catch (e) {
+        console.error("---!!!--- JSON PARSING FAILED ---!!!---");
+        console.error("The code could not parse the following string:", jsonString);
+        console.error("The specific error was:", e.message);
+        // We re-throw the error so the calling function knows the parse failed.
+        throw e;
+    }
 }
 // --- ADVANCED DATE PARSING & SCALING (No Changes) ---
 const isLeapYear = (year) => (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
@@ -2164,7 +2197,11 @@ function renderHybridTimeline(container, hybridData) {
  * preserving the specific prefetch prompt and logic.
  * @param {object} node - The tree node to fetch content for.
  */
-async function prefetchNodeContent(node) {
+/**
+ * Fetches node content in the background with a robust retry mechanism,
+ * preserving the specific prefetch prompt and logic.
+ */
+ async function prefetchNodeContent(node) {
     // Silently exit if content already exists or is being fetched.
     if (node.content || node.isPrefetching) return;
 
@@ -2172,13 +2209,11 @@ async function prefetchNodeContent(node) {
     node.isPrefetching = true;
     console.log(`%cPrefetching: "${node.fullTitle}"`, 'color: #8b5cf6;');
 
-    // --- NEW: Retry logic has been added ---
     const maxRetries = 3;
     let success = false;
 
     for (let i = 0; i < maxRetries; i++) {
         try {
-            // --- Your existing logic is preserved inside this try block ---
             const topic = node.fullTitle;
             let contextPrompt = '';
             if (node.parent && node.parent.id !== 'root') {
@@ -2187,10 +2222,9 @@ async function prefetchNodeContent(node) {
 
             const prefetchPrompt = `You are an expert educator who carries out tasks with precision and speed. Your task is to explain the topic "${topic}"${contextPrompt}.
         
-Your response MUST be a single, valid JSON object with no other text before or after it.
-The JSON object must have three keys: "explanation", "definitions", and an optional "visualAssets".
+Your response MUST be a single, valid JSON object with no other text before or after it. All keys and string values MUST use double quotes (").
 
-1.  In the "explanation" value, provide a detailed, explanation of the topic with at least 2 paragraphs. **For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters. CRITICALLY, any backslash \\ in your LaTeX must be escaped as a double backslash \\\\ within the JSON string (e.g., write "\\\\sqrt" instead of "\\sqrt").**
+1.  In the "explanation" value, provide a detailed, explanation of the topic with at least 2 paragraphs. **For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters. For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters like $...$ or $$...$$**
 2.  In the "definitions" value, provide an array of objects. For each object, identify a technical term from your explanation and provide a simple, one-sentence definition for it in the context of the topic. Only add/define these technical terms if they are truly technical and not straightforward, and their definition is specific to the context. Terms like focus, endurance, mental toughness which are obvious should not be included. 
 3.  In the "visualAssets" value, (this key is optional), analyze your explanation. If a visual aid would enhance understanding, add this key. If not, OMIT this key entirely.
     * If included, it must be an array of objects. Each object represents one visual asset.
@@ -2231,14 +2265,10 @@ Here are the available asset types and their required data formats:
             if (!response.ok) throw new Error(`Prefetch API failed for "${topic}"`);
 
             const data = await response.json();
-            let botResponseText = data.choices[0].message.content;
-            botResponseText = botResponseText.replace(/^```json\s*|```$/g, '');
+            const botResponseText = data.choices[0].message.content;
 
-            const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) throw new Error(`Prefetch found no JSON for "${topic}"`);
+            const structuredResponse = sanitizeAndParseJson(botResponseText);
 
-            const fixedJson = repairJsonKeys(jsonMatch[0]);
-            const structuredResponse = JSON.parse(fixedJson);
             const explanation = structuredResponse.explanation || "No explanation provided.";
             const definitions = structuredResponse.definitions || [];
             const visualAssets = structuredResponse.visualAssets || [];
@@ -2249,29 +2279,62 @@ Here are the available asset types and their required data formats:
 
             node.content = parsed;
             
-            // If we've reached this point without an error, the attempt was successful.
             success = true;
-            break; // Exit the retry loop.
+            break; 
 
         } catch (error) {
             console.error(`Prefetch attempt ${i + 1} of ${maxRetries} failed for "${node.fullTitle}":`, error);
-            // If this isn't the last attempt, wait a moment before trying again.
             if (i < maxRetries - 1) {
                 await new Promise(res => setTimeout(res, 500));
             }
         }
     }
 
-    // --- NEW: Final status logging and saving ---
     if (success) {
         console.log(`%c✅ Prefetch successful for "${node.fullTitle}"`, 'color: #22c55e;');
-        await saveTopicsToFirestore(); // Save the newly fetched content
+        await saveTopicsToFirestore(); 
     } else {
         console.error(`Prefetch ultimately failed for "${node.fullTitle}" after ${maxRetries} attempts.`);
     }
 
-    // Mark prefetching as complete regardless of outcome
     node.isPrefetching = false;
+}
+/**
+ * A robust function to find, clean, and parse a JSON object from a raw text string.
+ * This handles conversational text, code fences, and invalid escape characters.
+ * @param {string} rawText The raw text response from the AI.
+ * @returns {object} The parsed JavaScript object.
+ */
+ function sanitizeAndParseJson(rawText) {
+    // Find the JSON block, ignoring conversational text and code fences like ```json
+    const startIndex = rawText.indexOf('{');
+    const endIndex = rawText.lastIndexOf('}');
+
+    if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
+        // Log the problematic text if no JSON object is found
+        console.error("COULD NOT FIND JSON in the following text:", rawText);
+        throw new Error("No valid JSON object found in the AI response.");
+    }
+
+    // Extract the potential JSON string
+    let jsonString = rawText.substring(startIndex, endIndex + 1);
+
+    // CRITICAL FIX: Replace any single backslash with a double backslash.
+    // This sanitizes invalid escape sequences (like `\(` in LaTeX) for the JSON parser.
+    // JSON.parse requires backslashes to be escaped themselves.
+    const sanitizedString = jsonString.replace(/\\/g, '\\\\');
+
+    try {
+        return JSON.parse(sanitizedString);
+    } catch (e) {
+        // This is a fallback for the most stubborn errors. It will log the exact
+        // string that failed the final parse attempt.
+        console.error("---!!!--- FINAL JSON PARSING FAILED ---!!!---");
+        console.error("The code could not parse the following sanitized string:");
+        console.log(sanitizedString);
+        console.error("The specific error was:", e.message);
+        throw e; // Re-throw the error
+    }
 }
 // ==================== END: REPLACE THIS FUNCTION ====================
         /**
@@ -2672,27 +2735,44 @@ function restoreAndFixData(topics) {
  * @param {string} text - The raw text response from the AI.
  * @returns {Array<Object>} An array of section objects.
  */
+/**
+ * A universal "catch-all" parser that finds numbered list items
+ * anywhere in a string, whether it's plain text or embedded in JSON.
+ * @param {string} text - The raw text response from the AI, which may contain newlines.
+ * @returns {Array<Object>} An array of section objects.
+ */
+ /**
+ * A universal "catch-all" parser that finds numbered list items
+ * anywhere in a string, whether it's plain text or embedded in JSON.
+ * @param {string} text - The raw text response from the AI.
+ * @returns {Array<Object>} An array of section objects.
+ */
 function universalParseSyllabus(text) {
     const sections = [];
-    // This regex looks for a digit(s), a period, optional space,
-    // and then captures the text until it hits a quote, a comma, or the end of a line.
-    const regex = /\d+\.\s*([^",\n\r]+)/g;
+
+    // --- THIS IS THE FIX ---
+    // First, normalize the string by replacing the literal characters '\\n'
+    // with an actual newline character '\n'. This handles the AI's output format.
+    const normalizedText = text.replace(/\\n/g, '\n');
+    // ---------------------
+
+    const flexibleRegex = /^\s*(?:\d+\.|\-|\*)\s+(.+)$/gm;
     let match;
 
-    // Loop through all matches found in the entire string
-    while ((match = regex.exec(text)) !== null) {
-        // match[1] is the captured text (the module title)
-        const title = match[1].trim(); 
-        
+    // IMPORTANT: Run the regex on the NEW, normalizedText variable
+    while ((match = flexibleRegex.exec(normalizedText)) !== null) {
+        // The captured title is in match[1]. We trim it and remove any markdown bolding.
+        const title = match[1].replace(/\*\*/g, '').trim();
+
         sections.push({
             title: title,
-            content: "", 
+            content: "",
             fullContent: "",
             isExpanded: false
         });
     }
-    
-    console.log("DEBUG: Universal parser found sections:", sections);
+
+    console.log("DEBUG: Universal parser now finds sections:", sections);
     return sections;
 }
         let currentQuizQuestions = [];
@@ -3326,17 +3406,17 @@ function closeNewTopicModal() {
     // This new prompt asks for a JSON object with two keys: "category" and "syllabus".
     // REPLACE the existing prompt in the handleNewTopicSubmit function
 
-    const prompt = `You are an expert, rigorous and intellectual curriculum designer who follows tasks they have been set with precision and speed. Your task is to design a unique syllabus for "${topic}" for a "${sophistication}" audience.
+    const prompt = `You are an expert, rigorous and intellectual curriculum designer who follows tasks they have been set with precision and speed. Your task is to devise a syllabus. In case a, the topic you are asked about already has a syllabus e.g. GCSE math graphs or SAT algebra. In this case you should use those syllabi as best you can, being rigorously comprehensive and MECE. In case b, you are asked about a topic in more abstract terms like "iranian history since 1800" or "chinese diplomacy". In this case your task is to design a unique syllabus for the topic "${topic}" for a "${sophistication}" audience.
 
 Your response MUST be a single, valid JSON object with NO other text before or after it.
 The JSON object must have two required keys ("category", "syllabus") and one optional key ("visualAssets").
 
 1.  **"category"**: Categorize this topic into ONE of the following predefined categories: ${categories.join(', ')}.
-2.  **"syllabus"**: Design a syllabus as a numbered list of 4-8 unique and compelling module titles for the topic. This value must be a single string. The modules should be specific to the topic and not generic at all. Provide only the titles. Avoid generic titles like "Introduction" or "Key Concepts.", 'historical context'.
+2.  **"syllabus"**: In case a, write a syllabus with 6-12 modules, which together are MECE. In case b, Design a syllabus as a numbered list of 4-8 unique and compelling module titles for the topic. In both cases this value must be a single string. The modules should be specific to the topic and in case b, not generic at all. Provide only the titles. Avoid generic titles like "Introduction" or "Key Concepts.", 'historical context'.
 3.  **"visualAssets" (Optional)**:
     * **IF the topic's category is NOT "Science" or "Mathematics"** and is inherently historical or best understood chronologically, you MAY include this key. If you choose to include it, make it detailed e.g. aim for 5-10 events/periods, though more if the topic demands it. For instance if asked about chinese imperial history make sure to include all the dynasties, not just some.
     * **IF the topic's category IS "Science" or "Mathematics", OMIT this key entirely.**
-    * If included, it MUST be an array containing a single object for a timeline.
+    * If included, it MUST be an array containing a single object for a timeline.If you include a visual reference (timeline or graph equation) feel free to refer in your "explanation" content directly to them.
     * The object's "type" MUST be "hybrid_timeline".
     * The object's "data" MUST be an array of event and/or period objects covering the topic's key milestones. An event must have a single date (e.g. a year) - if it spans more than 1 year or 1 date it should be classified as a period.
         * An event requires "name" and "dateStr".
@@ -3383,13 +3463,9 @@ Example for a non-history topic (note the absence of visualAssets):
         const botResponseText = result.choices[0].message.content;
         console.log("DEBUG: Raw AI response:", botResponseText);
 
-        const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-            throw new Error("The AI didn't return a valid JSON object. Please try again.");
-        }
-        
-        const parsedResponse = JSON.parse(jsonMatch[0]);
-        const { category, syllabus, visualAssets } = parsedResponse; // visualAssets might be undefined, which is fine        
+        const parsedResponse = sanitizeAndParseJson(botResponseText);
+
+        const { category, syllabus, visualAssets } = parsedResponse;       
         if (!category || !syllabus) {
             throw new Error("AI response was missing 'category' or 'syllabus'.");
         }
@@ -3427,71 +3503,143 @@ let conversationHistory = [
 // This function now receives the answer text and definitions array directly
 // Replace the entire parseResponse function
 
-function parseResponse(mainContentText, definitionsArray) {
-    console.log("LOG #1 - Combining answer with definitions:", { mainContentText, definitionsArray });
-    const cleanedText = cleanUnnecessaryLatex(mainContentText);
+/**
+ * Parses the final content, converting markdown and handling paragraph/line breaks.
+ * This is the final step in the rendering pipeline.
+ * @param {string} mainContentText The explanation text from the AI.
+ * @param {Array} definitionsArray The array of definitions from the AI.
+ * @returns {object} A content object ready for rendering.
+ */
+ /**
+ * Parses the final content, converting markdown and handling paragraph/line breaks.
+ * @param {string} mainContentText The explanation text from the AI.
+ * @param {Array} definitionsArray The array of definitions from the AI.
+ * @returns {object} A content object ready for rendering.
+ */
+/**
+ * Parses the final content, adding a final cleanup step for inconsistent LaTeX.
+ * @param {string} mainContentText The explanation text from the AI.
+ * @param {Array} definitionsArray The array of definitions from the AI.
+ * @returns {object} A content object ready for rendering.
+ */
+ /**
+ * A robust, streamlined function to parse AI content, focusing on
+ * correct paragraph and markdown handling to prevent formatting errors.
+ * @param {string} mainContentText The explanation text from the AI.
+ * @param {Array} definitionsArray The array of definitions from the AI.
+ * @returns {object} A content object ready for rendering.
+ */
+/**
+ * A robust, streamlined function to parse AI content, now with
+ * math-aware line break conversion.
+ * @param {string} mainContentText The explanation text from the AI.
+ * @param {Array} definitionsArray The array of definitions from the AI.
+ * @returns {object} A content object ready for rendering.
+ */
+ function parseResponse(mainContentText, definitionsArray) {
+    const rawText = mainContentText || "";
+    console.log("DEBUG: Raw text received by parser:", rawText);
 
-    const result = {
-        overview: '',
-        sections: [],
-        definitions: definitionsArray || []
-    };
+    // Step 1: Normalize the input string.
+    const normalizedText = rawText.replace(/\\n/g, '\n').replace(/\\"/g, '"');
 
-    // 1. First, process the entire text for markdown. Order is important.
-    let processedText = mainContentText
-        // Headings (from most specific to least specific)
-        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-        // Bold and Italics (non-greedy)
+    // Step 2: Convert basic markdown to HTML.
+    let html = normalizedText
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*(.*?)\*/g, '<em>$1</em>');
 
-    // 2. Now, wrap the results in paragraph tags, but avoid wrapping the new heading tags.
-    processedText = processedText
-        .split(/\n\s*\n/) // Split by one or more empty lines
-        .map(p => p.trim()) // Trim whitespace from each paragraph
-        .filter(p => p) // Remove any empty paragraphs
+    // --- START: UPDATED PARAGRAPH LOGIC ---
+    // Step 3: Handle paragraphs with math-aware line breaks.
+    const paragraphs = html
+        .split(/(\n\s*){2,}/g) // Split by 2+ newlines to form paragraphs.
+        .filter(p => p && p.trim() !== '') // Filter out empty strings from the split.
         .map(p => {
-            // If the block already starts with a heading tag, don't wrap it in a <p> tag
-            if (p.match(/^<h[1-3]>/)) {
-                return p;
-            }
-            // Otherwise, wrap it in a <p> tag and convert single newlines to <br>
-            return `<p>${p.replace(/\n/g, '<br>')}</p>`;
-        })
-        .join('');
+            const trimmedParagraph = p.trim();
 
-    result.overview = processedText;
+            // We now split EACH paragraph into math and text segments.
+            const splitRegex = /(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$|\\\[[\s\S]*?\\\]|\\\(.*?\\\))/g;
+            const segments = trimmedParagraph.split(splitRegex);
+
+            // Process the segments to only add <br> tags to the text parts.
+            const processedSegments = segments.map((segment, index) => {
+                // If it's a math segment (odd index) or empty, leave it completely alone.
+                if (!segment || index % 2 !== 0) {
+                    return segment;
+                }
+                // This is a text segment. We can safely replace any newlines with <br> tags here.
+                return segment.replace(/\n/g, '<br>');
+            });
+
+            // Re-join the segments and wrap the whole thing in a <p> tag.
+            const finalParagraphHtml = processedSegments.join('');
+            return `<p>${finalParagraphHtml}</p>`;
+        });
+    // --- END: UPDATED PARAGRAPH LOGIC ---
+
+    html = paragraphs.join('');
+
+    // Step 4: Final safety net for backslashes.
+    html = html.replace(/\\\\/g, '\\');
+
+    console.log("DEBUG: Final processed HTML for rendering:", html);
+
+    const result = {
+        overview: html,
+        definitions: definitionsArray || []
+    };
     return result;
 }
 // Create a new helper function to wrap terms in special HTML
 // In your <script> tag...
 
-    function applyTermHighlighting(text, definitions) {
-            console.log("LOG #3 - Highlighting function called.");
-            if (!definitions || definitions.length === 0) {
-                return text; // If there are no definitions, return the text as is
-            }
+    /**
+ * A "math-aware" function that applies term highlighting only to text
+ * that is NOT inside LaTeX delimiters.
+ * @param {string} text - The full HTML string to process.
+ * @param {Array} definitions - The array of term/definition objects.
+ * @returns {string} The processed HTML with terms highlighted.
+ */
+function applyTermHighlighting(text, definitions) {
+    // If there's nothing to highlight, return the text immediately.
+    if (!definitions || definitions.length === 0 || !text) {
+        return text;
+    }
 
-            // --- THIS IS THE FIX ---
-            // Sort definitions by the length of the term, longest first.
-            // This ensures "private equity" is processed before "equity".
-            const sortedDefinitions = definitions.sort((a, b) => b.term.length - a.term.length);
+    // This regex splits the text by all common LaTeX delimiters,
+    // crucially keeping the delimiters themselves in the resulting array.
+    const splitRegex = /(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$|\\\[[\s\S]*?\\\]|\\\(.*?\\\))/g;
+    const segments = text.split(splitRegex);
 
-            // Now, loop through the correctly sorted definitions
-            sortedDefinitions.forEach(def => {
-                // The regex looks for whole words to avoid replacing text inside other HTML tags
-                const regex = new RegExp(`\\b${def.term}\\b(?![^<]*?>)`, 'gi');
-                
+    // Sort definitions by length to avoid partial matches (e.g., "equity" in "private equity").
+    const sortedDefinitions = definitions.sort((a, b) => b.term.length - a.term.length);
+
+    // Iterate through the segments. Even-indexed segments are regular text; odd-indexed are math.
+    const processedSegments = segments.map((segment, index) => {
+        // If the segment is a math block (odd index) or empty, return it unchanged.
+        if (!segment || index % 2 !== 0) {
+            return segment;
+        }
+
+        // This is a regular text segment, so we can safely perform replacements.
+        let processedText = segment;
+        sortedDefinitions.forEach(def => {
+            try {
+                // This regex finds the term as a whole word, but not inside an HTML tag.
+                const termRegex = new RegExp(`\\b${def.term}\\b(?![^<]*?>)`, 'gi');
                 const sanitizedDefinition = def.definition.replace(/"/g, '&quot;');
                 const replacement = `<span class="technical-term">${def.term}<span class="term-tooltip">${sanitizedDefinition}</span></span>`;
+                processedText = processedText.replace(termRegex, replacement);
+            } catch (e) {
+                // Safety net for terms with special characters that might break the regex.
+                console.error(`Could not create regex for term: "${def.term}"`, e);
+            }
+        });
+        return processedText;
+    });
 
-                text = text.replace(regex, replacement);
-            });
-
-            return text;
-        }
+    // Join the processed and untouched segments back into a single, final HTML string.
+    return processedSegments.join('');
+}
         // Create tree node
         // REPLACE the existing createTreeNode function
 function createTreeNode(title, content, parent, isUserQuestion = false) {
@@ -4012,9 +4160,9 @@ async function elaborateOnTopic(targetNode, generateNewCards = false) {
 Your response MUST be a single, valid JSON object with no other text before or after it.
 The JSON object must have three keys: "explanation", "definitions", and an optional "visualAssets".
 
-1.  In the "explanation" value, provide a detailed, explanation of the topic with at least 2 paragraphs. **For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters. CRITICALLY, any backslash \\ in your LaTeX must be escaped as a double backslash \\\\ within the JSON string (e.g., write "\\\\sqrt" instead of "\\sqrt").**
+1.  In the "explanation" value, provide a detailed, explanation of the topic with at least 2 paragraphs. **For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters. For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters like $...$ or $$...$$**
 2.  In the "definitions" value, provide an array of objects for any technical terms used.
-3.  In the "visualAssets" value, (this key is optional, but **strongly encouraged** for STEM topics), you MUST use this key if the explanation can be enhanced with graphs or charts.
+3.  In the "visualAssets" value, (this key is optional, but **strongly encouraged** for STEM topics), you MUST use this key if the explanation can be enhanced with graphs or charts.If you include a visual reference (e.g. graph equation) feel free to refer in your "explanation" content directly to them.
     * The value must be an array of "layout_row" objects. Each row represents a horizontal container.
     * Each "layout_row" object has a "columns" key, which is an array of visual assets to display side-by-side.
     * Each asset in the "columns" array is an object with a "type" and "data".
@@ -4073,21 +4221,24 @@ Example for a topic on Parabolas:
                 prefetchNodeContent(childNode);
             });
         } else {
-            try {
-                const jsonMatch = botResponse.match(/\{[\s\S]*\}/);
-                if (!jsonMatch) throw new Error("No valid JSON object found in AI response.");
-                const fixedJson = repairJsonKeys(jsonMatch[0]);
-                const structuredResponse = JSON.parse(fixedJson);
+            // ... inside the STEM branch of elaborateOnTopic
+        try {
+                // Use the new sanitizer and parser
+                const structuredResponse = sanitizeAndParseJson(botResponse);
+
                 const explanation = structuredResponse.explanation || "No explanation provided.";
                 const definitions = structuredResponse.definitions || [];
                 const visualAssets = structuredResponse.visualAssets || [];
+
+                // Call the new, more powerful parseResponse function
                 parsed = parseResponse(explanation, definitions);
                 parsed.visualAssets = visualAssets;
                 parsed.showTellMeMore = true;
             } catch (e) {
-                console.error("Failed to parse AI response:", e);
-                // If parsing fails, we consider the entire operation a failure.
-                throw e; 
+                console.error("Failed to parse structured response from AI:", e);
+                // Fallback if JSON parsing fails completely.
+                parsed = parseResponse(botResponse, []); 
+                throw e; // Re-throw the error to be handled by the outer catch
             }
         }
         targetNode.content = parsed;
@@ -4155,7 +4306,7 @@ The JSON object must have three keys: "explanation", "definitions", and an optio
 
 1.  In the "explanation" value, provide a detailed, explanation of the topic with at least 2 paragraphs. **For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters. Use $ for inline math (e.g., Let $x$ be a variable) and $$ for display math (e.g., $$E = mc^2$$).**
 2.  In the "definitions" value, provide an array of objects. For each object, identify a technical term from your explanation and provide a simple, one-sentence definition for it in the context of the topic. Only add/define these technical terms if they are truly technical and not straightforward, and their definition is specific to the context. Terms like focus, endurance, mental toughness which are not included. 
-3.  In the "visualAssets" value, (this key is optional), analyze your explanation. If a visual aid would enhance understanding, add this key. If not, OMIT this key entirely.
+3.  In the "visualAssets" value, (this key is optional), analyze your explanation. If a visual aid would enhance understanding, add this key. If not, OMIT this key entirely.If you include a visual reference (timeline or graph equation) feel free to refer in your "explanation" content directly to them.
     * If included, it must be an array of objects. Each object represents one visual asset.
     * For each asset, provide a "type" and "data".
 
@@ -4226,25 +4377,25 @@ Example JSON structure for a history topic:
                 prefetchNodeContent(childNode);
             });
 
-        } else {
+        // ... inside the standard content branch of elaborateOnTopic (else block)
+    } else {
             try {
-                const botResponseText = data.choices[0].message.content;
-                const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
-                if (!jsonMatch) throw new Error("No valid JSON object found in the AI response.");
-                
-                const fixedJson = repairJsonKeys(jsonMatch[0]);
-                const structuredResponse = JSON.parse(fixedJson);
+                // Use the new sanitizer and parser
+                const structuredResponse = sanitizeAndParseJson(botResponse);
+
                 const explanation = structuredResponse.explanation || "No explanation provided.";
                 const definitions = structuredResponse.definitions || [];
                 const visualAssets = structuredResponse.visualAssets || [];
 
+                // Call the new, more powerful parseResponse function
                 parsed = parseResponse(explanation, definitions);
                 parsed.visualAssets = visualAssets;
                 parsed.showTellMeMore = true;
 
             } catch (e) {
                 console.error("Failed to parse structured response from AI:", e);
-                parsed = parseResponse(data.choices[0].message.content, []);
+                // Fallback for catastrophic failure
+                parsed = parseResponse(botResponse, []);
             }
         }
 
@@ -5209,11 +5360,11 @@ Example JSON structure:
         if (!response.ok) throw new Error('API request failed');
 
         const result = await response.json();
-        const botResponseText = result.choices[0].message.content.replace(/^```json\s*|```$/g, '');
-        const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error("No valid JSON object found in the AI response.");
+        // ... inside elaborateOnTimelineEvent
+        const botResponseText = result.choices[0].message.content;
 
-        const structuredResponse = JSON.parse(jsonMatch[0]);
+        // Use the new sanitizer to reliably get the JSON object
+        const structuredResponse = sanitizeAndParseJson(botResponseText);
 
         // --- LOGIC CHANGE: We now extract both keys from the response ---
         const explanation = structuredResponse.explanation || "No explanation provided.";
@@ -5239,6 +5390,12 @@ Example JSON structure:
 // ==================== END: REPLACE THIS FUNCTION ====================
 // ======================= START: ADD THIS NEW FUNCTION =======================
 /**
+ * Finds and converts unnecessarily-wrapped LaTeX for simple text and percentages
+ * back into plain text, leaving real equations untouched.
+ * @param {string} text The text content from the AI.
+ * @returns {string} The cleaned text.
+ */
+ /**
  * Finds and converts unnecessarily-wrapped LaTeX for simple text and percentages
  * back into plain text, leaving real equations untouched.
  * @param {string} text The text content from the AI.
@@ -5282,6 +5439,30 @@ Example JSON structure:
  * Elaborates on the current node's content in place, adding new paragraphs
  * and identifying/highlighting new technical terms.
  */
+/**
+ * Elaborates on the current node's content in place, adding new paragraphs
+ * and identifying/highlighting new technical terms.
+ */
+ /**
+ * Elaborates on the current node's content in place, adding new paragraphs
+ * and identifying/highlighting new technical terms.
+ */
+/**
+ * Elaborates on the current node's content in place, adding new paragraphs
+ * and identifying/highlighting new technical terms.
+ */
+ /**
+ * Elaborates on the current node's content in place, adding new paragraphs
+ * and identifying/highlighting new technical terms.
+ */
+/**
+ * Elaborates on the current node's content in place, adding new paragraphs
+ * and identifying/highlighting new technical terms.
+ */
+ /**
+ * Elaborates on the current node's content in place, adding new paragraphs
+ * and identifying/highlighting new technical terms.
+ */
 async function elaborateInPlace() {
     const currentNode = currentTreeNode;
     if (!currentNode || !currentNode.content || !currentNode.content.overview) {
@@ -5292,7 +5473,6 @@ async function elaborateInPlace() {
     showLoading(true);
 
     try {
-        // Gather the same detailed context (this part is unchanged)
         const rootNode = treeStructure;
         const sophistication = rootNode.sophistication || 'Detailed';
         const topicTitle = rootNode.fullTitle;
@@ -5303,12 +5483,10 @@ async function elaborateInPlace() {
         tempDiv.innerHTML = currentNode.content.overview;
         const existingParagraphs = tempDiv.textContent || tempDiv.innerText || "";
 
-        // --- PROMPT CHANGE ---
-        // The prompt now asks for a JSON object with new text AND new definitions.
         const elaborationPrompt = `You are an expert curriculum designer providing a hyper-personalized learning experience.
 
 CONTEXT:
-The user is learning about the topic "${topicTitle}" at a "${sophistication}" level. They are currently at the node titled "${currentNode.fullTitle}".
+The user is learning about the topic of "${topicTitle}" at a "${sophistication}" level. They are currently at the node titled "${currentNode.fullTitle}".
 
 Here is the user's complete learning journey so far:
 --- JOURNEY MAP ---
@@ -5326,19 +5504,34 @@ ${existingParagraphs}
 --- END EXISTING PARAGRAPHS ---
 
 TASK:
-The user has clicked "Tell me more". Your task is to generate 2-3 new paragraphs of text that follow on naturally from the existing paragraphs, going into more depth.
+The user has clicked "Tell me more". Your task is to generate 2-3 new paragraphs of text that follow on naturally from the existing paragraphs, going into more depth. If you include a visual reference (timeline or graph equation) feel free to refer in your "explanation" content directly to them.
 
-Your response MUST be a single, valid JSON object with no other text before or after it. The JSON object must have two keys: "newText" and "newDefinitions".
+Your response MUST be a single, valid JSON object with no other text before or after it. CRITICAL: All keys and string values must use double quotes (").
 
-1.  In the "newText" value, provide the 2-3 new paragraphs.
+1.  In the "newText" value, provide the 2-3 new paragraphs. For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters. For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters like $...$ or $$...$$.
 2.  In the "newDefinitions" value, provide an array of objects for any technical terms found ONLY in your new text. Each object should have a "term" and a "definition". Only define terms that are truly technical and not common knowledge.
+3.  **"visualAssets" (Optional):** Analyze your new text. If a visual aid would significantly enhance understanding of the *new* information, include this key. If not, OMIT this key entirely.
+    * If included, it must be an array of objects. Each object represents one visual asset.
+    * For a **function graph** (e.g., for math/economics equations):
+        * "type": "implicit_plotter"
+        * "data": (String) A single string with one or more equations separated by semicolons (e.g., "y=x^2; y=sin(x)"). The equation here must be plain text, NOT in LaTeX format.
+    * For a **timeline** (for historical events, periods, or both):
+        * "type": "hybrid_timeline"
+        * "data": (Array of Objects) An array of items. Each item must have a "type" key ('period' or 'event').
+            * If type is 'period', include "name", "startStr", and "endStr".
+            * If type is 'event', include "name" and "dateStr".
 
 Example Response:
 {
-  "newText": "This leads to the concept of monetary velocity, which is how fast money changes hands... Another related idea is the liquidity trap, where monetary policy becomes ineffective because...",
+  "newText": "This leads to the concept of monetary velocity... As you can see in the chart, this is represented by the equation y=1/x. Another related idea is the liquidity trap...",
   "newDefinitions": [
-    {"term": "monetary velocity", "definition": "The rate at which money is exchanged in an economy."},
-    {"term": "liquidity trap", "definition": "A situation in which interest rates are low and savings rates are high, making monetary policy ineffective."}
+    {"term": "monetary velocity", "definition": "The rate at which money is exchanged in an economy."}
+  ],
+  "visualAssets": [
+      { 
+          "type": "implicit_plotter", 
+          "data": "y=1/x"
+      }
   ]
 }`;
 
@@ -5354,41 +5547,59 @@ Example Response:
         if (!response.ok) throw new Error('API request failed');
 
         const result = await response.json();
-        
-        // --- FUNCTION LOGIC CHANGE ---
-        // We now parse the JSON response instead of treating it as plain text.
         const botResponseText = result.choices[0].message.content;
-        const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error("AI did not return valid JSON.");
-
-        const structuredResponse = JSON.parse(jsonMatch[0]);
+        
+        // ... inside elaborateInPlace
+        let structuredResponse;
+        try {
+            // Use the new sanitizer to reliably get the JSON object
+            structuredResponse = sanitizeAndParseJson(botResponseText);
+        } catch (e) {
+            console.error("---!!!--- JSON PARSING FAILED in elaborateInPlace ---!!!---");
+            console.error("The code could not parse the following text:", botResponseText);
+            console.error("The specific error was:", e.message);
+            throw new Error("The AI returned data in a format that could not be read.");
+        }
+        
         const newText = structuredResponse.newText || "";
         const newDefinitions = structuredResponse.newDefinitions || [];
+        const visualAssets = structuredResponse.visualAssets || [];
 
-        // Add the newly found definitions to the node's existing list
         if (newDefinitions.length > 0) {
             currentNode.content.definitions.push(...newDefinitions);
         }
 
-        // Format the new text with paragraph tags
-        const formattedNewText = newText
-            .split(/\n\s*\n/).map(p => p.trim()).filter(p => p)
-            .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
+        if (visualAssets.length > 0) {
+            if (!currentNode.content.visualAssets) {
+                currentNode.content.visualAssets = [];
+            }
+            currentNode.content.visualAssets.push(...visualAssets);
+        }
+        
+        // --- START OF FIX 1 ---
+        // First, normalize any literal '\\n' strings from the AI into actual newline characters.
+        const normalizedNewText = newText.replace(/\\n/g, '\n');
 
-        // Highlight the terms within the new text block
+        // Then, process the normalized text to create paragraphs and line breaks.
+        const formattedNewText = normalizedNewText
+            .split(/\n\s*\n/)
+            .map(p => p.trim())
+            .filter(p => p)
+            .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
+            .join('');
+        // --- END OF FIX 1 ---
+
         const highlightedNewText = applyTermHighlighting(formattedNewText, newDefinitions);
 
-        // Append the new, highlighted content with a separator
         const separator = '<hr style="border: none; border-top: 1px solid #e5e7eb; margin: 25px 0;">';
         currentNode.content.overview += separator + highlightedNewText;
         
-        // Rerender the content and save to the database
         displayContent(currentNode);
         await saveTopicsToFirestore();
 
     } catch (error) {
         console.error("Error during in-place elaboration:", error);
-        showError("Sorry, I was unable to generate more content for this section.");
+        showError(error.message || "Sorry, I was unable to generate more content for this section.");
     } finally {
         showLoading(false);
     }

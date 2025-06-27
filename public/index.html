@@ -1677,6 +1677,11 @@
     margin-top: -5px; /* Pulls it slightly closer to the main title */
     margin-bottom: 10px; /* Adds a little space before the timeline */
 }
+/* --- ADD THIS RULE TO PREVENT EQUATIONS FROM BREAKING ACROSS LINES --- */
+.katex {
+    display: inline-block;
+    white-space: nowrap; /* Add this for extra safety */
+}
             </style>
 
 <script>
