@@ -4788,6 +4788,50 @@ async function checkConnection() {
 
         // Wait until the document is fully loaded to run this script
         document.addEventListener('DOMContentLoaded', function () {
+            // --- BITESIZE JAVASCRIPT FOR FEEDBACK MODAL ---
+
+// 1. Get references to all the new elements
+const feedbackModal = document.getElementById('feedbackModal');
+const feedbackBtn = document.getElementById('feedbackBtn');
+const closeFeedbackBtn = document.getElementById('closeFeedbackBtn');
+const submitFeedbackBtn = document.getElementById('submitFeedbackBtn');
+const feedbackFormView = document.getElementById('feedbackFormView');
+const feedbackSuccessView = document.getElementById('feedbackSuccessView');
+const feedbackTitleInput = document.getElementById('feedbackTitleInput');
+const feedbackContentInput = document.getElementById('feedbackContentInput');
+
+// 2. Functions to open and close the modal
+function openFeedbackModal() {
+    // Before opening, always reset the view to the form
+    feedbackFormView.style.display = 'block';
+    feedbackSuccessView.style.display = 'none';
+    // And clear any old input
+    feedbackTitleInput.value = '';
+    feedbackContentInput.value = '';
+    // Now, show the modal
+    feedbackModal.classList.add('active');
+}
+
+function closeFeedbackModal() {
+    feedbackModal.classList.remove('active');
+}
+
+// 3. Event Listeners for opening and closing
+feedbackBtn.addEventListener('click', openFeedbackModal);
+closeFeedbackBtn.addEventListener('click', closeFeedbackModal);
+feedbackModal.addEventListener('click', (event) => {
+    // Close if the user clicks on the dark overlay background
+    if (event.target === feedbackModal) {
+        closeFeedbackModal();
+    }
+});
+
+// 4. Event Listener for the submission logic
+submitFeedbackBtn.addEventListener('click', () => {
+    // Just hide the form and show the success message for now
+    feedbackFormView.style.display = 'none';
+    feedbackSuccessView.style.display = 'block';
+});
             // --- COLOR PALETTE FOR MULTI-LINE PLOTS ---
 
 // --- JavaScript for the 'What's the difference' modal ---
@@ -5859,50 +5903,7 @@ Example Response:
         showLoading(false);
     }
 }
-// --- BITESIZE JAVASCRIPT FOR FEEDBACK MODAL ---
 
-// 1. Get references to all the new elements
-const feedbackModal = document.getElementById('feedbackModal');
-const feedbackBtn = document.getElementById('feedbackBtn');
-const closeFeedbackBtn = document.getElementById('closeFeedbackBtn');
-const submitFeedbackBtn = document.getElementById('submitFeedbackBtn');
-const feedbackFormView = document.getElementById('feedbackFormView');
-const feedbackSuccessView = document.getElementById('feedbackSuccessView');
-const feedbackTitleInput = document.getElementById('feedbackTitleInput');
-const feedbackContentInput = document.getElementById('feedbackContentInput');
-
-// 2. Functions to open and close the modal
-function openFeedbackModal() {
-    // Before opening, always reset the view to the form
-    feedbackFormView.style.display = 'block';
-    feedbackSuccessView.style.display = 'none';
-    // And clear any old input
-    feedbackTitleInput.value = '';
-    feedbackContentInput.value = '';
-    // Now, show the modal
-    feedbackModal.classList.add('active');
-}
-
-function closeFeedbackModal() {
-    feedbackModal.classList.remove('active');
-}
-
-// 3. Event Listeners for opening and closing
-feedbackBtn.addEventListener('click', openFeedbackModal);
-closeFeedbackBtn.addEventListener('click', closeFeedbackModal);
-feedbackModal.addEventListener('click', (event) => {
-    // Close if the user clicks on the dark overlay background
-    if (event.target === feedbackModal) {
-        closeFeedbackModal();
-    }
-});
-
-// 4. Event Listener for the submission logic
-submitFeedbackBtn.addEventListener('click', () => {
-    // Just hide the form and show the success message for now
-    feedbackFormView.style.display = 'none';
-    feedbackSuccessView.style.display = 'block';
-});
     </script>
     <!-- New Topic Modal -->
 <div class="modal-overlay" id="newTopicModal">
