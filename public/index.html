@@ -3762,6 +3762,7 @@ async function navigateToNode(nodeId) {
         return;
     }
     node.isRead = true;
+    updateParentReadStatus(node.parent);
 
     // If the node is a leaf and has no content, fetch it with retries.
     if (node.children.length === 0 && !node.content && node.id !== 'root') {
