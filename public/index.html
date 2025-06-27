@@ -5898,7 +5898,7 @@ feedbackModal.addEventListener('click', (event) => {
 });
 
 // 4. Event Listener for the submission logic
-submitFeedbackBtn.addEventListener('click', () => {
+submitFeedbackBtn.addEventLisner('click', () => {
     // Just hide the form and show the success message for now
     feedbackFormView.style.display = 'none';
     feedbackSuccessView.style.display = 'block';
