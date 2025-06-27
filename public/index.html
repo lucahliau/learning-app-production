@@ -4112,7 +4112,14 @@ if (parsedContent.showTellMeMore) {
     // Add both buttons to the wrapper
     buttonWrapper.appendChild(tellMeMoreBtn);
     buttonWrapper.appendChild(goDeeperBtn);
+// --- Add the following code for the new button ---
+const differenceBtn = document.createElement('button');
+    differenceBtn.className = 'difference-button';
+    differenceBtn.textContent = "What's the difference between tell me more and go deeper?";
+    differenceBtn.onclick = openDifferenceModal; // This will open the new modal
 
+    buttonWrapper.appendChild(differenceBtn);
+    // --- End of new code ---
     // Add the wrapper to the main content area
     mainContent.appendChild(buttonWrapper);
 }
