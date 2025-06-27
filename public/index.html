@@ -1952,10 +1952,42 @@ function triggerMathRendering(element) {
  * @param {string} jsonString - The potentially malformed JSON string.
  * @returns {string} A repaired JSON string.
  */
- function repairJsonKeys(jsonString) {
-    // This regular expression finds property names that are not in double quotes
-    // and wraps them in double quotes to make the JSON valid.
-    return jsonString.replace(/(?<=[\{,]\s*)(\w+)(?=\s*:)/g, '"$1"');
+ /**
+ * A robust function to find, clean, and parse a JSON object from a raw text string.
+ * This handles conversational text, code fences, and invalid escape characters.
+ * @param {string} rawText The raw text response from the AI.
+ * @returns {object} The parsed JavaScript object.
+ */
+ function sanitizeAndParseJson(rawText) {
+    // Find the JSON block, ignoring conversational text and code fences like ```json
+    const startIndex = rawText.indexOf('{');
+    const endIndex = rawText.lastIndexOf('}');
+
+    if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
+        // Log the problematic text if no JSON object is found
+        console.error("COULD NOT FIND JSON in the following text:", rawText);
+        throw new Error("No valid JSON object found in the AI response.");
+    }
+
+    // Extract the potential JSON string
+    let jsonString = rawText.substring(startIndex, endIndex + 1);
+
+    // CRITICAL FIX: Replace any single backslash with a double backslash.
+    // This sanitizes invalid escape sequences (like `\(` in LaTeX) for the JSON parser.
+    // JSON.parse requires backslashes to be escaped themselves.
+    const sanitizedString = jsonString.replace(/\\/g, '\\\\');
+
+    try {
+        return JSON.parse(sanitizedString);
+    } catch (e) {
+        // This is a fallback for the most stubborn errors. It will log the exact
+        // string that failed the final parse attempt.
+        console.error("---!!!--- FINAL JSON PARSING FAILED ---!!!---");
+        console.error("The code could not parse the following sanitized string:");
+        console.log(sanitizedString);
+        console.error("The specific error was:", e.message);
+        throw e; // Re-throw the error
+    }
 }
 // --- ADVANCED DATE PARSING & SCALING (No Changes) ---
 const isLeapYear = (year) => (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
@@ -3413,13 +3445,9 @@ Example for a non-history topic (note the absence of visualAssets):
         const botResponseText = result.choices[0].message.content;
         console.log("DEBUG: Raw AI response:", botResponseText);
 
-        const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-            throw new Error("The AI didn't return a valid JSON object. Please try again.");
-        }
-        
-        const parsedResponse = JSON.parse(jsonMatch[0]);
-        const { category, syllabus, visualAssets } = parsedResponse; // visualAssets might be undefined, which is fine        
+        const parsedResponse = sanitizeAndParseJson(botResponseText);
+
+        const { category, syllabus, visualAssets } = parsedResponse;       
         if (!category || !syllabus) {
             throw new Error("AI response was missing 'category' or 'syllabus'.");
         }
@@ -3457,8 +3485,15 @@ let conversationHistory = [
 // This function now receives the answer text and definitions array directly
 // Replace the entire parseResponse function
 
-function parseResponse(mainContentText, definitionsArray) {
-    console.log("LOG #1 - Combining answer with definitions:", { mainContentText, definitionsArray });
+/**
+ * Parses the final content, converting markdown and handling paragraph/line breaks.
+ * This is the final step in the rendering pipeline.
+ * @param {string} mainContentText The explanation text from the AI.
+ * @param {Array} definitionsArray The array of definitions from the AI.
+ * @returns {object} A content object ready for rendering.
+ */
+ function parseResponse(mainContentText, definitionsArray) {
+    // Step 1: Clean up any unnecessary LaTeX for simple text/percentages
     const cleanedText = cleanUnnecessaryLatex(mainContentText);
 
     const result = {
@@ -3467,38 +3502,29 @@ function parseResponse(mainContentText, definitionsArray) {
         definitions: definitionsArray || []
     };
 
-    let processedText = mainContentText
-        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>');
+    // Step 2: Convert markdown to HTML
+    let processedText = cleanedText
+        .replace(/^### (.*$)/gim, '<h3>$1</h3>') // h3
+        .replace(/^## (.*$)/gim, '<h2>$1</h2>')   // h2
+        .replace(/^# (.*$)/gim, '<h1>$1</h1>')     // h1
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // bold
+        .replace(/\*(.*?)\*/g, '<em>$1</em>');       // italic
 
-    // --- START OF FIX 2 ---
+    // Step 3: Handle paragraphs and line breaks robustly
     processedText = processedText
-        .split(/\n\s*\n/) // Split by one or more empty lines
-        .map(p => p.trim()) // Trim whitespace from each paragraph
-        .filter(p => p) // Remove any empty paragraphs
+        .split(/\n\s*\n/) // Split by one or more empty lines to define paragraphs
+        .map(p => p.trim()) // Trim whitespace from each potential paragraph
+        .filter(p => p) // Remove any empty strings that resulted from splitting
         .map(p => {
+            // If the line is already an HTML heading, leave it as is.
             if (p.match(/^<h[1-3]>/)) {
                 return p;
             }
-
-            // Add a <br> before all display math blocks ($$...$$ or \[...\])
-            // This ensures they always render on a new line.
-            // Note: The backslashes for the \[...\] part are double-escaped for the regex.
-            let processedParagraph = p.replace(/(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\])/g, '<br>$1');
-
-            // If the paragraph now starts with a <br>, remove it to avoid extra space.
-            if (processedParagraph.startsWith('<br>')) {
-                processedParagraph = processedParagraph.substring(4).trim();
-            }
-
-            // Convert any remaining single newlines to <br> tags and wrap in a paragraph.
-            return `<p>${processedParagraph.replace(/\n/g, '<br>')}</p>`;
+            
+            // For regular text, convert single newlines into <br> tags and wrap the whole thing in a <p> tag.
+            return `<p>${p.replace(/\n/g, '<br>')}</p>`;
         })
-        .join('');
-    // --- END OF FIX 2 ---
+        .join(''); // Join the processed paragraphs back into a single HTML string.
 
     result.overview = processedText;
     return result;
@@ -4111,25 +4137,24 @@ Example for a topic on Parabolas:
                 prefetchNodeContent(childNode);
             });
         } else {
-            try {
-                const jsonMatch = botResponse.match(/\{[\s\S]*\}/);
-                if (!jsonMatch) throw new Error("No valid JSON object found in AI response.");
+            // ... inside the STEM branch of elaborateOnTopic
+        try {
+                // Use the new sanitizer and parser
+                const structuredResponse = sanitizeAndParseJson(botResponse);
 
-                // FIX: Sanitize the JSON string to escape control characters
-                const sanitizedJsonString = jsonMatch[0].replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t");
-
-                const fixedJson = repairJsonKeys(sanitizedJsonString);
-                const structuredResponse = JSON.parse(fixedJson);
                 const explanation = structuredResponse.explanation || "No explanation provided.";
                 const definitions = structuredResponse.definitions || [];
                 const visualAssets = structuredResponse.visualAssets || [];
+
+                // Call the new, more powerful parseResponse function
                 parsed = parseResponse(explanation, definitions);
                 parsed.visualAssets = visualAssets;
                 parsed.showTellMeMore = true;
             } catch (e) {
-                console.error("Failed to parse AI response:", e);
-                // If parsing fails, we consider the entire operation a failure.
-                throw e; 
+                console.error("Failed to parse structured response from AI:", e);
+                // Fallback if JSON parsing fails completely.
+                parsed = parseResponse(botResponse, []); 
+                throw e; // Re-throw the error to be handled by the outer catch
             }
         }
         targetNode.content = parsed;
@@ -4268,25 +4293,25 @@ Example JSON structure for a history topic:
                 prefetchNodeContent(childNode);
             });
 
-        } else {
+        // ... inside the standard content branch of elaborateOnTopic (else block)
+    } else {
             try {
-                const botResponseText = data.choices[0].message.content;
-                const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
-                if (!jsonMatch) throw new Error("No valid JSON object found in the AI response.");
-                
-                const fixedJson = repairJsonKeys(jsonMatch[0]);
-                const structuredResponse = JSON.parse(fixedJson);
+                // Use the new sanitizer and parser
+                const structuredResponse = sanitizeAndParseJson(botResponse);
+
                 const explanation = structuredResponse.explanation || "No explanation provided.";
                 const definitions = structuredResponse.definitions || [];
                 const visualAssets = structuredResponse.visualAssets || [];
 
+                // Call the new, more powerful parseResponse function
                 parsed = parseResponse(explanation, definitions);
                 parsed.visualAssets = visualAssets;
                 parsed.showTellMeMore = true;
 
             } catch (e) {
                 console.error("Failed to parse structured response from AI:", e);
-                parsed = parseResponse(data.choices[0].message.content, []);
+                // Fallback for catastrophic failure
+                parsed = parseResponse(botResponse, []);
             }
         }
 
@@ -5251,11 +5276,11 @@ Example JSON structure:
         if (!response.ok) throw new Error('API request failed');
 
         const result = await response.json();
-        const botResponseText = result.choices[0].message.content.replace(/^```json\s*|```$/g, '');
-        const jsonMatch = botResponseText.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error("No valid JSON object found in the AI response.");
+        // ... inside elaborateOnTimelineEvent
+        const botResponseText = result.choices[0].message.content;
 
-        const structuredResponse = JSON.parse(jsonMatch[0]);
+        // Use the new sanitizer to reliably get the JSON object
+        const structuredResponse = sanitizeAndParseJson(botResponseText);
 
         // --- LOGIC CHANGE: We now extract both keys from the response ---
         const explanation = structuredResponse.explanation || "No explanation provided.";
@@ -5281,6 +5306,12 @@ Example JSON structure:
 // ==================== END: REPLACE THIS FUNCTION ====================
 // ======================= START: ADD THIS NEW FUNCTION =======================
 /**
+ * Finds and converts unnecessarily-wrapped LaTeX for simple text and percentages
+ * back into plain text, leaving real equations untouched.
+ * @param {string} text The text content from the AI.
+ * @returns {string} The cleaned text.
+ */
+ /**
  * Finds and converts unnecessarily-wrapped LaTeX for simple text and percentages
  * back into plain text, leaving real equations untouched.
  * @param {string} text The text content from the AI.
@@ -5434,27 +5465,16 @@ Example Response:
         const result = await response.json();
         const botResponseText = result.choices[0].message.content;
         
+        // ... inside elaborateInPlace
         let structuredResponse;
         try {
-            const startIndex = botResponseText.indexOf('{');
-            const endIndex = botResponseText.lastIndexOf('}');
-
-            if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
-                throw new Error("No valid JSON object found in the AI response.");
-            }
-            
-            let jsonString = botResponseText.substring(startIndex, endIndex + 1);
-
-            const sanitizedForParsing = jsonString.replace(/\\/g, '\\\\');
-
-            structuredResponse = JSON.parse(sanitizedForParsing);
-
+            // Use the new sanitizer to reliably get the JSON object
+            structuredResponse = sanitizeAndParseJson(botResponseText);
         } catch (e) {
-            console.error("---!!!--- JSON PARSING FAILED ---!!!---");
-            console.error("The code could not parse the following text received from the AI:");
-            console.log(botResponseText); 
+            console.error("---!!!--- JSON PARSING FAILED in elaborateInPlace ---!!!---");
+            console.error("The code could not parse the following text:", botResponseText);
             console.error("The specific error was:", e.message);
-            throw new Error("The AI returned data in a format that could not be read. Please check the console for details.");
+            throw new Error("The AI returned data in a format that could not be read.");
         }
         
         const newText = structuredResponse.newText || "";
