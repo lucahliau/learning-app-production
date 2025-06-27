@@ -3522,50 +3522,51 @@ let conversationHistory = [
  * @param {Array} definitionsArray The array of definitions from the AI.
  * @returns {object} A content object ready for rendering.
  */
- function parseResponse(mainContentText, definitionsArray) {
-    // 1. Normalize newlines and clean unnecessary LaTeX (no changes here)
-    const normalizedText = (mainContentText || "").replace(/\\n/g, '\n');
-    const cleanedText = cleanUnnecessaryLatex(normalizedText);
+ /**
+ * A robust, streamlined function to parse AI content, focusing on
+ * correct paragraph and markdown handling to prevent formatting errors.
+ * @param {string} mainContentText The explanation text from the AI.
+ * @param {Array} definitionsArray The array of definitions from the AI.
+ * @returns {object} A content object ready for rendering.
+ */
+function parseResponse(mainContentText, definitionsArray) {
+    const rawText = mainContentText || "";
+    console.log("DEBUG: Raw text received by parser:", rawText);
 
-    const result = {
-        overview: '',
-        sections: [],
-        definitions: definitionsArray || []
-    };
+    // Step 1: Normalize the input string.
+    // This replaces literal '\\n' with actual newlines and '\\"' with quotes.
+    const normalizedText = rawText.replace(/\\n/g, '\n').replace(/\\"/g, '"');
 
-    // 2. Convert markdown to HTML (no changes here)
-    let processedText = cleanedText
-        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+    // Step 2: Convert basic markdown to HTML.
+    let html = normalizedText
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*(.*?)\*/g, '<em>$1</em>');
 
-    processedText = processedText
-        .split(/\n\s*\n/)
-        .map(p => p.trim())
-        .filter(p => p)
+    // Step 3: Handle paragraphs correctly.
+    // This is the most critical step to prevent run-on text.
+    // We split the text into paragraphs wherever there are two or more newlines.
+    const paragraphs = html
+        .split(/(\n\s*){2,}/g) // Split by 2+ newlines
+        .filter(p => p && p.trim() !== '') // Filter out empty strings from the split
         .map(p => {
-            if (p.match(/^<h[1-3]>/)) {
-                return p;
-            }
-            return `<p>${p.replace(/\n/g, '<br>')}</p>`;
-        })
-        .join('');
+            // For each paragraph, trim it and replace single newlines with <br> tags.
+            const trimmedParagraph = p.trim();
+            // This ensures that even if a paragraph has some LaTeX, it's wrapped correctly.
+            return `<p>${trimmedParagraph.replace(/\n/g, '<br>')}</p>`;
+        });
 
-    // --- START: NEW CATCH-ALL FIX & DEBUGGING ---
+    html = paragraphs.join('');
 
-    // 3. Final Cleanup: Replace any occurrences of double backslashes with a single one.
-    // This is the key step that fixes the inconsistent \\( ... \\) issue.
-    const finalHtml = processedText.replace(/\\\\/g, '\\');
+    // Step 4: Final safety net for backslashes.
+    // This catches any remaining double-slashes from inconsistent AI output.
+    html = html.replace(/\\\\/g, '\\');
 
-    // 4. Debugging: Log the final HTML to the console so you can inspect it.
-    console.log("DEBUG: Final processed HTML for rendering:", finalHtml);
+    console.log("DEBUG: Final processed HTML for rendering:", html);
 
-    // --- END: NEW CATCH-ALL FIX & DEBUGGING ---
-
-    result.overview = finalHtml; // Assign the fully cleaned HTML to the result
-
+    const result = {
+        overview: html,
+        definitions: definitionsArray || []
+    };
     return result;
 }
 // Create a new helper function to wrap terms in special HTML
