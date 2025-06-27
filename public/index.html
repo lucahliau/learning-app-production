@@ -3572,30 +3572,54 @@ function parseResponse(mainContentText, definitionsArray) {
 // Create a new helper function to wrap terms in special HTML
 // In your <script> tag...
 
-    function applyTermHighlighting(text, definitions) {
-            console.log("LOG #3 - Highlighting function called.");
-            if (!definitions || definitions.length === 0) {
-                return text; // If there are no definitions, return the text as is
-            }
+    /**
+ * A "math-aware" function that applies term highlighting only to text
+ * that is NOT inside LaTeX delimiters.
+ * @param {string} text - The full HTML string to process.
+ * @param {Array} definitions - The array of term/definition objects.
+ * @returns {string} The processed HTML with terms highlighted.
+ */
+function applyTermHighlighting(text, definitions) {
+    // If there's nothing to highlight, return the text immediately.
+    if (!definitions || definitions.length === 0 || !text) {
+        return text;
+    }
 
-            // --- THIS IS THE FIX ---
-            // Sort definitions by the length of the term, longest first.
-            // This ensures "private equity" is processed before "equity".
-            const sortedDefinitions = definitions.sort((a, b) => b.term.length - a.term.length);
+    // This regex splits the text by all common LaTeX delimiters,
+    // crucially keeping the delimiters themselves in the resulting array.
+    const splitRegex = /(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$|\\\[[\s\S]*?\\\]|\\\(.*?\\\))/g;
+    const segments = text.split(splitRegex);
 
-            // Now, loop through the correctly sorted definitions
-            sortedDefinitions.forEach(def => {
-                // The regex looks for whole words to avoid replacing text inside other HTML tags
-                const regex = new RegExp(`\\b${def.term}\\b(?![^<]*?>)`, 'gi');
-                
+    // Sort definitions by length to avoid partial matches (e.g., "equity" in "private equity").
+    const sortedDefinitions = definitions.sort((a, b) => b.term.length - a.term.length);
+
+    // Iterate through the segments. Even-indexed segments are regular text; odd-indexed are math.
+    const processedSegments = segments.map((segment, index) => {
+        // If the segment is a math block (odd index) or empty, return it unchanged.
+        if (!segment || index % 2 !== 0) {
+            return segment;
+        }
+
+        // This is a regular text segment, so we can safely perform replacements.
+        let processedText = segment;
+        sortedDefinitions.forEach(def => {
+            try {
+                // This regex finds the term as a whole word, but not inside an HTML tag.
+                const termRegex = new RegExp(`\\b${def.term}\\b(?![^<]*?>)`, 'gi');
                 const sanitizedDefinition = def.definition.replace(/"/g, '&quot;');
                 const replacement = `<span class="technical-term">${def.term}<span class="term-tooltip">${sanitizedDefinition}</span></span>`;
+                processedText = processedText.replace(termRegex, replacement);
+            } catch (e) {
+                // Safety net for terms with special characters that might break the regex.
+                console.error(`Could not create regex for term: "${def.term}"`, e);
+            }
+        });
+        return processedText;
+    });
 
-                text = text.replace(regex, replacement);
-            });
-
-            return text;
-        }
+    // Join the processed and untouched segments back into a single, final HTML string.
+    return processedSegments.join('');
+}
         // Create tree node
         // REPLACE the existing createTreeNode function
 function createTreeNode(title, content, parent, isUserQuestion = false) {
