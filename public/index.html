@@ -2197,12 +2197,10 @@ function renderHybridTimeline(container, hybridData) {
 
 
         // --- BITESIZE STEP 3 & 4: Period & Event Positioning ---
-        let verticalToggle = true; // Start with the first item on top.
+        let periodVerticalToggle = true; // A dedicated toggle for periods
+        let eventVerticalToggle = true;  // A dedicated toggle for events
 
         allItems.forEach(item => {
-            const isTop = verticalToggle;
-            verticalToggle = !verticalToggle; // Alternate for the next item.
-
             // Find the start and end segments for the current item.
             const startSegment = segments.find(s => Math.abs(s.start - item.startYear) < 0.001);
             const endSegment = segments.find(s => Math.abs(s.end - item.endYear) < 0.001);
@@ -2213,6 +2211,9 @@ function renderHybridTimeline(container, hybridData) {
             }
 
             if (item.type === 'period') {
+                const isTop = periodVerticalToggle;
+                periodVerticalToggle = !periodVerticalToggle; // Alternate for the next period
+
                 // For periods, the brace spans from the start of its first segment
                 // to the end of its last segment.
                 const endPixel = endSegment ? endSegment.pixelStart + endSegment.pixelWidth : startSegment.pixelStart;
@@ -2245,6 +2246,9 @@ function renderHybridTimeline(container, hybridData) {
                 timelineWrapper.appendChild(eventElement);
 
             } else { // type === 'event'
+                const isTop = eventVerticalToggle;
+                eventVerticalToggle = !eventVerticalToggle; // Alternate for the next event
+
                 // For events, we find the period they belong to.
                 let containingPeriod = null;
                 for (const p of allItems) {
