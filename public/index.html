@@ -4640,7 +4640,31 @@ async function checkConnection() {
         document.addEventListener('DOMContentLoaded', function () {
             // --- COLOR PALETTE FOR MULTI-LINE PLOTS ---
 
+// --- JavaScript for the 'What's the difference' modal ---
 
+// Get the modal and the close button
+const differenceModal = document.getElementById('differenceModal');
+const closeDifferenceModalBtn = document.getElementById('closeDifferenceModal');
+
+// Function to open the modal
+window.openDifferenceModal = function() {
+    differenceModal.classList.add('active');
+}
+
+// Function to close the modal
+function closeDifferenceModal() {
+    differenceModal.classList.remove('active');
+}
+
+// Event listener for the close button
+closeDifferenceModalBtn.addEventListener('click', closeDifferenceModal);
+
+// Event listener to close the modal if the user clicks the overlay
+differenceModal.addEventListener('click', (event) => {
+    if (event.target === differenceModal) {
+        closeDifferenceModal();
+    }
+});
 
             function renderPeriodTimeline() {
                 const timelineWrapper = document.getElementById('period-timeline-wrapper');
