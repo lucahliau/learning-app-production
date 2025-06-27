@@ -2854,11 +2854,11 @@ function universalParseSyllabus(text) {
  * Shows or hides a loading spinner on the new topic modal's submit button.
  * @param {boolean} isLoading - Whether to show the loading state.
  */
-function showModalLoading(isLoading) {
+ function showModalLoading(isLoading) {
     const submitBtn = document.getElementById('submitTopicBtn');
     if (isLoading) {
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="loading-spinner" style="width: 20px; height: 20px; border-width: 3px;"></span>Loading...';
+        submitBtn.innerHTML = '<span class="loading-spinner" style="width: 16px; height: 16px; border-width: 2px; margin-right: 8px;"></span>Loading...';
     } else {
         submitBtn.disabled = false;
         submitBtn.innerHTML = 'Submit';
