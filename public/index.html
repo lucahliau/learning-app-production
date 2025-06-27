@@ -2740,28 +2740,38 @@ function restoreAndFixData(topics) {
  * @param {string} text - The raw text response from the AI, which may contain newlines.
  * @returns {Array<Object>} An array of section objects.
  */
- function universalParseSyllabus(text) {
+ /**
+ * A universal "catch-all" parser that finds numbered list items
+ * anywhere in a string, whether it's plain text or embedded in JSON.
+ * @param {string} text - The raw text response from the AI.
+ * @returns {Array<Object>} An array of section objects.
+ */
+function universalParseSyllabus(text) {
     const sections = [];
-    
-    // This new, more flexible regex handles multiple list formats and, critically,
-    // works across multiple lines within a single string.
-    // The 'm' flag is key: it allows '^' and '$' to match the start/end of each LINE.
+
+    // --- THIS IS THE FIX ---
+    // First, normalize the string by replacing the literal characters '\\n'
+    // with an actual newline character '\n'. This handles the AI's output format.
+    const normalizedText = text.replace(/\\n/g, '\n');
+    // ---------------------
+
     const flexibleRegex = /^\s*(?:\d+\.|\-|\*)\s+(.+)$/gm;
     let match;
 
-    while ((match = flexibleRegex.exec(text)) !== null) {
+    // IMPORTANT: Run the regex on the NEW, normalizedText variable
+    while ((match = flexibleRegex.exec(normalizedText)) !== null) {
         // The captured title is in match[1]. We trim it and remove any markdown bolding.
-        const title = match[1].replace(/\*\*/g, '').trim(); 
-        
+        const title = match[1].replace(/\*\*/g, '').trim();
+
         sections.push({
             title: title,
-            content: "", 
+            content: "",
             fullContent: "",
             isExpanded: false
         });
     }
-    
-    console.log("DEBUG: Universal parser found sections:", sections);
+
+    console.log("DEBUG: Universal parser now finds sections:", sections);
     return sections;
 }
         let currentQuizQuestions = [];
