@@ -2234,27 +2234,7 @@ Here are the available asset types and their required data formats:
             const data = await response.json();
             const botResponseText = data.choices[0].message.content;
 
-            // --- START OF FIX & DEBUGGING LOG ---
-            let structuredResponse;
-            try {
-                const startIndex = botResponseText.indexOf('{');
-                const endIndex = botResponseText.lastIndexOf('}');
-
-                if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
-                    throw new Error("No valid JSON object found in the AI response.");
-                }
-                
-                let jsonString = botResponseText.substring(startIndex, endIndex + 1);
-                const sanitizedForParsing = jsonString.replace(/\\/g, '\\\\');
-                structuredResponse = JSON.parse(sanitizedForParsing);
-
-            } catch (e) {
-                console.error(`---!!!--- PREFETCH JSON PARSING FAILED for "${node.fullTitle}" ---!!!---`);
-                console.error("The code could not parse the following text received from the AI:");
-                console.log(botResponseText); // This will print the exact problematic string.
-                throw e; // Re-throw the error to be caught by the outer block.
-            }
-            // --- END OF FIX & DEBUGGING LOG ---
+            const structuredResponse = sanitizeAndParseJson(botResponseText);
 
             const explanation = structuredResponse.explanation || "No explanation provided.";
             const definitions = structuredResponse.definitions || [];
@@ -2285,6 +2265,43 @@ Here are the available asset types and their required data formats:
     }
 
     node.isPrefetching = false;
+}
+/**
+ * A robust function to find, clean, and parse a JSON object from a raw text string.
+ * This handles conversational text, code fences, and invalid escape characters.
+ * @param {string} rawText The raw text response from the AI.
+ * @returns {object} The parsed JavaScript object.
+ */
+ function sanitizeAndParseJson(rawText) {
+    // Find the JSON block, ignoring conversational text and code fences like ```json
+    const startIndex = rawText.indexOf('{');
+    const endIndex = rawText.lastIndexOf('}');
+
+    if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
+        // Log the problematic text if no JSON object is found
+        console.error("COULD NOT FIND JSON in the following text:", rawText);
+        throw new Error("No valid JSON object found in the AI response.");
+    }
+
+    // Extract the potential JSON string
+    let jsonString = rawText.substring(startIndex, endIndex + 1);
+
+    // CRITICAL FIX: Replace any single backslash with a double backslash.
+    // This sanitizes invalid escape sequences (like `\(` in LaTeX) for the JSON parser.
+    // JSON.parse requires backslashes to be escaped themselves.
+    const sanitizedString = jsonString.replace(/\\/g, '\\\\');
+
+    try {
+        return JSON.parse(sanitizedString);
+    } catch (e) {
+        // This is a fallback for the most stubborn errors. It will log the exact
+        // string that failed the final parse attempt.
+        console.error("---!!!--- FINAL JSON PARSING FAILED ---!!!---");
+        console.error("The code could not parse the following sanitized string:");
+        console.log(sanitizedString);
+        console.error("The specific error was:", e.message);
+        throw e; // Re-throw the error
+    }
 }
 // ==================== END: REPLACE THIS FUNCTION ====================
         /**
