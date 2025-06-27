@@ -2237,7 +2237,7 @@ function renderHybridTimeline(container, hybridData) {
                 eventElement.style.left = `${periodPixelStart + (periodPixelWidth / 2) - (cardWidth / 2)}px`;
                 
                 // Vertical positioning for periods
-                const periodVerticalLevel = 40; // A bit further out
+                const periodVerticalLevel = 5; // A bit further out
                 eventElement.style.marginBottom = isTop ? `${periodVerticalLevel}px` : null;
                 eventElement.style.marginTop = !isTop ? `${periodVerticalLevel}px` : null;
 
