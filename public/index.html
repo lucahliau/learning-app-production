@@ -3160,10 +3160,72 @@ function renderTopicCards() {
     const topicsArray = Object.entries(learningTopics).map(([id, data]) => ({ ...data, id: id }));
 
     if (topicsArray.length === 0) {
-        grid.className = 'empty topic-grid-layout'; 
-        grid.innerHTML = '<p style="color: #71717a; font-size: 16px; text-align: center;">You haven\'t started any topics yet. Click "Learn a new topic" to begin!</p>';
-        return;
-    }
+    grid.className = 'empty topic-grid-layout'; 
+    grid.innerHTML = `
+        <div style="max-width: 800px; margin: 0 auto; text-align: center; padding: 40px 20px;">
+            <h2 style="font-size: 36px; color: #11182c; margin-bottom: 20px; font-weight: 700;">
+                Welcome to Your Interactive Learning Journey
+            </h2>
+            <p style="color: #4b5563; font-size: 18px; line-height: 1.6; margin-bottom: 40px;">
+                Transform any topic into a personalized, visual learning experience. Our AI-powered platform creates custom curricula that adapt to your knowledge level, complete with interactive visualizations and deep-dive explorations.
+            </p>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 40px 0;">
+                <div style="background: #f9fafb; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb;">
+                    <div style="font-size: 32px; margin-bottom: 15px;">📊</div>
+                    <h3 style="font-size: 18px; color: #11182c; margin-bottom: 10px;">Interactive Graphs</h3>
+                    <p style="color: #6b7280; font-size: 14px; line-height: 1.5;">
+                        Explore mathematical concepts with live, interactive function plotters. Zoom, pan, and see multiple equations rendered in real-time.
+                    </p>
+                </div>
+                
+                <div style="background: #f9fafb; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb;">
+                    <div style="font-size: 32px; margin-bottom: 15px;">📅</div>
+                    <h3 style="font-size: 18px; color: #11182c; margin-bottom: 10px;">Dynamic Timelines</h3>
+                    <p style="color: #6b7280; font-size: 14px; line-height: 1.5;">
+                        Visualize historical events and periods with intelligent timelines that scale to show both broad eras and specific moments.
+                    </p>
+                </div>
+                
+                <div style="background: #f9fafb; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb;">
+                    <div style="font-size: 32px; margin-bottom: 15px;">🌳</div>
+                    <h3 style="font-size: 18px; color: #11182c; margin-bottom: 10px;">Knowledge Trees</h3>
+                    <p style="color: #6b7280; font-size: 14px; line-height: 1.5;">
+                        Build your understanding step-by-step with a visual map of your learning journey. Each topic branches into deeper explorations.
+                    </p>
+                </div>
+            </div>
+            
+            <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 30px; border-radius: 16px; margin: 40px 0;">
+                <h3 style="color: white; font-size: 22px; margin-bottom: 15px;">How It Works</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; color: white; font-size: 15px;">
+                    <div style="text-align: left;">
+                        <strong style="display: block; margin-bottom: 5px;">1. Choose Your Topic</strong>
+                        Pick any subject you want to learn - from quantum physics to ancient history
+                    </div>
+                    <div style="text-align: left;">
+                        <strong style="display: block; margin-bottom: 5px;">2. Select Your Level</strong>
+                        Simple, Detailed, or Expert - content adapts to your sophistication level
+                    </div>
+                    <div style="text-align: left;">
+                        <strong style="display: block; margin-bottom: 5px;">3. Explore & Learn</strong>
+                        Navigate through topics, ask questions, and dive deeper with "Tell me more"
+                    </div>
+                </div>
+            </div>
+            
+            <button class="new-topic-btn" onclick="document.getElementById('newTopicBtn').click()" style="font-size: 18px; padding: 15px 30px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14m-7-7h14"/></svg>
+                Start Your First Learning Journey
+            </button>
+            
+            <p style="color: #9ca3af; font-size: 14px; margin-top: 30px;">
+                Pro tip: Try starting with "The Roman Empire", "Calculus", or "Climate Change" to see the full power of visual learning!
+            </p>
+        </div>
+    `;
+    return;
+}
 
     if (currentSort === 'recent') {
         grid.className = 'topic-grid-layout'; // Use the standard grid layout
