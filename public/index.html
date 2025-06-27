@@ -2106,10 +2106,10 @@ const parseDateToFractionalYear = (dateStr) => {
     return null;
 };
 function renderHybridTimeline(container, hybridData) {
-    // 1. Create the timeline's HTML frame
+    // 1. Create the timeline's HTML frame (same as before)
     container.innerHTML = `
         <h1>Timeline</h1>
-        <p class="timeline-subtitle">Hover over a partially covered card to see it in detail. Click a card to learn more.</p>
+        <p class="timeline-subtitle">A dynamic timeline of key events and periods. Hover for detail, click to learn more.</p>
         <div class="timeline-container-wrapper">
             <div class="timeline-wrapper">
                  <div class="timeline-line"></div>
@@ -2121,99 +2121,182 @@ function renderHybridTimeline(container, hybridData) {
     const timelineLine = container.querySelector('.timeline-line');
     if (!timelineWrapper || !timelineLine) return;
 
+    // Use requestAnimationFrame to ensure the container has been rendered and has a width
     requestAnimationFrame(() => {
-        // Dynamic Vertical Level Calculation
-        const containerHeight = timelineContainerWrapper.clientHeight;
-        const availableSpace = containerHeight / 2;
-        const cardHeightEstimate = 50;
-        const verticalPadding = 15;
-        
-        const maxLevel = Math.max(10, availableSpace - cardHeightEstimate - verticalPadding);
-        
-        const eventVerticalLevel = Math.round(maxLevel * 0.5);
-        const periodVerticalLevel = Math.round(maxLevel * 0.2);
+        // =================================================================
+        // ALGORITHM IMPLEMENTATION START
+        // =================================================================
 
-        const processedData = hybridData.map(d => {
+        // --- BITESIZE STEP 1: Data Preparation & Segmentation ---
+        // First, process all data points to have consistent numerical start and end years.
+        const allItems = hybridData.map(d => {
             if (d.type === 'period') {
                 const startYear = parseDateToFractionalYear(d.startStr);
                 const endYear = parseDateToFractionalYear(d.endStr);
-                return { ...d, startYear, endYear, duration: endYear - startYear };
-            } else {
+                return { ...d, startYear, endYear, midYear: startYear + (endYear - startYear) / 2 };
+            } else { // type === 'event'
                 const year = parseDateToFractionalYear(d.dateStr);
-                return { ...d, year };
+                return { ...d, startYear: year, endYear: year, midYear: year };
             }
-        }).filter(d => d.type === 'period' ? (d.startYear !== null && d.endYear !== null) : d.year !== null)
-          .sort((a, b) => (a.type === 'period' ? a.startYear : a.year) - (b.type === 'period' ? b.startYear : b.year));
+        }).filter(d => d.startYear !== null)
+          .sort((a, b) => a.startYear - b.startYear); // Sort all items chronologically
 
-        if (processedData.length === 0) return;
+        if (allItems.length === 0) return;
 
-        const compressionExponent = 0.5;
-        const scaleValue = (value) => Math.pow(Math.max(0, value), compressionExponent) * 4;
-
-        // Calculate layout
-        let lastNaturalPos = 0;
-        let lastEventEndYear = processedData.length > 0 ? (processedData[0].type === 'period' ? processedData[0].startYear : processedData[0].year) : 0;
-        processedData.forEach(item => {
-            const currentEventStartYear = item.type === 'period' ? item.startYear : item.year;
-            const timeGap = currentEventStartYear - lastEventEndYear;
-            item.naturalStartPos = lastNaturalPos + scaleValue(Math.max(0, timeGap));
-            item.naturalBraceWidth = item.type === 'period' ? scaleValue(Math.max(0, item.duration)) : 0;
-            lastNaturalPos = item.naturalStartPos + item.naturalBraceWidth;
-            lastEventEndYear = item.type === 'period' ? item.endYear : item.year;
+        // Create a distinct list of all start and end points on the timeline.
+        const boundaries = new Set();
+        allItems.forEach(item => {
+            boundaries.add(item.startYear);
+            boundaries.add(item.endYear);
         });
-        const totalNaturalWidth = lastNaturalPos;
+        const sortedBoundaries = Array.from(boundaries).sort((a, b) => a - b);
 
-        // Determine final width and scaling factor
+        // Create "segments" - these are the gaps between each unique boundary point.
+        // This is the key to correct scaling.
+        const segments = [];
+        for (let i = 0; i < sortedBoundaries.length - 1; i++) {
+            const start = sortedBoundaries[i];
+            const end = sortedBoundaries[i+1];
+            const duration = end - start;
+            if (duration >= 0) {
+                 segments.push({ start, end, duration });
+            }
+        }
+
+        // --- BITESIZE STEP 2: Hierarchical Non-Linear Scaling ---
+        // Apply a non-linear compression function to each segment's duration.
+        // This shrinks long, empty periods and gives more space to dense periods.
+        // We use Math.sqrt as you suggested. A small epsilon (0.01) prevents zero-width gaps for touching periods.
+        const compressionFunc = (duration) => Math.sqrt(duration + 0.01);
+        
+        let totalWeightedDuration = 0;
+        segments.forEach(seg => {
+            seg.weightedDuration = compressionFunc(seg.duration);
+            totalWeightedDuration += seg.weightedDuration;
+        });
+        
+        // Determine the total pixel width available for rendering.
         const containerWidth = timelineContainerWrapper.clientWidth;
-        const HORIZONTAL_MARGIN = 80;
+        const HORIZONTAL_MARGIN = 40; // Reduced margin for more space
+        const drawableWidth = containerWidth - (2 * HORIZONTAL_MARGIN);
+
+        // Calculate the pixel width for each segment based on its "weight".
+        segments.forEach(seg => {
+            const proportion = totalWeightedDuration > 0 ? seg.weightedDuration / totalWeightedDuration : 0;
+            seg.pixelWidth = proportion * drawableWidth;
+        });
+
+        // Calculate the absolute pixel start position for each segment.
+        let currentPixelPos = HORIZONTAL_MARGIN;
+        segments.forEach(seg => {
+            seg.pixelStart = currentPixelPos;
+            currentPixelPos += seg.pixelWidth;
+        });
         timelineWrapper.style.width = `${containerWidth}px`;
         timelineLine.style.width = `${containerWidth}px`;
-        const safeAreaWidth = containerWidth - (2 * HORIZONTAL_MARGIN);
-        const positionScaleFactor = totalNaturalWidth > 0 ? safeAreaWidth / totalNaturalWidth : 0;
-        
-        // Render Elements
-        processedData.forEach((item, index) => {
-            const isTop = index % 2 === 0;
-            const finalStartPos = (item.naturalStartPos * positionScaleFactor) + HORIZONTAL_MARGIN;
+
+
+        // --- BITESIZE STEP 3 & 4: Period & Event Positioning ---
+        let verticalToggle = true; // Start with the first item on top.
+
+        allItems.forEach(item => {
+            const isTop = verticalToggle;
+            verticalToggle = !verticalToggle; // Alternate for the next item.
+
+            // Find the start and end segments for the current item.
+            const startSegment = segments.find(s => Math.abs(s.start - item.startYear) < 0.001);
+            const endSegment = segments.find(s => Math.abs(s.end - item.endYear) < 0.001);
+
+            if (!startSegment) {
+                console.warn(`Could not find start segment for item:`, item);
+                return;
+            }
 
             if (item.type === 'period') {
-                const finalBraceWidth = item.naturalBraceWidth * positionScaleFactor;
-                const textBasedWidth = measureTextWidth(item.name) + 40;
-                const braceBasedWidth = finalBraceWidth + 20;
-                const cardWidth = Math.max(textBasedWidth, braceBasedWidth);
-                const cardStartPos = finalStartPos + (finalBraceWidth - cardWidth) / 2;
-
+                // For periods, the brace spans from the start of its first segment
+                // to the end of its last segment.
+                const endPixel = endSegment ? endSegment.pixelStart + endSegment.pixelWidth : startSegment.pixelStart;
+                const periodPixelStart = startSegment.pixelStart;
+                const periodPixelWidth = endPixel - periodPixelStart;
+                
+                // This correctly places the bracket. If the duration is 0, the width is 0, making them touch.
+                const brace = document.createElement('div');
+                brace.className = `period-brace ${isTop ? 'top' : 'bottom'}`;
+                brace.style.left = `${periodPixelStart}px`;
+                brace.style.width = `${periodPixelWidth}px`;
+                timelineWrapper.appendChild(brace);
+                
+                // Position the label card above/below the brace
+                const cardWidth = Math.max(140, measureTextWidth(item.name) + 30);
                 const eventElement = document.createElement('div');
                 eventElement.className = `timeline-event ${isTop ? 'top' : 'bottom'}`;
                 eventElement.innerHTML = `<div class="timeline-event-title">${item.name}</div><div class="timeline-event-date">${item.startStr} - ${item.endStr}</div>`;
-                eventElement.style.left = `${cardStartPos}px`;
                 eventElement.style.width = `${cardWidth}px`;
+                // Center the card over the brace
+                eventElement.style.left = `${periodPixelStart + (periodPixelWidth / 2) - (cardWidth / 2)}px`;
+                
+                // Vertical positioning for periods
+                const periodVerticalLevel = 40; // A bit further out
                 eventElement.style.marginBottom = isTop ? `${periodVerticalLevel}px` : null;
                 eventElement.style.marginTop = !isTop ? `${periodVerticalLevel}px` : null;
-                eventElement.style.cursor = 'pointer'; // Add pointer cursor
-                eventElement.onclick = () => handleTimelineCardClick(item, hybridData); // Add click handler
+
+                eventElement.style.cursor = 'pointer';
+                eventElement.onclick = () => handleTimelineCardClick(item, hybridData);
                 timelineWrapper.appendChild(eventElement);
 
-                const brace = document.createElement('div');
-                brace.className = `period-brace ${isTop ? 'top' : 'bottom'}`;
-                brace.style.left = `${finalStartPos}px`;
-                brace.style.width = `${finalBraceWidth}px`;
-                timelineWrapper.appendChild(brace);
+            } else { // type === 'event'
+                // For events, we find the period they belong to.
+                let containingPeriod = null;
+                for (const p of allItems) {
+                    if (p.type === 'period' && item.startYear >= p.startYear && item.startYear <= p.endYear) {
+                        containingPeriod = p;
+                        break;
+                    }
+                }
 
-            } else { 
+                let eventPixelPos;
+                if (containingPeriod) {
+                    // --- THIS IS THE FIX FOR EVENT PLACEMENT ---
+                    // Linearly interpolate the event's position within its containing period's pixel space.
+                    const periodStartSeg = segments.find(s => Math.abs(s.start - containingPeriod.startYear) < 0.001);
+                    const periodEndSeg = segments.find(s => Math.abs(s.end - containingPeriod.endYear) < 0.001);
+                    
+                    if(periodStartSeg) {
+                        const periodPixelStart = periodStartSeg.pixelStart;
+                        const periodPixelEnd = periodEndSeg ? periodEndSeg.pixelStart + periodEndSeg.pixelWidth : periodPixelStart;
+                        const periodPixelWidth = periodPixelEnd - periodPixelStart;
+                        const periodDuration = containingPeriod.endYear - containingPeriod.startYear;
+
+                        if (periodDuration > 0) {
+                            const timeRatio = (item.startYear - containingPeriod.startYear) / periodDuration;
+                            eventPixelPos = periodPixelStart + (timeRatio * periodPixelWidth);
+                        } else {
+                            eventPixelPos = periodPixelStart; // Place at start if period has no duration
+                        }
+                    } else {
+                         eventPixelPos = startSegment.pixelStart; // Fallback
+                    }
+
+                } else {
+                    // If event is not in a period (standalone), place it at its segment start.
+                    eventPixelPos = startSegment.pixelStart;
+                }
+                
                 const cardWidth = 140;
                 const eventWrapper = document.createElement('div');
                 eventWrapper.className = `hybrid-event ${isTop ? 'top' : 'bottom'}`;
-                eventWrapper.style.left = `${finalStartPos - (cardWidth / 2)}px`;
+                eventWrapper.style.left = `${eventPixelPos - (cardWidth / 2)}px`;
                 eventWrapper.style.width = `${cardWidth}px`;
-                eventWrapper.style.setProperty('--connector-height', `${eventVerticalLevel}px`);
                 
+                // Vertical positioning for events
+                const eventVerticalLevel = 30; // Closer to the line
+                eventWrapper.style.setProperty('--connector-height', `${eventVerticalLevel}px`);
                 if (isTop) {
                     eventWrapper.style.bottom = '50%';
-                    eventWrapper.style.marginBottom = '0px';
+                    eventWrapper.style.marginBottom = '2px';
                 } else {
                     eventWrapper.style.top = '50%';
-                    eventWrapper.style.marginTop = '0px';
+                    eventWrapper.style.marginTop = '2px';
                 }
                 
                 eventWrapper.innerHTML = `
@@ -2223,13 +2306,14 @@ function renderHybridTimeline(container, hybridData) {
                     </div>
                     <div class="timeline-connector"></div>
                 `;
-                eventWrapper.style.cursor = 'pointer'; // Add pointer cursor
-                eventWrapper.onclick = () => handleTimelineCardClick(item, hybridData); // Add click handler
+                eventWrapper.style.cursor = 'pointer';
+                eventWrapper.onclick = () => handleTimelineCardClick(item, hybridData);
                 timelineWrapper.appendChild(eventWrapper);
             }
         });
     });
 }
+
 
 
 /**
