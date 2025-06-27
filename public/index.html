@@ -1681,6 +1681,72 @@
 .katex {
     display: inline-block;
     white-space: nowrap; /* Add this for extra safety */
+}/* --- New styles for the 'What's the difference' button --- */
+.difference-button {
+    background: none;
+    border: none;
+    color: #6b7280; /* A nice grey color */
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 0;
+    margin-left: 15px; /* Adds some space from the other buttons */
+    transition: color 0.2s ease;
+}
+
+.difference-button:hover {
+    text-decoration: underline;
+    color: #4f46e5; /* A bit of color on hover */
+}
+
+/* --- New styles for the difference modal --- */
+.close-modal-btn {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 28px;
+    font-weight: bold;
+    color: #9ca3af;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.close-modal-btn:hover {
+    color: #374151;
+}
+
+.difference-container {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 25px;
+    gap: 20px;
+}
+
+.difference-column {
+    flex: 1;
+    text-align: center;
+}
+
+.difference-column h3 {
+    font-size: 20px;
+    color: #11182c;
+    margin-bottom: 10px;
+}
+
+.difference-column p {
+    font-size: 15px;
+    line-height: 1.6;
+    color: #4b5563;
+}
+
+.vertical-separator {
+    width: 1px;
+    background-color: #e5e7eb; /* A thin grey vertical line */
+}
+
+.icon-placeholder {
+    margin-top: 20px;
+    color: #6366f1; /* Purple icon color to match your theme */
 }
             </style>
 
@@ -1848,7 +1914,31 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script>
+// --- JavaScript for the 'What's the difference' modal ---
 
+// Get the modal and the close button
+const differenceModal = document.getElementById('differenceModal');
+const closeDifferenceModalBtn = document.getElementById('closeDifferenceModal');
+
+// Function to open the modal
+function openDifferenceModal() {
+    differenceModal.classList.add('active');
+}
+
+// Function to close the modal
+function closeDifferenceModal() {
+    differenceModal.classList.remove('active');
+}
+
+// Event listener for the close button
+closeDifferenceModalBtn.addEventListener('click', closeDifferenceModal);
+
+// Event listener to close the modal if the user clicks the overlay
+differenceModal.addEventListener('click', (event) => {
+    if (event.target === differenceModal) {
+        closeDifferenceModal();
+    }
+});
         /**
  * Creates a text description of visual assets for the AI context.
  * @param {Array} visualAssets - The visualAssets array from a content object.
@@ -4046,6 +4136,15 @@ if (parsedContent.showTellMeMore) {
     buttonWrapper.appendChild(tellMeMoreBtn);
     buttonWrapper.appendChild(goDeeperBtn);
 
+       // --- Add the following code for the new button ---
+       const differenceBtn = document.createElement('button');
+    differenceBtn.className = 'difference-button';
+    differenceBtn.textContent = "What's the difference between tell me more and go deeper?";
+    differenceBtn.onclick = openDifferenceModal; // This will open the new modal
+
+    buttonWrapper.appendChild(differenceBtn);
+    // --- End of new code ---
+
     // Add the wrapper to the main content area
     mainContent.appendChild(buttonWrapper);
 }
@@ -5660,6 +5759,29 @@ Example Response:
         <div class="modal-actions">
             <button class="modal-btn cancel" id="cancelDeleteBtn">Cancel</button>
             <button class="modal-btn delete" id="confirmDeleteBtn">Confirm Delete</button>
+        </div>
+    </div>
+</div>
+<div class="modal-overlay" id="differenceModal">
+    <div class="modal-content" style="max-width: 700px;">
+        <span class="close-modal-btn" id="closeDifferenceModal">&times;</span>
+        <h2>Understanding Your Options</h2>
+        <div class="difference-container">
+            <div class="difference-column">
+                <h3>Tell me more</h3>
+                <p>Tell me more expands the current page and adds more paragraphs to expand on the previous ones. Best if you want just a bit more detail.</p>
+                <div class="icon-placeholder">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevrons-down"><polyline points="7 13 12 18 17 13"></polyline><polyline points="7 6 12 11 17 6"></polyline></svg>
+                </div>
+            </div>
+            <div class="vertical-separator"></div>
+            <div class="difference-column">
+                <h3>Go deeper on this</h3>
+                <p>Go deeper on this splits this topic into several more categories, each of which can be explored further. Best if you want a rigorous expansion of the content you're currently reading.</p>
+                <div class="icon-placeholder">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-git-branch"><line x1="6" y1="3" x2="6" y2="15"></line><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path></svg>
+                </div>
+            </div>
         </div>
     </div>
 </div>
