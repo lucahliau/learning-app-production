@@ -1681,72 +1681,6 @@
 .katex {
     display: inline-block;
     white-space: nowrap; /* Add this for extra safety */
-}/* --- New styles for the 'What's the difference' button --- */
-.difference-button {
-    background: none;
-    border: none;
-    color: #6b7280; /* A nice grey color */
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    padding: 0;
-    margin-left: 15px; /* Adds some space from the other buttons */
-    transition: color 0.2s ease;
-}
-
-.difference-button:hover {
-    text-decoration: underline;
-    color: #4f46e5; /* A bit of color on hover */
-}
-
-/* --- New styles for the difference modal --- */
-.close-modal-btn {
-    position: absolute;
-    top: 15px;
-    right: 20px;
-    font-size: 28px;
-    font-weight: bold;
-    color: #9ca3af;
-    cursor: pointer;
-    transition: color 0.2s ease;
-}
-
-.close-modal-btn:hover {
-    color: #374151;
-}
-
-.difference-container {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 25px;
-    gap: 20px;
-}
-
-.difference-column {
-    flex: 1;
-    text-align: center;
-}
-
-.difference-column h3 {
-    font-size: 20px;
-    color: #11182c;
-    margin-bottom: 10px;
-}
-
-.difference-column p {
-    font-size: 15px;
-    line-height: 1.6;
-    color: #4b5563;
-}
-
-.vertical-separator {
-    width: 1px;
-    background-color: #e5e7eb; /* A thin grey vertical line */
-}
-
-.icon-placeholder {
-    margin-top: 20px;
-    color: #6366f1; /* Purple icon color to match your theme */
 }
             </style>
 
@@ -1914,8 +1848,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script>
-       
-    
+
         /**
  * Creates a text description of visual assets for the AI context.
  * @param {Array} visualAssets - The visualAssets array from a content object.
@@ -4113,15 +4046,6 @@ if (parsedContent.showTellMeMore) {
     buttonWrapper.appendChild(tellMeMoreBtn);
     buttonWrapper.appendChild(goDeeperBtn);
 
-       // --- Add the following code for the new button ---
-       const differenceBtn = document.createElement('button');
-    differenceBtn.className = 'difference-button';
-    differenceBtn.textContent = "What's the difference between tell me more and go deeper?";
-    differenceBtn.onclick = openDifferenceModal; // This will open the new modal
-
-    buttonWrapper.appendChild(differenceBtn);
-    // --- End of new code ---
-
     // Add the wrapper to the main content area
     mainContent.appendChild(buttonWrapper);
 }
@@ -4637,128 +4561,7 @@ async function checkConnection() {
             }
         }
         // --- RESIZABLE SIDEBAR LOGIC ---
-// Add these functions back into your main <script> tag
 
-    let barChartInstance;
-function renderBarChart(canvasId, dataString) {
-    const ctx = document.getElementById(canvasId).getContext('2d');
-    
-    const lines = dataString.trim().split('\n');
-    const labels = [];
-    const data = [];
-    let maxValue = 0;
-
-    lines.forEach(line => {
-        const parts = line.split(':');
-        if (parts.length === 2) {
-            const label = parts[0].trim();
-            const value = parseFloat(parts[1].trim());
-            if (label && !isNaN(value)) {
-                labels.push(label);
-                data.push(value);
-                if (value > maxValue) {
-                    maxValue = value;
-                }
-            }
-        }
-    });
-    
-    const suggestedMax = maxValue * 1.1;
-
-    // Destroy the old chart instance if it exists
-    if (barChartInstance) { barChartInstance.destroy(); }
-
-    barChartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Value',
-                data: data,
-                backgroundColor: 'rgba(99, 102, 241, 0.6)',
-                borderColor: 'rgba(99, 102, 241, 1)',
-                borderWidth: 1,
-                borderRadius: 4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: { callbacks: { label: (context) => ` ${context.raw}` } }
-            },
-            scales: {
-                y: { beginAtZero: true, suggestedMax: suggestedMax, grid: { color: '#e5e7eb' } },
-                x: { grid: { display: false } }
-            }
-        }
-    });
-}
-
-let pieChartInstance;
-function renderPieChart(canvasId, legendId, dataString) {
-    // This function had a latent bug. The corrected version is below.
-    const legendContainer = legendId ? document.getElementById(legendId) : null;
-    const ctx = document.getElementById(canvasId).getContext('2d');
-    
-    const lines = dataString.trim().split('\n');
-    const labels = [];
-    let data = [];
-    
-    lines.forEach(line => {
-        const parts = line.split(':');
-        if (parts.length === 2) {
-            const label = parts[0].trim();
-            const value = parseFloat(parts[1].trim());
-            if (label && !isNaN(value)) {
-                labels.push(label);
-                data.push(value);
-            }
-        }
-    });
-
-    const total = data.reduce((sum, val) => sum + val, 0);
-    if (total > 0) { data = data.map(val => (val / total) * 100); }
-    
-    const backgroundColors = [ '#8b5cf6', '#6366f1', '#3b82f6', '#14b8a6', '#f59e0b', '#ef4444', '#ec4899'];
-
-    // Destroy the old chart instance if it exists
-    if (pieChartInstance) { pieChartInstance.destroy(); }
-
-    pieChartInstance = new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: labels,
-            datasets: [{ data: data, backgroundColor: backgroundColors, borderColor: '#ffffff', borderWidth: 2 }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: { callbacks: { label: (context) => ` ${context.label}: ${context.raw.toFixed(1)}%` } }
-            }
-        }
-    });
-
-    // Safely update the legend only if the container exists
-    if (legendContainer) {
-        legendContainer.innerHTML = '';
-        labels.forEach((label, index) => {
-            const item = document.createElement('div');
-            item.className = 'legend-item';
-            const colorBox = document.createElement('div');
-            colorBox.className = 'legend-color-box';
-            colorBox.style.backgroundColor = backgroundColors[index % backgroundColors.length];
-            const text = document.createElement('span');
-            text.textContent = label;
-            item.appendChild(colorBox);
-            item.appendChild(text);
-            legendContainer.appendChild(item);
-        });
-    }
-}
         // Wait until the document is fully loaded to run this script
         document.addEventListener('DOMContentLoaded', function () {
             // --- COLOR PALETTE FOR MULTI-LINE PLOTS ---
@@ -5181,29 +4984,7 @@ mainContent.addEventListener('mouseout', (event) => {
 });
 // --- END OF FINAL REVISION ---
 
-// --- JavaScript for the 'What's the difference' modal ---
-const differenceModal = document.getElementById('differenceModal');
-    const closeDifferenceModalBtn = document.getElementById('closeDifferenceModal');
 
-    function openDifferenceModal() {
-        if (differenceModal) differenceModal.classList.add('active');
-    }
-
-    function closeDifferenceModal() {
-        if (differenceModal) differenceModal.classList.remove('active');
-    }
-
-    if (closeDifferenceModalBtn) {
-        closeDifferenceModalBtn.addEventListener('click', closeDifferenceModal);
-    }
-
-    if (differenceModal) {
-        differenceModal.addEventListener('click', (event) => {
-            if (event.target === differenceModal) {
-                closeDifferenceModal();
-            }
-        });
-    }
         });
         // Checks if all children of a node are read and updates the parent's status
         function updateParentReadStatus(parentNode) {
@@ -5879,29 +5660,6 @@ Example Response:
         <div class="modal-actions">
             <button class="modal-btn cancel" id="cancelDeleteBtn">Cancel</button>
             <button class="modal-btn delete" id="confirmDeleteBtn">Confirm Delete</button>
-        </div>
-    </div>
-</div>
-<div class="modal-overlay" id="differenceModal">
-    <div class="modal-content" style="max-width: 700px;">
-        <span class="close-modal-btn" id="closeDifferenceModal">&times;</span>
-        <h2>Understanding Your Options</h2>
-        <div class="difference-container">
-            <div class="difference-column">
-                <h3>Tell me more</h3>
-                <p>Tell me more expands the current page and adds more paragraphs to expand on the previous ones. Best if you want just a bit more detail.</p>
-                <div class="icon-placeholder">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevrons-down"><polyline points="7 13 12 18 17 13"></polyline><polyline points="7 6 12 11 17 6"></polyline></svg>
-                </div>
-            </div>
-            <div class="vertical-separator"></div>
-            <div class="difference-column">
-                <h3>Go deeper on this</h3>
-                <p>Go deeper on this splits this topic into several more categories, each of which can be explored further. Best if you want a rigorous expansion of the content you're currently reading.</p>
-                <div class="icon-placeholder">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-git-branch"><line x1="6" y1="3" x2="6" y2="15"></line><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path></svg>
-                </div>
-            </div>
         </div>
     </div>
 </div>
