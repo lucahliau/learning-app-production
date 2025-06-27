@@ -4637,7 +4637,128 @@ async function checkConnection() {
             }
         }
         // --- RESIZABLE SIDEBAR LOGIC ---
+// Add these functions back into your main <script> tag
 
+    let barChartInstance;
+function renderBarChart(canvasId, dataString) {
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    
+    const lines = dataString.trim().split('\n');
+    const labels = [];
+    const data = [];
+    let maxValue = 0;
+
+    lines.forEach(line => {
+        const parts = line.split(':');
+        if (parts.length === 2) {
+            const label = parts[0].trim();
+            const value = parseFloat(parts[1].trim());
+            if (label && !isNaN(value)) {
+                labels.push(label);
+                data.push(value);
+                if (value > maxValue) {
+                    maxValue = value;
+                }
+            }
+        }
+    });
+    
+    const suggestedMax = maxValue * 1.1;
+
+    // Destroy the old chart instance if it exists
+    if (barChartInstance) { barChartInstance.destroy(); }
+
+    barChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Value',
+                data: data,
+                backgroundColor: 'rgba(99, 102, 241, 0.6)',
+                borderColor: 'rgba(99, 102, 241, 1)',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: (context) => ` ${context.raw}` } }
+            },
+            scales: {
+                y: { beginAtZero: true, suggestedMax: suggestedMax, grid: { color: '#e5e7eb' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+}
+
+let pieChartInstance;
+function renderPieChart(canvasId, legendId, dataString) {
+    // This function had a latent bug. The corrected version is below.
+    const legendContainer = legendId ? document.getElementById(legendId) : null;
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    
+    const lines = dataString.trim().split('\n');
+    const labels = [];
+    let data = [];
+    
+    lines.forEach(line => {
+        const parts = line.split(':');
+        if (parts.length === 2) {
+            const label = parts[0].trim();
+            const value = parseFloat(parts[1].trim());
+            if (label && !isNaN(value)) {
+                labels.push(label);
+                data.push(value);
+            }
+        }
+    });
+
+    const total = data.reduce((sum, val) => sum + val, 0);
+    if (total > 0) { data = data.map(val => (val / total) * 100); }
+    
+    const backgroundColors = [ '#8b5cf6', '#6366f1', '#3b82f6', '#14b8a6', '#f59e0b', '#ef4444', '#ec4899'];
+
+    // Destroy the old chart instance if it exists
+    if (pieChartInstance) { pieChartInstance.destroy(); }
+
+    pieChartInstance = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: labels,
+            datasets: [{ data: data, backgroundColor: backgroundColors, borderColor: '#ffffff', borderWidth: 2 }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: (context) => ` ${context.label}: ${context.raw.toFixed(1)}%` } }
+            }
+        }
+    });
+
+    // Safely update the legend only if the container exists
+    if (legendContainer) {
+        legendContainer.innerHTML = '';
+        labels.forEach((label, index) => {
+            const item = document.createElement('div');
+            item.className = 'legend-item';
+            const colorBox = document.createElement('div');
+            colorBox.className = 'legend-color-box';
+            colorBox.style.backgroundColor = backgroundColors[index % backgroundColors.length];
+            const text = document.createElement('span');
+            text.textContent = label;
+            item.appendChild(colorBox);
+            item.appendChild(text);
+            legendContainer.appendChild(item);
+        });
+    }
+}
         // Wait until the document is fully loaded to run this script
         document.addEventListener('DOMContentLoaded', function () {
             // --- COLOR PALETTE FOR MULTI-LINE PLOTS ---
