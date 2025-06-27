@@ -4643,35 +4643,7 @@ async function checkConnection() {
             // --- COLOR PALETTE FOR MULTI-LINE PLOTS ---
 
 
- // --- JavaScript for the 'What's the difference' modal ---
-    
-        // Get the modal and the close button
-        const differenceModal = document.getElementById('differenceModal');
-        const closeDifferenceModalBtn = document.getElementById('closeDifferenceModal');
-    
-        // Function to open the modal
-        function openDifferenceModal() {
-            differenceModal.classList.add('active');
-        }
-    
-        // Function to close the modal
-        function closeDifferenceModal() {
-            differenceModal.classList.remove('active');
-        }
-    
-        // Event listener for the close button
-        if (closeDifferenceModalBtn) { // Safety check to prevent future errors
-            closeDifferenceModalBtn.addEventListener('click', closeDifferenceModal);
-        }
-    
-        // Event listener to close the modal if the user clicks the overlay
-        if (differenceModal) { // Safety check
-            differenceModal.addEventListener('click', (event) => {
-                if (event.target === differenceModal) {
-                    closeDifferenceModal();
-                }
-            });
-        }
+
             function renderPeriodTimeline() {
                 const timelineWrapper = document.getElementById('period-timeline-wrapper');
                 const timelineLine = timelineWrapper.querySelector('.timeline-line');
@@ -5088,7 +5060,29 @@ mainContent.addEventListener('mouseout', (event) => {
 });
 // --- END OF FINAL REVISION ---
 
+// --- JavaScript for the 'What's the difference' modal ---
+const differenceModal = document.getElementById('differenceModal');
+    const closeDifferenceModalBtn = document.getElementById('closeDifferenceModal');
 
+    function openDifferenceModal() {
+        if (differenceModal) differenceModal.classList.add('active');
+    }
+
+    function closeDifferenceModal() {
+        if (differenceModal) differenceModal.classList.remove('active');
+    }
+
+    if (closeDifferenceModalBtn) {
+        closeDifferenceModalBtn.addEventListener('click', closeDifferenceModal);
+    }
+
+    if (differenceModal) {
+        differenceModal.addEventListener('click', (event) => {
+            if (event.target === differenceModal) {
+                closeDifferenceModal();
+            }
+        });
+    }
         });
         // Checks if all children of a node are read and updates the parent's status
         function updateParentReadStatus(parentNode) {
