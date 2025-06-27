@@ -1958,13 +1958,18 @@ function triggerMathRendering(element) {
  * @param {string} rawText The raw text response from the AI.
  * @returns {object} The parsed JavaScript object.
  */
- function sanitizeAndParseJson(rawText) {
+ /**
+ * A robust function to find and parse a JSON object from a raw text string.
+ * This version relies on the AI producing valid JSON and the native parser.
+ * @param {string} rawText The raw text response from the AI.
+ * @returns {object} The parsed JavaScript object.
+ */
+function sanitizeAndParseJson(rawText) {
     // Find the JSON block, ignoring conversational text and code fences like ```json
     const startIndex = rawText.indexOf('{');
-    const endIndex = rawText.lastIndexOf('}');
+    const endIndex = raw.lastIndexOf('}');
 
     if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
-        // Log the problematic text if no JSON object is found
         console.error("COULD NOT FIND JSON in the following text:", rawText);
         throw new Error("No valid JSON object found in the AI response.");
     }
@@ -1972,21 +1977,17 @@ function triggerMathRendering(element) {
     // Extract the potential JSON string
     let jsonString = rawText.substring(startIndex, endIndex + 1);
 
-    // CRITICAL FIX: Replace any single backslash with a double backslash.
-    // This sanitizes invalid escape sequences (like `\(` in LaTeX) for the JSON parser.
-    // JSON.parse requires backslashes to be escaped themselves.
-    const sanitizedString = jsonString.replace(/\\/g, '\\\\');
+    // The aggressive .replace(/\\/g, '\\\\') line has been REMOVED.
+    // This was the cause of the double-backslash issue in your LaTeX.
 
     try {
-        return JSON.parse(sanitizedString);
+        return JSON.parse(jsonString);
     } catch (e) {
-        // This is a fallback for the most stubborn errors. It will log the exact
-        // string that failed the final parse attempt.
-        console.error("---!!!--- FINAL JSON PARSING FAILED ---!!!---");
-        console.error("The code could not parse the following sanitized string:");
-        console.log(sanitizedString);
+        console.error("---!!!--- JSON PARSING FAILED ---!!!---");
+        console.error("The code could not parse the following string:", jsonString);
         console.error("The specific error was:", e.message);
-        throw e; // Re-throw the error
+        // We re-throw the error so the calling function knows the parse failed.
+        throw e;
     }
 }
 // --- ADVANCED DATE PARSING & SCALING (No Changes) ---
@@ -3509,9 +3510,20 @@ let conversationHistory = [
  * @param {Array} definitionsArray The array of definitions from the AI.
  * @returns {object} A content object ready for rendering.
  */
- function parseResponse(mainContentText, definitionsArray) {
-    // Step 1: Clean up any unnecessary LaTeX for simple text/percentages
-    const cleanedText = cleanUnnecessaryLatex(mainContentText);
+ /**
+ * Parses the final content, converting markdown and handling paragraph/line breaks.
+ * @param {string} mainContentText The explanation text from the AI.
+ * @param {Array} definitionsArray The array of definitions from the AI.
+ * @returns {object} A content object ready for rendering.
+ */
+function parseResponse(mainContentText, definitionsArray) {
+    // --- START: NEW FIX ---
+    // First, normalize any literal '\\n' characters into actual newlines.
+    const normalizedText = (mainContentText || "").replace(/\\n/g, '\n');
+    // --- END: NEW FIX ---
+
+    // Clean up any unnecessary LaTeX for simple text/percentages
+    const cleanedText = cleanUnnecessaryLatex(normalizedText);
 
     const result = {
         overview: '',
@@ -3519,29 +3531,26 @@ let conversationHistory = [
         definitions: definitionsArray || []
     };
 
-    // Step 2: Convert markdown to HTML
+    // Convert markdown to HTML
     let processedText = cleanedText
-        .replace(/^### (.*$)/gim, '<h3>$1</h3>') // h3
-        .replace(/^## (.*$)/gim, '<h2>$1</h2>')   // h2
-        .replace(/^# (.*$)/gim, '<h1>$1</h1>')     // h1
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // bold
-        .replace(/\*(.*?)\*/g, '<em>$1</em>');       // italic
+        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>');
 
-    // Step 3: Handle paragraphs and line breaks robustly
+    // Handle paragraphs and line breaks robustly
     processedText = processedText
-        .split(/\n\s*\n/) // Split by one or more empty lines to define paragraphs
-        .map(p => p.trim()) // Trim whitespace from each potential paragraph
-        .filter(p => p) // Remove any empty strings that resulted from splitting
+        .split(/\n\s*\n/) // Split by double newlines to create paragraphs
+        .map(p => p.trim())
+        .filter(p => p)
         .map(p => {
-            // If the line is already an HTML heading, leave it as is.
             if (p.match(/^<h[1-3]>/)) {
                 return p;
             }
-            
-            // For regular text, convert single newlines into <br> tags and wrap the whole thing in a <p> tag.
-            return `<p>${p.replace(/\n/g, '<br>')}</p>`;
+            return `<p>${p.replace(/\n/g, '<br>')}</p>`; // Convert single newlines to <br>
         })
-        .join(''); // Join the processed paragraphs back into a single HTML string.
+        .join('');
 
     result.overview = processedText;
     return result;
