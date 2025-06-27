@@ -1682,6 +1682,73 @@
     display: inline-block;
     white-space: nowrap; /* Add this for extra safety */
 }
+/* --- New styles for the 'What's the difference' button --- */
+.difference-button {
+    background: none;
+    border: none;
+    color: #6b7280; /* A nice grey color */
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 0;
+    margin-left: 15px; /* Adds some space from the other buttons */
+    transition: color 0.2s ease;
+}
+
+.difference-button:hover {
+    text-decoration: underline;
+    color: #4f46e5; /* A bit of color on hover */
+}
+
+/* --- New styles for the difference modal --- */
+.close-modal-btn {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 28px;
+    font-weight: bold;
+    color: #9ca3af;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.close-modal-btn:hover {
+    color: #374151;
+}
+
+.difference-container {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 25px;
+    gap: 20px;
+}
+
+.difference-column {
+    flex: 1;
+    text-align: center;
+}
+
+.difference-column h3 {
+    font-size: 20px;
+    color: #11182c;
+    margin-bottom: 10px;
+}
+
+.difference-column p {
+    font-size: 15px;
+    line-height: 1.6;
+    color: #4b5563;
+}
+
+.vertical-separator {
+    width: 1px;
+    background-color: #e5e7eb; /* A thin grey vertical line */
+}
+
+.icon-placeholder {
+    margin-top: 20px;
+    color: #6366f1; /* Purple icon color to match your theme */
+}
             </style>
 
 <script>
