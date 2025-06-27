@@ -3761,6 +3761,7 @@ async function navigateToNode(nodeId) {
         console.error("Navigation failed: Node not found with ID:", nodeId);
         return;
     }
+    node.isRead = true;
 
     // If the node is a leaf and has no content, fetch it with retries.
     if (node.children.length === 0 && !node.content && node.id !== 'root') {
