@@ -3440,30 +3440,38 @@ function parseResponse(mainContentText, definitionsArray) {
         definitions: definitionsArray || []
     };
 
-    // 1. First, process the entire text for markdown. Order is important.
     let processedText = mainContentText
-        // Headings (from most specific to least specific)
         .replace(/^### (.*$)/gim, '<h3>$1</h3>')
         .replace(/^## (.*$)/gim, '<h2>$1</h2>')
         .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-        // Bold and Italics (non-greedy)
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*(.*?)\*/g, '<em>$1</em>');
 
-    // 2. Now, wrap the results in paragraph tags, but avoid wrapping the new heading tags.
+    // --- START OF FIX 2 ---
     processedText = processedText
         .split(/\n\s*\n/) // Split by one or more empty lines
         .map(p => p.trim()) // Trim whitespace from each paragraph
         .filter(p => p) // Remove any empty paragraphs
         .map(p => {
-            // If the block already starts with a heading tag, don't wrap it in a <p> tag
             if (p.match(/^<h[1-3]>/)) {
                 return p;
             }
-            // Otherwise, wrap it in a <p> tag and convert single newlines to <br>
-            return `<p>${p.replace(/\n/g, '<br>')}</p>`;
+
+            // Add a <br> before all display math blocks ($$...$$ or \[...\])
+            // This ensures they always render on a new line.
+            // Note: The backslashes for the \[...\] part are double-escaped for the regex.
+            let processedParagraph = p.replace(/(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\])/g, '<br>$1');
+
+            // If the paragraph now starts with a <br>, remove it to avoid extra space.
+            if (processedParagraph.startsWith('<br>')) {
+                processedParagraph = processedParagraph.substring(4).trim();
+            }
+
+            // Convert any remaining single newlines to <br> tags and wrap in a paragraph.
+            return `<p>${processedParagraph.replace(/\n/g, '<br>')}</p>`;
         })
         .join('');
+    // --- END OF FIX 2 ---
 
     result.overview = processedText;
     return result;
@@ -5309,7 +5317,11 @@ Example JSON structure:
  * Elaborates on the current node's content in place, adding new paragraphs
  * and identifying/highlighting new technical terms.
  */
- async function elaborateInPlace() {
+ /**
+ * Elaborates on the current node's content in place, adding new paragraphs
+ * and identifying/highlighting new technical terms.
+ */
+async function elaborateInPlace() {
     const currentNode = currentTreeNode;
     if (!currentNode || !currentNode.content || !currentNode.content.overview) {
         showError("There is no content here to elaborate on.");
@@ -5406,10 +5418,7 @@ Example Response:
             
             let jsonString = botResponseText.substring(startIndex, endIndex + 1);
 
-            // --- START OF FINAL FIX ---
-            // Escape all single backslashes to prevent JSON.parse() from failing on LaTeX.
             const sanitizedForParsing = jsonString.replace(/\\/g, '\\\\');
-            // --- END OF FINAL FIX ---
 
             structuredResponse = JSON.parse(sanitizedForParsing);
 
@@ -5435,10 +5444,19 @@ Example Response:
             }
             currentNode.content.visualAssets.push(...visualAssets);
         }
+        
+        // --- START OF FIX 1 ---
+        // First, normalize any literal '\\n' strings from the AI into actual newline characters.
+        const normalizedNewText = newText.replace(/\\n/g, '\n');
 
-        const formattedNewText = newText
-            .split(/\n\s*\n/).map(p => p.trim()).filter(p => p)
-            .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
+        // Then, process the normalized text to create paragraphs and line breaks.
+        const formattedNewText = normalizedNewText
+            .split(/\n\s*\n/)
+            .map(p => p.trim())
+            .filter(p => p)
+            .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
+            .join('');
+        // --- END OF FIX 1 ---
 
         const highlightedNewText = applyTermHighlighting(formattedNewText, newDefinitions);
 
