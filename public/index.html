@@ -1749,6 +1749,23 @@
     margin-top: 20px;
     color: #6366f1; /* Purple icon color to match your theme */
 }
+/* --- New styles for the Feedback button --- */
+.feedback-btn {
+    background: none;
+    border: none;
+    color: #6b7280; /* A nice grey color */
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    padding: 12px 0; /* Match vertical padding of other buttons */
+    margin-right: 20px; /* Space between it and the next button */
+    transition: color 0.2s ease;
+}
+
+.feedback-btn:hover {
+    text-decoration: underline;
+    color: #4f46e5; /* A bit of color on hover */
+}
             </style>
 
 <script>
@@ -1796,6 +1813,7 @@
                 <button class="sort-btn" data-sort="category">By Category</button>
             </div>
         </div>
+        <button class="feedback-btn" id="feedbackBtn">Feedback</button>
         <div style="display: flex; gap: 15px;">
             <button class="new-topic-btn" id="newTopicBtn">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14m-7-7h14"/></svg>
@@ -5841,6 +5859,50 @@ Example Response:
         showLoading(false);
     }
 }
+// --- BITESIZE JAVASCRIPT FOR FEEDBACK MODAL ---
+
+// 1. Get references to all the new elements
+const feedbackModal = document.getElementById('feedbackModal');
+const feedbackBtn = document.getElementById('feedbackBtn');
+const closeFeedbackBtn = document.getElementById('closeFeedbackBtn');
+const submitFeedbackBtn = document.getElementById('submitFeedbackBtn');
+const feedbackFormView = document.getElementById('feedbackFormView');
+const feedbackSuccessView = document.getElementById('feedbackSuccessView');
+const feedbackTitleInput = document.getElementById('feedbackTitleInput');
+const feedbackContentInput = document.getElementById('feedbackContentInput');
+
+// 2. Functions to open and close the modal
+function openFeedbackModal() {
+    // Before opening, always reset the view to the form
+    feedbackFormView.style.display = 'block';
+    feedbackSuccessView.style.display = 'none';
+    // And clear any old input
+    feedbackTitleInput.value = '';
+    feedbackContentInput.value = '';
+    // Now, show the modal
+    feedbackModal.classList.add('active');
+}
+
+function closeFeedbackModal() {
+    feedbackModal.classList.remove('active');
+}
+
+// 3. Event Listeners for opening and closing
+feedbackBtn.addEventListener('click', openFeedbackModal);
+closeFeedbackBtn.addEventListener('click', closeFeedbackModal);
+feedbackModal.addEventListener('click', (event) => {
+    // Close if the user clicks on the dark overlay background
+    if (event.target === feedbackModal) {
+        closeFeedbackModal();
+    }
+});
+
+// 4. Event Listener for the submission logic
+submitFeedbackBtn.addEventListener('click', () => {
+    // Just hide the form and show the success message for now
+    feedbackFormView.style.display = 'none';
+    feedbackSuccessView.style.display = 'block';
+});
     </script>
     <!-- New Topic Modal -->
 <div class="modal-overlay" id="newTopicModal">
@@ -5931,6 +5993,28 @@ Example Response:
                   </div>
                   
             </div>
+        </div>
+    </div>
+</div>
+<div class="modal-overlay" id="feedbackModal">
+    <div class="modal-content">
+        <span class="close-modal-btn" id="closeFeedbackBtn">&times;</span>
+        
+        <div id="feedbackFormView">
+            <h2>Submit Feedback</h2>
+            <label for="feedbackTitleInput">Title</label>
+            <input type="text" id="feedbackTitleInput" class="modal-input" placeholder="e.g., 'Suggestion for Timelines'">
+            
+            <label for="feedbackContentInput" style="margin-top: 15px;">Feedback</label>
+            <textarea id="feedbackContentInput" class="styled-textarea" placeholder="Please provide your detailed feedback here..."></textarea>
+
+            <div class="modal-actions" style="margin-top: 30px;">
+                <button class="modal-btn submit" id="submitFeedbackBtn">Submit</button>
+            </div>
+        </div>
+
+        <div id="feedbackSuccessView" style="display: none; text-align: center; color: #6b7280; font-size: 18px; padding: 60px 0;">
+            Feedback Sent
         </div>
     </div>
 </div>
