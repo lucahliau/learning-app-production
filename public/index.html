@@ -2224,7 +2224,7 @@ function renderHybridTimeline(container, hybridData) {
         
 Your response MUST be a single, valid JSON object with no other text before or after it. All keys and string values MUST use double quotes (").
 
-1.  In the "explanation" value, provide a detailed, explanation of the topic with at least 2 paragraphs. **For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters. CRITICALLY, any backslash \\ in your LaTeX must be escaped as a double backslash \\\\ within the JSON string (e.g., write "\\\\sqrt" instead of "\\sqrt").**
+1.  In the "explanation" value, provide a detailed, explanation of the topic with at least 2 paragraphs. **For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters. For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters like $...$ or $$...$$**
 2.  In the "definitions" value, provide an array of objects. For each object, identify a technical term from your explanation and provide a simple, one-sentence definition for it in the context of the topic. Only add/define these technical terms if they are truly technical and not straightforward, and their definition is specific to the context. Terms like focus, endurance, mental toughness which are obvious should not be included. 
 3.  In the "visualAssets" value, (this key is optional), analyze your explanation. If a visual aid would enhance understanding, add this key. If not, OMIT this key entirely.
     * If included, it must be an array of objects. Each object represents one visual asset.
@@ -3516,13 +3516,15 @@ let conversationHistory = [
  * @param {Array} definitionsArray The array of definitions from the AI.
  * @returns {object} A content object ready for rendering.
  */
-function parseResponse(mainContentText, definitionsArray) {
-    // --- START: NEW FIX ---
-    // First, normalize any literal '\\n' characters into actual newlines.
+/**
+ * Parses the final content, adding a final cleanup step for inconsistent LaTeX.
+ * @param {string} mainContentText The explanation text from the AI.
+ * @param {Array} definitionsArray The array of definitions from the AI.
+ * @returns {object} A content object ready for rendering.
+ */
+ function parseResponse(mainContentText, definitionsArray) {
+    // 1. Normalize newlines and clean unnecessary LaTeX (no changes here)
     const normalizedText = (mainContentText || "").replace(/\\n/g, '\n');
-    // --- END: NEW FIX ---
-
-    // Clean up any unnecessary LaTeX for simple text/percentages
     const cleanedText = cleanUnnecessaryLatex(normalizedText);
 
     const result = {
@@ -3531,7 +3533,7 @@ function parseResponse(mainContentText, definitionsArray) {
         definitions: definitionsArray || []
     };
 
-    // Convert markdown to HTML
+    // 2. Convert markdown to HTML (no changes here)
     let processedText = cleanedText
         .replace(/^### (.*$)/gim, '<h3>$1</h3>')
         .replace(/^## (.*$)/gim, '<h2>$1</h2>')
@@ -3539,20 +3541,31 @@ function parseResponse(mainContentText, definitionsArray) {
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*(.*?)\*/g, '<em>$1</em>');
 
-    // Handle paragraphs and line breaks robustly
     processedText = processedText
-        .split(/\n\s*\n/) // Split by double newlines to create paragraphs
+        .split(/\n\s*\n/)
         .map(p => p.trim())
         .filter(p => p)
         .map(p => {
             if (p.match(/^<h[1-3]>/)) {
                 return p;
             }
-            return `<p>${p.replace(/\n/g, '<br>')}</p>`; // Convert single newlines to <br>
+            return `<p>${p.replace(/\n/g, '<br>')}</p>`;
         })
         .join('');
 
-    result.overview = processedText;
+    // --- START: NEW CATCH-ALL FIX & DEBUGGING ---
+
+    // 3. Final Cleanup: Replace any occurrences of double backslashes with a single one.
+    // This is the key step that fixes the inconsistent \\( ... \\) issue.
+    const finalHtml = processedText.replace(/\\\\/g, '\\');
+
+    // 4. Debugging: Log the final HTML to the console so you can inspect it.
+    console.log("DEBUG: Final processed HTML for rendering:", finalHtml);
+
+    // --- END: NEW CATCH-ALL FIX & DEBUGGING ---
+
+    result.overview = finalHtml; // Assign the fully cleaned HTML to the result
+
     return result;
 }
 // Create a new helper function to wrap terms in special HTML
@@ -4102,7 +4115,7 @@ async function elaborateOnTopic(targetNode, generateNewCards = false) {
 Your response MUST be a single, valid JSON object with no other text before or after it.
 The JSON object must have three keys: "explanation", "definitions", and an optional "visualAssets".
 
-1.  In the "explanation" value, provide a detailed, explanation of the topic with at least 2 paragraphs. **For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters. CRITICALLY, any backslash \\ in your LaTeX must be escaped as a double backslash \\\\ within the JSON string (e.g., write "\\\\sqrt" instead of "\\sqrt").**
+1.  In the "explanation" value, provide a detailed, explanation of the topic with at least 2 paragraphs. **For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters. For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters like $...$ or $$...$$**
 2.  In the "definitions" value, provide an array of objects for any technical terms used.
 3.  In the "visualAssets" value, (this key is optional, but **strongly encouraged** for STEM topics), you MUST use this key if the explanation can be enhanced with graphs or charts.If you include a visual reference (e.g. graph equation) feel free to refer in your "explanation" content directly to them.
     * The value must be an array of "layout_row" objects. Each row represents a horizontal container.
@@ -5450,7 +5463,7 @@ The user has clicked "Tell me more". Your task is to generate 2-3 new paragraphs
 
 Your response MUST be a single, valid JSON object with no other text before or after it. CRITICAL: All keys and string values must use double quotes (").
 
-1.  In the "newText" value, provide the 2-3 new paragraphs. For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters. CRITICALLY, any backslash \\ in your LaTeX must be escaped as a double backslash \\\\ within the JSON string (e.g., write "\\\\(x\\\\)" instead of "\\(x\\)").
+1.  In the "newText" value, provide the 2-3 new paragraphs. For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters. For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters like $...$ or $$...$$.
 2.  In the "newDefinitions" value, provide an array of objects for any technical terms found ONLY in your new text. Each object should have a "term" and a "definition". Only define terms that are truly technical and not common knowledge.
 3.  **"visualAssets" (Optional):** Analyze your new text. If a visual aid would significantly enhance understanding of the *new* information, include this key. If not, OMIT this key entirely.
     * If included, it must be an array of objects. Each object represents one visual asset.
