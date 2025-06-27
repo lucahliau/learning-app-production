@@ -1913,37 +1913,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    <script>document.addEventListener('DOMContentLoaded', function() {
-        // --- JavaScript for the 'What's the difference' modal ---
+    <script>
+       
     
-        // Get the modal and the close button
-        const differenceModal = document.getElementById('differenceModal');
-        const closeDifferenceModalBtn = document.getElementById('closeDifferenceModal');
-    
-        // Function to open the modal
-        function openDifferenceModal() {
-            differenceModal.classList.add('active');
-        }
-    
-        // Function to close the modal
-        function closeDifferenceModal() {
-            differenceModal.classList.remove('active');
-        }
-    
-        // Event listener for the close button
-        if (closeDifferenceModalBtn) { // Safety check to prevent future errors
-            closeDifferenceModalBtn.addEventListener('click', closeDifferenceModal);
-        }
-    
-        // Event listener to close the modal if the user clicks the overlay
-        if (differenceModal) { // Safety check
-            differenceModal.addEventListener('click', (event) => {
-                if (event.target === differenceModal) {
-                    closeDifferenceModal();
-                }
-            });
-        }
-    });
         /**
  * Creates a text description of visual assets for the AI context.
  * @param {Array} visualAssets - The visualAssets array from a content object.
@@ -4671,7 +4643,35 @@ async function checkConnection() {
             // --- COLOR PALETTE FOR MULTI-LINE PLOTS ---
 
 
-
+ // --- JavaScript for the 'What's the difference' modal ---
+    
+        // Get the modal and the close button
+        const differenceModal = document.getElementById('differenceModal');
+        const closeDifferenceModalBtn = document.getElementById('closeDifferenceModal');
+    
+        // Function to open the modal
+        function openDifferenceModal() {
+            differenceModal.classList.add('active');
+        }
+    
+        // Function to close the modal
+        function closeDifferenceModal() {
+            differenceModal.classList.remove('active');
+        }
+    
+        // Event listener for the close button
+        if (closeDifferenceModalBtn) { // Safety check to prevent future errors
+            closeDifferenceModalBtn.addEventListener('click', closeDifferenceModal);
+        }
+    
+        // Event listener to close the modal if the user clicks the overlay
+        if (differenceModal) { // Safety check
+            differenceModal.addEventListener('click', (event) => {
+                if (event.target === differenceModal) {
+                    closeDifferenceModal();
+                }
+            });
+        }
             function renderPeriodTimeline() {
                 const timelineWrapper = document.getElementById('period-timeline-wrapper');
                 const timelineLine = timelineWrapper.querySelector('.timeline-line');
