@@ -2734,17 +2734,24 @@ function restoreAndFixData(topics) {
  * @param {string} text - The raw text response from the AI.
  * @returns {Array<Object>} An array of section objects.
  */
-function universalParseSyllabus(text) {
+/**
+ * A universal "catch-all" parser that finds numbered list items
+ * anywhere in a string, whether it's plain text or embedded in JSON.
+ * @param {string} text - The raw text response from the AI, which may contain newlines.
+ * @returns {Array<Object>} An array of section objects.
+ */
+ function universalParseSyllabus(text) {
     const sections = [];
-    // This regex looks for a digit(s), a period, optional space,
-    // and then captures the text until it hits a quote, a comma, or the end of a line.
-    const regex = /\d+\.\s*([^",\n\r]+)/g;
+    
+    // This new, more flexible regex handles multiple list formats and, critically,
+    // works across multiple lines within a single string.
+    // The 'm' flag is key: it allows '^' and '$' to match the start/end of each LINE.
+    const flexibleRegex = /^\s*(?:\d+\.|\-|\*)\s+(.+)$/gm;
     let match;
 
-    // Loop through all matches found in the entire string
-    while ((match = regex.exec(text)) !== null) {
-        // match[1] is the captured text (the module title)
-        const title = match[1].trim(); 
+    while ((match = flexibleRegex.exec(text)) !== null) {
+        // The captured title is in match[1]. We trim it and remove any markdown bolding.
+        const title = match[1].replace(/\*\*/g, '').trim(); 
         
         sections.push({
             title: title,
